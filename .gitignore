@@ -1,0 +1,45 @@
+# Build directories
+build/
+build_*/
+cmake-build-*/
+bin/
+lib/
+
+# Generated files & tooling cache
+compile_commands.json
+.cache/
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Data & Matrix Market files
+data/
+*.mtx
+*.tar.gz
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+_skbuild/
+.venv/
+venv/
+
+# Latex & Quarto build directories
+obj/
+**/obj/
+output/
+**/output/
+.quarto/
+**/.quarto/
+*.quarto_ipynb
+# Latex tooling logs
+indent.log
+
+quarto_demo

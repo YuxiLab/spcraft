@@ -1,0 +1,7 @@
+# Files clang-format must never touch (patterns follow .gitignore rules,
+# relative to this file). Respected by clang-format >= 18 and by editors that
+# shell out to it (VSCode xaver, CLion). Keep this the single source of truth
+# for the exclusion so every tool agrees.
+
+# Third-party reference code, kept verbatim for comparison.
+external/**
