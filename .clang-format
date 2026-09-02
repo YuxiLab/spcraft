@@ -1,6 +1,7 @@
 BasedOnStyle: Google
 IndentWidth: 2
 UseTab: Never
+SortIncludes: Never
 BreakBeforeBraces: Linux
 ColumnLimit: 95
 AllowShortFunctionsOnASingleLine: false

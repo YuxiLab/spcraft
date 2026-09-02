@@ -1,12 +1,16 @@
 #pragma once
 
+#include <sys/sysinfo.h>
 #include <algorithm>
-#include <fast_matrix_market/fast_matrix_market.hpp>
+#include <cstdlib>
 #include <fstream>
 #include <stdexcept>
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#include <fast_matrix_market/fast_matrix_market.hpp>
+#include <fmt/format.h>
 
 #include "CooMatrix.h"
 
@@ -16,9 +20,10 @@ namespace spcraft
 template <class IT, class NT, class OT>
 std::tuple<IT*, IT*, NT*> CooMatrix<IT, NT, OT>::SafeAllocate(OT nnz)
 {
-  IT* r = (nnz > 0) ? new IT[nnz]() : nullptr;
-  IT* c = (nnz > 0) ? new IT[nnz]() : nullptr;
-  NT* v = (nnz > 0) ? new NT[nnz]() : nullptr;
+  if (nnz <= 0) throw std::invalid_argument("CooMatrix::SafeAllocate requires nnz > 0");
+  IT* r = static_cast<IT*>(std::calloc(nnz, sizeof(IT)));
+  IT* c = static_cast<IT*>(std::calloc(nnz, sizeof(IT)));
+  NT* v = static_cast<NT*>(std::calloc(nnz, sizeof(NT)));
   return std::make_tuple(r, c, v);
 }
 
@@ -26,9 +31,9 @@ template <class IT, class NT, class OT>
 void CooMatrix<IT, NT, OT>::SafeDelete(bool memowned, IT* row_id, IT* col_id, NT* val)
 {
   if (memowned) {
-    delete[] row_id;
-    delete[] col_id;
-    delete[] val;
+    std::free(row_id); row_id = nullptr;
+    std::free(col_id); col_id = nullptr;
+    std::free(val); val = nullptr;
   }
 }
 
@@ -79,11 +84,13 @@ CooMatrix<IT, NT, OT>::~CooMatrix()
 template <class IT, class NT, class OT>
 void CooMatrix<IT, NT, OT>::Allocate(OT require_nnz, IT nRows, IT nCols)
 {
+  if (require_nnz <= 0) throw std::invalid_argument("CooMatrix::Allocate requires nnz > 0");
   SafeDelete(memowned, row_id, col_id, val);
-  m = nRows;
-  n = nCols;
-  nnz = require_nnz;
-  memowned = true;
+  this->m = nRows;
+  this->n = nCols;
+  fmt::print("nnz in Alloate {}", require_nnz);
+  this->nnz = require_nnz;
+  this->memowned = true;
   std::tie(row_id, col_id, val) = SafeAllocate(nnz);
 }
 
@@ -155,8 +162,7 @@ CooMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::FromMatrixMarket(const std::string&
 {
   std::ifstream ifs(filename);
   if (!ifs.is_open()) {
-    throw std::runtime_error("CooMatrix::FromMatrixMarket failed: unable to open file " +
-                             filename);
+    throw std::runtime_error("CooMatrix::FromMatrixMarket failed: unable to open file " + filename);
   }
 
   int64_t rows = 0;
@@ -170,7 +176,7 @@ CooMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::FromMatrixMarket(const std::string&
   CooMatrix<IT, NT, OT> coo;
   OT num_entries = static_cast<OT>(r_vec.size());
   coo.Allocate(num_entries, static_cast<IT>(rows), static_cast<IT>(cols));
-
+  fmt::print("hello? num_entries {} ", num_entries);
   if (num_entries > 0) {
     std::copy(r_vec.begin(), r_vec.end(), coo.row_id);
     std::copy(c_vec.begin(), c_vec.end(), coo.col_id);

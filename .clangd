@@ -13,9 +13,7 @@ CompileFlags:
     - "-I.."
     - "-isystem"
     - "_deps/fastmatrixmarket-src/include"
-    - "-I/usr/lib/x86_64-linux-gnu/openmpi/include"
-    - "-isystem"
-    - "/usr/lib/gcc/x86_64-linux-gnu/12/include"
+    - "-I/opt/nvidia/hpc_sdk/Linux_x86_64/26.5/comm_libs/13.2/hpcx/hpcx-2.50/ompi5/include"
 
 Diagnostics:
   Suppress:
@@ -41,7 +39,7 @@ If:
 CompileFlags:
   Compiler: /usr/bin/c++
   Add:
-    - -I/u/yuxihong/workspace/cuda/cuda-12.9/targets/x86_64-linux/include
+    - -I/usr/local/cuda/13.2/targets/x86_64-linux/include
     - --std=c++20
   Remove:
     # strip nvcc-only arguments inherited by compdb header entries
@@ -67,11 +65,13 @@ CompileFlags:
 If:
   PathMatch: '.*\.(cu|cuh)$'
 CompileFlags:
-  Compiler: /u/yuxihong/workspace/cuda/cuda-12.9/bin/nvcc
+  Compiler: /usr/local/cuda/13.2/bin/nvcc
   Add:
-    - --cuda-path=/u/yuxihong/workspace/cuda/cuda-12.9
+    - --cuda-path=/usr/local/cuda/13.2
     - --cuda-gpu-arch=sm_90a
-    - -I/u/yuxihong/workspace/cuda/cuda-12.9/targets/x86_64-linux/include
+    - -I/usr/local/cuda/13.2/targets/x86_64-linux/include
+    - "-isystem"
+    - "/usr/lib/gcc/x86_64-linux-gnu/12/include"
     - "-xcuda"
     - "-ferror-limit=0"
     - "--no-cuda-version-check"
@@ -82,9 +82,9 @@ CompileFlags:
     - "-DCUDA_12_0_SM90_FEATURES_SUPPORTED"
     - "-DCUTLASS_ARCH_MMA_SM90_SUPPORTED=1"
     - "-D_LIBCUDACXX_STD_VER=12"
-    - "-D__CUDACC_VER_MAJOR__=12"
-    - "-D__CUDACC_VER_MINOR__=9"
-    - "-D__CUDACC_VER_BUILD__=41"
+    - "-D__CUDACC_VER_MAJOR__=13"
+    - "-D__CUDACC_VER_MINOR__=2"
+    - "-D__CUDACC_VER_BUILD__=78"
     - "-D__CUDA_ARCH__=900"
     - "-D__CUDA_ARCH_FEAT_SM90_ALL"
     - "-Wno-invalid-constexpr"

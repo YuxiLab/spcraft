@@ -21,6 +21,9 @@ data/
 *.mtx
 *.tar.gz
 
+# Reproducible raw benchmark output
+/benchmarks/results/spmv_mkl/*.json
+
 # Python cache
 __pycache__/
 *.pyc
@@ -41,5 +44,28 @@ output/
 *.quarto_ipynb
 # Latex tooling logs
 indent.log
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.nav
+*.out
+*.snm
+*.synctex.gz
+*.toc
+/latex/tikz/*.pdf
+/latex/tikz/*.png
 
 quarto_demo
+
+# doxygen output
+doxygen/html
+doxygen/latex
+doxygen/SPCraft-reference.pdf
+doxygen/warnings.log
+
+# slurm output
+slurm/spcraft-*
+
+# CMake presets
+CMakePresets.json

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdlib>
+#include <stdexcept>
 #include <tuple>
 #include <utility>
 
@@ -12,9 +14,10 @@ namespace spcraft
 template <class IT, class NT, class OT>
 std::tuple<OT*, IT*, NT*> CsrMatrix<IT, NT, OT>::SafeAllocate(IT m, OT nnz)
 {
-  OT* r = new OT[m + 1]();
-  IT* c = (nnz > 0) ? new IT[nnz]() : nullptr;
-  NT* v = (nnz > 0) ? new NT[nnz]() : nullptr;
+  if (nnz <= 0) throw std::invalid_argument("CsrMatrix::SafeAllocate requires nnz > 0");
+  OT* r = static_cast<OT*>(std::calloc(m + 1, sizeof(OT)));
+  IT* c = static_cast<IT*>(std::calloc(nnz, sizeof(IT)));
+  NT* v = static_cast<NT*>(std::calloc(nnz, sizeof(NT)));
   return std::make_tuple(r, c, v);
 }
 
@@ -22,9 +25,9 @@ template <class IT, class NT, class OT>
 void CsrMatrix<IT, NT, OT>::SafeDelete(bool memowned, OT* row_ptr, IT* col_id, NT* val)
 {
   if (memowned) {
-    delete[] row_ptr;
-    delete[] col_id;
-    delete[] val;
+    std::free(row_ptr); row_ptr = nullptr;
+    std::free(col_id); col_id = nullptr;
+    std::free(val); val = nullptr;
   }
 }
 
@@ -75,6 +78,7 @@ CsrMatrix<IT, NT, OT>::~CsrMatrix()
 template <class IT, class NT, class OT>
 void CsrMatrix<IT, NT, OT>::Allocate(OT require_nnz, IT nRows, IT nCols)
 {
+  if (require_nnz <= 0) throw std::invalid_argument("CsrMatrix::Allocate requires nnz > 0");
   SafeDelete(memowned, row_ptr, col_id, val);
   m = nRows;
   n = nCols;

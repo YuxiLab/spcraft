@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "spcraft.h"
+#include "SpCraft.h"
 
 namespace nb = nanobind;
 using namespace nb::literals;

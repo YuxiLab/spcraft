@@ -13,7 +13,7 @@
 
 #include <omp.h>
 
-#include "mtspmv.h"
+#include "mtSpMV.h"
 
 namespace
 {

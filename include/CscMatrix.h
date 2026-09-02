@@ -7,23 +7,23 @@ namespace spcraft
 {
 
 /**
- * @brief Compressed Sparse Row (CSR) matrix format.
+ * @brief Compressed Sparse Column (CSC) matrix format.
  */
 template <class IT, class NT, class OT = IT>
-class CsrMatrix
+class CscMatrix
 {
   /***************************
    * static function
    * *************************/
-  [[nodiscard]] static std::tuple<OT*, IT*, NT*> SafeAllocate(IT m, OT nnz);
-  static void SafeDelete(bool memowned, OT* row_ptr, IT* col_id, NT* val);
+  [[nodiscard]] static std::tuple<OT*, IT*, NT*> SafeAllocate(IT n, OT nnz);
+  static void SafeDelete(bool memowned, OT* col_ptr, IT* row_id, NT* val);
 
  public:
   /***************************
    * data member
    * *************************/
-  OT* row_ptr = nullptr;  //!< row pointers, size m+1
-  IT* col_id = nullptr;   //!< column indices, size nnz
+  OT* col_ptr = nullptr;  //!< column pointers, size n+1
+  IT* row_id = nullptr;   //!< row indices, size nnz
   NT* val = nullptr;      //!< numerical values, size nnz
   OT nnz = 0;             //!< number of nonzeros
   IT m = 0;               //!< number of rows
@@ -31,30 +31,30 @@ class CsrMatrix
   bool memowned = true;   //!< owns the storage (views opt out)
 
   /***************************
-   * function member
+   * memeber function
    * *************************/
   //! Empty matrix (owns nothing yet).
-  CsrMatrix() = default;
+  CscMatrix() = default;
   //! Wrap externally managed buffers as a non-owning view.
-  CsrMatrix(OT* row_ptr_, IT* col_id_, NT* val_, OT nnz_, IT m_, IT n_);
+  CscMatrix(OT* col_ptr_, IT* row_id_, NT* val_, OT nnz_, IT m_, IT n_);
   //! Disable copy construction.
-  CsrMatrix(const CsrMatrix<IT, NT, OT>& rhs) = delete;
+  CscMatrix(const CscMatrix<IT, NT, OT>& rhs) = delete;
   //! Disable copy assignment.
-  CsrMatrix& operator=(const CsrMatrix<IT, NT, OT>& rhs) = delete;
+  CscMatrix& operator=(const CscMatrix<IT, NT, OT>& rhs) = delete;
   //! Move constructor (transfers ownership).
-  CsrMatrix(CsrMatrix<IT, NT, OT>&& rhs) noexcept;
+  CscMatrix(CscMatrix<IT, NT, OT>&& rhs) noexcept;
   //! Move assignment (frees the old storage, takes the new).
-  CsrMatrix<IT, NT, OT>& operator=(CsrMatrix<IT, NT, OT>&& rhs) noexcept;
+  CscMatrix<IT, NT, OT>& operator=(CscMatrix<IT, NT, OT>&& rhs) noexcept;
   //! Frees owned storage.
-  ~CsrMatrix();
+  ~CscMatrix();
   //! explicitly allocate the memory
   void Allocate(OT require_nnz, IT nRows, IT nCols);
   //! clone a new instance
-  CsrMatrix<IT, NT, OT> Clone() const;
+  CscMatrix<IT, NT, OT> Clone() const;
   //! Null every member without freeing; releases ownership.
   void Reset();
 };
 
 }  // namespace spcraft
 
-#include "CsrMatrix-inl.h"
+#include "CscMatrix-inl.h"

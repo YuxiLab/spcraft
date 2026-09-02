@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <iostream>
 
-#include "mtspmv.h"
+#include "mtSpMV.h"
 
 #ifndef _OPENMP
 #error "test_mtspmv must be compiled with OpenMP enabled"

@@ -29,5 +29,6 @@ SPCRAFT_BUILD_PYTHON = "ON"
 [dependency-groups]
 dev = [
     "ipykernel>=6.31.0",
+    "jupyter>=1.0.0",
     "pytest>=8.4.2",
 ]

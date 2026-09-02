@@ -1,23 +1,38 @@
-# SPCraft
+# Sparse Craft Kernel Library
 
-This is a teaching-oriented sparse computation library.
-It aims to provide a light-weight but clear-documented sparse kernel, sparse algorithm library with visualization and teaching tutorials.
+This is a teaching-oriented sparse computation library. It aims to provide a light-weight but clear-documented sparse kernel, sparse algorithm library with visualization and teaching tutorials.
 
 At the ground layer, the library will focus on implementing the basic sparse matrix storage, sparse matrix kernel ( SpMV, SpMM, etc.) as well as reproducing some classic papers in the sparse computation community.
 
-Please send email to yuxihong@iu.edu if you have any questions.
+Please send email to `yuxihong@iu.edu` if you have any questions.
 
-Yuxi Hong
+[Yuxi Hong](https://hongyx11.github.io/)
+
+## Sparse Matrix Storage
+
+
+
+## Sparse Kernels Implementation
+
+
 
 ## Optional Python interface
 
-The Python package is a thin, optional nanobind interface. The C++ library does not depend on
-Python or nanobind, and the `SPCRAFT_BUILD_PYTHON` CMake option is disabled by default.
+Passing `-DSPCRAFT_BUILD_PYTHON=ON` to cmake to activate python interface. Please use [uv](https://docs.astral.sh/uv/) to install the python environment.
 
-Build and install the package from the repository root:
-
+to install `uv`, use
 ```bash
-python -m pip install .
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then use `uv` to create a virutal environment and install the python interface.
+```bash
+# Create and activate virtual environment
+uv venv
+source .venv/bin/activate
+
+# Install the package
+uv pip install -e .
 ```
 
 Create COO or CSR matrices from NumPy-compatible arrays:

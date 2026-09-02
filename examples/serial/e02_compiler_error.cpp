@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "spcraft.h"
+#include "SpCraft.h"
 
 using namespace spcraft;
 
