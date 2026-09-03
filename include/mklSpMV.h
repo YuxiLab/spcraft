@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef SPCRAFT_USE_MKL
+
 #include <mkl.h>
 
 #include <stdexcept>
@@ -142,3 +144,5 @@ class MklCsrSpmv
 };
 
 }  // namespace spcraft
+
+#endif  // SPCRAFT_USE_MKL
