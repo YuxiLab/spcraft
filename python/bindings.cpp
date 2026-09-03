@@ -162,7 +162,10 @@ void BindCsr(nb::module_& module, const char* name)
                throw std::invalid_argument("vector length must match matrix column dimension");
              }
              Number* y = new Number[matrix.m];
-             spcraft::spmv_openmp(matrix, x.data(), y);
+             spcraft::DenseVector<Index, Number> input(
+                 const_cast<Number*>(x.data()), static_cast<Index>(x.size()));
+             spcraft::DenseVector<Index, Number> output(y, matrix.m);
+             spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
              nb::capsule owner(y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
              OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
              return nb::cast(array, nb::rv_policy::reference);
@@ -175,7 +178,10 @@ void BindCsr(nb::module_& module, const char* name)
                throw std::invalid_argument("vector length must match matrix column dimension");
              }
              Number* y = new Number[matrix.m];
-             spcraft::spmv_openmp(matrix, x.data(), y);
+             spcraft::DenseVector<Index, Number> input(
+                 const_cast<Number*>(x.data()), static_cast<Index>(x.size()));
+             spcraft::DenseVector<Index, Number> output(y, matrix.m);
+             spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
              nb::capsule owner(y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
              OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
              return nb::cast(array, nb::rv_policy::reference);
@@ -187,7 +193,10 @@ void BindCsr(nb::module_& module, const char* name)
                throw std::invalid_argument("vector length must match matrix column dimension");
              }
              Number* y = new Number[matrix.m];
-             spcraft::spmv_openmp(matrix, x.data(), y);
+             spcraft::DenseVector<Index, Number> input(
+                 const_cast<Number*>(x.data()), static_cast<Index>(x.size()));
+             spcraft::DenseVector<Index, Number> output(y, matrix.m);
+             spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
              nb::capsule owner(y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
              OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
              return nb::cast(array, nb::rv_policy::reference);

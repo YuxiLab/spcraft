@@ -20,6 +20,8 @@ using Index = std::int32_t;
 using Offset = std::int32_t;
 using Numeric = double;
 using Matrix = spcraft::CsrMatrix<Index, Numeric, Offset>;
+using Ring = spcraft::PlusTimesRing<Numeric>;
+using Vector = spcraft::DenseVector<Index, Numeric>;
 
 struct ThreadProfile {
   int thread = 0;
@@ -30,7 +32,7 @@ struct ThreadProfile {
   double average_work_ms = 0.0;
 };
 
-std::vector<ThreadProfile> profile_spmv(const Matrix& matrix, const Numeric* x, Numeric* y,
+std::vector<ThreadProfile> profile_spmv(const Matrix& matrix, const Vector& x, Vector& y,
                                         int requested_threads, int iterations)
 {
   omp_set_dynamic(0);
@@ -59,9 +61,9 @@ std::vector<ThreadProfile> profile_spmv(const Matrix& matrix, const Numeric* x, 
         Numeric sum{};
         for (Offset position = matrix.row_ptr[row]; position < matrix.row_ptr[row + 1];
              ++position) {
-          sum += matrix.val[position] * x[matrix.col_id[position]];
+          sum += matrix.val[position] * x.val[matrix.col_id[position]];
         }
-        y[row] = sum;
+        y.val[row] = sum;
         if (iteration == 0) {
           ++rows;
           nonzeros += matrix.row_ptr[row + 1] - matrix.row_ptr[row];
@@ -107,11 +109,12 @@ int main(int argc, char** argv)
   try {
     auto coo = spcraft::CooMatrix<Index, Numeric, Offset>::FromMatrixMarket(path.string());
     Matrix matrix = coo.ToCsr();
-    std::vector<Numeric> x(static_cast<std::size_t>(matrix.n), 1.0);
-    std::vector<Numeric> y(static_cast<std::size_t>(matrix.m), 0.0);
+    Vector x(matrix.n);
+    Vector y(matrix.m);
+    std::fill(x.begin(), x.end(), 1.0);
 
-    spcraft::spmv_openmp(matrix, x.data(), y.data());
-    const auto profiles = profile_spmv(matrix, x.data(), y.data(), threads, iterations);
+    spcraft::spmv_openmp<Ring>(matrix, x, y);
+    const auto profiles = profile_spmv(matrix, x, y, threads, iterations);
 
     const double mean_time = std::accumulate(profiles.begin(), profiles.end(), 0.0,
                                              [](double sum, const ThreadProfile& profile) {

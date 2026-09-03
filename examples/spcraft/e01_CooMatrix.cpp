@@ -6,13 +6,13 @@
 #include <string>
 #include <vector>
 
+#include "CooMatrix.h"
 #include "SpCraft.h"
 
 using namespace spcraft;
+using COO = CooMatrix<int32_t, float>;
 
 int main(int argc, char** argv)
 {
-  CsrMatrix<int32_t, float> A;
- 
   return 0;
 }

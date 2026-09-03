@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include "MatrixGenerator.h"
 #include "SpCraft.h"
 
 namespace
@@ -29,62 +30,8 @@ using Offset = std::int32_t;
 template <class NT>
 using Matrix = spcraft::CsrMatrix<Index, NT, Offset>;
 
-// Generate Erdős-Rényi random graph using Batagelj-Brandes edge-skipping algorithm
 template <class NT>
-Matrix<NT> make_er_graph(Index vertices, double expected_degree, std::uint64_t seed)
-{
-  if (vertices < 2 || expected_degree <= 0.0 || expected_degree >= vertices - 1.0) {
-    throw std::invalid_argument("expected degree must be in (0, vertices - 1)");
-  }
-
-  const double probability = expected_degree / static_cast<double>(vertices - 1);
-  const double log_one_minus_p = std::log1p(-probability);
-  std::mt19937_64 generator(seed);
-  std::uniform_real_distribution<double> uniform(0.0, 1.0);
-
-  std::vector<std::pair<Index, Index>> edges;
-  edges.reserve(static_cast<std::size_t>(vertices * expected_degree * 0.525));
-
-  Offset source = 1;
-  Offset destination = -1;
-  while (source < vertices) {
-    const double random_value = uniform(generator);
-    destination +=
-        1 + static_cast<Offset>(std::floor(std::log1p(-random_value) / log_one_minus_p));
-    while (destination >= source && source < vertices) {
-      destination -= source;
-      ++source;
-    }
-    if (source < vertices) {
-      edges.emplace_back(static_cast<Index>(source), static_cast<Index>(destination));
-    }
-  }
-
-  std::vector<Offset> degrees(static_cast<std::size_t>(vertices), 0);
-  for (const auto& [row, column] : edges) {
-    ++degrees[row];
-    ++degrees[column];
-  }
-
-  Matrix<NT> graph;
-  const Offset nonzeros = static_cast<Offset>(edges.size()) * 2;
-  graph.Allocate(nonzeros, vertices, vertices);
-  graph.row_ptr[0] = 0;
-  for (Index row = 0; row < vertices; ++row) {
-    graph.row_ptr[row + 1] = graph.row_ptr[row] + degrees[row];
-  }
-
-  std::vector<Offset> next(graph.row_ptr, graph.row_ptr + vertices);
-  for (const auto& [row, column] : edges) {
-    const Offset forward = next[row]++;
-    const Offset reverse = next[column]++;
-    graph.col_id[forward] = column;
-    graph.col_id[reverse] = row;
-    graph.val[forward] = static_cast<NT>(1.0);
-    graph.val[reverse] = static_cast<NT>(1.0);
-  }
-  return graph;
-}
+using Vector = spcraft::DenseVector<Index, NT>;
 
 std::vector<int> parse_threads(const std::string& thread_str)
 {
@@ -119,8 +66,8 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
 {
   // These buffers must outlive benchmark registration: Google Benchmark runs
   // the callbacks after this function returns.
-  auto x = std::make_shared<std::vector<NT>>(static_cast<std::size_t>(A.n));
-  auto spcraft_y = std::make_shared<std::vector<NT>>(static_cast<std::size_t>(A.m), NT{});
+  auto x = std::make_shared<Vector<NT>>(A.n);
+  auto spcraft_y = std::make_shared<Vector<NT>>(A.m);
   std::mt19937_64 rng(seed);
   std::uniform_real_distribution<double> dist(-1.0, 1.0);
   for (Index i = 0; i < A.n; ++i) {
@@ -129,7 +76,7 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
 
   // Warmup run
   omp_set_num_threads(1);
-  spcraft::spmv_openmp(A, x->data(), spcraft_y->data());
+  spcraft::spmv_openmp<spcraft::PlusTimesRing<NT>>(A, *x, *spcraft_y);
 
   const std::string type_name = std::is_same_v<NT, float> ? "FP32" : "FP64";
   const std::uint64_t useful_bytes =
@@ -138,7 +85,7 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
       static_cast<std::uint64_t>(A.m) * sizeof(NT);
 
 #ifdef SPCRAFT_USE_MKL
-  auto mkl_y = std::make_shared<std::vector<NT>>(static_cast<std::size_t>(A.m), NT{});
+  auto mkl_y = std::make_shared<Vector<NT>>(A.m);
 #endif
 
   for (int threads : thread_counts) {
@@ -150,7 +97,7 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
         [&A, x, spcraft_y, threads, useful_bytes](benchmark::State& state) {
           omp_set_num_threads(threads);
           for (auto _ : state) {
-            spcraft::spmv_openmp(A, x->data(), spcraft_y->data());
+            spcraft::spmv_openmp<spcraft::PlusTimesRing<NT>>(A, *x, *spcraft_y);
             benchmark::DoNotOptimize(spcraft_y->data());
             benchmark::ClobberMemory();
           }
@@ -346,13 +293,13 @@ int main(int argc, char** argv)
 
     if (precision == "float" || precision == "both") {
       f32_matrix =
-          std::make_unique<Matrix<float>>(make_er_graph<float>(vertices, degree, seed));
+          std::make_unique<Matrix<float>>(spcraft::GenERGraph<float>(vertices, degree, seed));
       std::cout << "  [FP32] Rows: " << f32_matrix->m << ", Cols: " << f32_matrix->n
                 << ", NNZ: " << f32_matrix->nnz << "\n";
     }
     if (precision == "double" || precision == "both") {
-      f64_matrix =
-          std::make_unique<Matrix<double>>(make_er_graph<double>(vertices, degree, seed));
+      f64_matrix = std::make_unique<Matrix<double>>(
+          spcraft::GenERGraph<double>(vertices, degree, seed));
       std::cout << "  [FP64] Rows: " << f64_matrix->m << ", Cols: " << f64_matrix->n
                 << ", NNZ: " << f64_matrix->nnz << "\n";
     }

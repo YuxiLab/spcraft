@@ -56,9 +56,9 @@ class CooMatrix
   CooMatrix<IT, NT, OT> Clone() const;
   //! Null every member without freeing; releases ownership.
   void Reset();
+
   //! Read a Matrix Market (.mtx) file into COO format.
   [[nodiscard]] static CooMatrix<IT, NT, OT> FromMatrixMarket(const std::string& filename);
-
   /**
    * @brief Convert COO matrix to CSR matrix format.
    */

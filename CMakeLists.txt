@@ -31,11 +31,15 @@ option(SPCRAFT_BUILD_BENCHMARKS "Build SPCraft benchmarks" OFF)
 # CPM & Dependencies
 #################################################################
 include(cmake/CPM.cmake)
+include(cmake/boost.cmake)
+include(cmake/eigen3.cmake)
 include(cmake/fast_matrix_market.cmake)
 include(cmake/cxxopts.cmake)
 include(cmake/fmt.cmake)
 include(cmake/benchmark.cmake)
 
+find_boost()
+find_eigen3()
 find_fast_matrix_market()
 find_cxxopts()
 find_fmt()
@@ -80,6 +84,7 @@ target_include_directories(SPCraft
 )
 target_link_libraries(SPCraft
 	INTERFACE
+		Boost::preprocessor
 		fast_matrix_market::fast_matrix_market
 		fmt::fmt
 )
@@ -101,7 +106,7 @@ if(SPCRAFT_USE_CUDA)
 		PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 	)
 	target_compile_definitions(SPCraftCUDA PUBLIC SPCRAFT_USE_CUDA=1)
-	target_link_libraries(SPCraftCUDA PUBLIC CUDA::cudart)
+	target_link_libraries(SPCraftCUDA PUBLIC CUDA::cudart Boost::preprocessor)
 	target_link_libraries(SPCraft INTERFACE SPCraftCUDA)
 endif()
 

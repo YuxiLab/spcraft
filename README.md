@@ -1,4 +1,4 @@
-# Sparse Craft Kernel Library
+# Sparse Craft Library
 
 This is a teaching-oriented sparse computation library. It aims to provide a light-weight but clear-documented sparse kernel, sparse algorithm library with visualization and teaching tutorials.
 
@@ -7,6 +7,12 @@ At the ground layer, the library will focus on implementing the basic sparse mat
 Please send email to `yuxihong@iu.edu` if you have any questions.
 
 [Yuxi Hong](https://hongyx11.github.io/)
+
+
+## Design Philosophy
+
+A lot of class design of Sparse Craft Library is derived from [CombBLAS](https://github.com/PASSIONLab/CombBLAS).
+Thank you Aydin!
 
 ## Sparse Matrix Storage
 
