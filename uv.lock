@@ -851,6 +851,19 @@ wheels = [
 ]
 
 [[package]]
+name = "matspy"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7e/d7/36edf302c496ae21f6ad0244d28ac4840ede8919ae50ffc12d063caec707/matspy-1.0.0.tar.gz", hash = "sha256:4c9abda5c57c4e35fca9aa6d436995c0ecfdc001b28a45f746f408e9acf6b9e8", size = 16152, upload-time = "2023-10-26T03:06:25.777Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/ef/c4108012589c50b767988eee40cea60159c71eefe733eb891d830fa820aa/matspy-1.0.0-py3-none-any.whl", hash = "sha256:455696693a3eb9bd774aadb2fa3a0dc8125c2fa86ff57a7760bdc0618895451b", size = 16629, upload-time = "2023-10-26T03:06:24.338Z" },
+]
+
+[[package]]
 name = "mistune"
 version = "3.3.4"
 source = { registry = "https://pypi.org/simple" }
@@ -930,6 +943,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b4/73/731debf26e27e0a0323d7bda270dc2f634b398e38f040a09da1f4351d0aa/nest_asyncio2-1.7.2.tar.gz", hash = "sha256:1921d70b92cc4612c374928d081552efb59b83d91b2b789d935c665fa01729a8", size = 14743, upload-time = "2026-02-13T00:34:04.386Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c5/3c/3179b85b0e1c3659f0369940200cd6d0fa900e6cefcc7ea0bc6dd0e29ffb/nest_asyncio2-1.7.2-py3-none-any.whl", hash = "sha256:f5dfa702f3f81f6a03857e9a19e2ba578c0946a4ad417b4c50a24d7ba641fe01", size = 7843, upload-time = "2026-02-13T00:34:02.691Z" },
+]
+
+[[package]]
+name = "networkx"
+version = "3.6.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/51/63fe664f3908c97be9d2e4f1158eb633317598cfa6e1fc14af5383f17512/networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509", size = 2517025, upload-time = "2025-12-08T17:02:39.908Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9e/c9/b2622292ea83fbb4ec318f5b9ab867d0a28ab43c5717bb85b0a5f6b3b0a4/networkx-3.6.1-py3-none-any.whl", hash = "sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762", size = 2068504, upload-time = "2025-12-08T17:02:38.159Z" },
 ]
 
 [[package]]
@@ -1370,7 +1392,9 @@ dependencies = [
 dev = [
     { name = "ipykernel" },
     { name = "jupyter" },
+    { name = "matspy" },
     { name = "nanobind" },
+    { name = "networkx" },
     { name = "pytest" },
 ]
 
@@ -1385,7 +1409,9 @@ requires-dist = [
 dev = [
     { name = "ipykernel", specifier = ">=6.31.0" },
     { name = "jupyter", specifier = ">=1.0.0" },
+    { name = "matspy", specifier = ">=1.0.0" },
     { name = "nanobind", specifier = ">=2.4" },
+    { name = "networkx", specifier = ">=3.4" },
     { name = "pytest", specifier = ">=8.4.2" },
 ]
 

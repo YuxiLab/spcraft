@@ -1,4 +1,4 @@
-#include "cuSpMV.cuh"
+#include "SpCraft.h"
 
 #include <cuda_runtime.h>
 

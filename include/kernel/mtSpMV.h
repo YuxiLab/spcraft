@@ -3,9 +3,9 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "CsrMatrix.h"
-#include "DenseVector.h"
-#include "SemiRing.h"
+#include "core/CsrMatrix.h"
+#include "core/DenseVector.h"
+#include "semiring/SemiRing.h"
 
 namespace spcraft
 {

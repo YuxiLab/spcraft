@@ -65,9 +65,9 @@ void ValidateColumnIndices(InputArray<Index> column_indices, Index columns)
 
 template <class Number>
 spcraft::CooMatrix<Index, Number, Offset> CooFromArrays(InputArray<Index> row_indices,
-                                                         InputArray<Index> column_indices,
-                                                         InputArray<Number> values, Index rows,
-                                                         Index columns)
+                                                        InputArray<Index> column_indices,
+                                                        InputArray<Number> values, Index rows,
+                                                        Index columns)
 {
   ValidateShape(rows, columns);
   if (row_indices.size() != column_indices.size() || row_indices.size() != values.size()) {
@@ -95,9 +95,9 @@ spcraft::CooMatrix<Index, Number, Offset> CooFromArrays(InputArray<Index> row_in
 
 template <class Number>
 spcraft::CsrMatrix<Index, Number, Offset> CsrFromArrays(InputArray<Offset> row_offsets,
-                                                         InputArray<Index> column_indices,
-                                                         InputArray<Number> values, Index rows,
-                                                         Index columns)
+                                                        InputArray<Index> column_indices,
+                                                        InputArray<Number> values, Index rows,
+                                                        Index columns)
 {
   ValidateShape(rows, columns);
   const size_t expected_offsets = static_cast<size_t>(rows) + 1;
@@ -132,6 +132,22 @@ spcraft::CsrMatrix<Index, Number, Offset> CsrFromArrays(InputArray<Offset> row_o
 }
 
 template <class Number>
+spcraft::CsrMatrix<Index, Number, Offset> GenerateERGraph(Index vertices,
+                                                          double expected_degree,
+                                                          std::uint64_t seed)
+{
+  return spcraft::GenERGraph<Number, Index, Offset>(vertices, expected_degree, seed);
+}
+
+template <class Number>
+spcraft::CsrMatrix<Index, Number, Offset> GenerateRMAT(Index scale, std::size_t edge_factor,
+                                                       std::uint64_t seed, double a, double b,
+                                                       double c, double d)
+{
+  return spcraft::GenRMAT<Number, Index, Offset>(scale, edge_factor, seed, a, b, c, d);
+}
+
+template <class Number>
 void BindCsr(nb::module_& module, const char* name)
 {
   using Matrix = spcraft::CsrMatrix<Index, Number, Offset>;
@@ -156,52 +172,57 @@ void BindCsr(nb::module_& module, const char* name)
                    [](const Matrix& matrix) {
                      return CopyToNumpy(matrix.val, static_cast<size_t>(matrix.nnz));
                    })
-      .def("spmv",
-           [](const Matrix& matrix, InputArray<Number> x) {
-             if (x.size() != static_cast<size_t>(matrix.n)) {
-               throw std::invalid_argument("vector length must match matrix column dimension");
-             }
-             Number* y = new Number[matrix.m];
-             spcraft::DenseVector<Index, Number> input(
-                 const_cast<Number*>(x.data()), static_cast<Index>(x.size()));
-             spcraft::DenseVector<Index, Number> output(y, matrix.m);
-             spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
-             nb::capsule owner(y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
-             OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
-             return nb::cast(array, nb::rv_policy::reference);
-           },
-           "x"_a,
-           "Multiply the sparse matrix by a dense vector x.")
-      .def("__matmul__",
-           [](const Matrix& matrix, InputArray<Number> x) {
-             if (x.size() != static_cast<size_t>(matrix.n)) {
-               throw std::invalid_argument("vector length must match matrix column dimension");
-             }
-             Number* y = new Number[matrix.m];
-             spcraft::DenseVector<Index, Number> input(
-                 const_cast<Number*>(x.data()), static_cast<Index>(x.size()));
-             spcraft::DenseVector<Index, Number> output(y, matrix.m);
-             spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
-             nb::capsule owner(y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
-             OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
-             return nb::cast(array, nb::rv_policy::reference);
-           },
-           "x"_a)
-      .def("dot",
-           [](const Matrix& matrix, InputArray<Number> x) {
-             if (x.size() != static_cast<size_t>(matrix.n)) {
-               throw std::invalid_argument("vector length must match matrix column dimension");
-             }
-             Number* y = new Number[matrix.m];
-             spcraft::DenseVector<Index, Number> input(
-                 const_cast<Number*>(x.data()), static_cast<Index>(x.size()));
-             spcraft::DenseVector<Index, Number> output(y, matrix.m);
-             spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
-             nb::capsule owner(y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
-             OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
-             return nb::cast(array, nb::rv_policy::reference);
-           },
-           "x"_a)
+      .def(
+          "spmv",
+          [](const Matrix& matrix, InputArray<Number> x) {
+            if (x.size() != static_cast<size_t>(matrix.n)) {
+              throw std::invalid_argument("vector length must match matrix column dimension");
+            }
+            Number* y = new Number[matrix.m];
+            spcraft::DenseVector<Index, Number> input(const_cast<Number*>(x.data()),
+                                                      static_cast<Index>(x.size()));
+            spcraft::DenseVector<Index, Number> output(y, matrix.m);
+            spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
+            nb::capsule owner(
+                y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
+            OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
+            return nb::cast(array, nb::rv_policy::reference);
+          },
+          "x"_a, "Multiply the sparse matrix by a dense vector x.")
+      .def(
+          "__matmul__",
+          [](const Matrix& matrix, InputArray<Number> x) {
+            if (x.size() != static_cast<size_t>(matrix.n)) {
+              throw std::invalid_argument("vector length must match matrix column dimension");
+            }
+            Number* y = new Number[matrix.m];
+            spcraft::DenseVector<Index, Number> input(const_cast<Number*>(x.data()),
+                                                      static_cast<Index>(x.size()));
+            spcraft::DenseVector<Index, Number> output(y, matrix.m);
+            spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
+            nb::capsule owner(
+                y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
+            OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
+            return nb::cast(array, nb::rv_policy::reference);
+          },
+          "x"_a)
+      .def(
+          "dot",
+          [](const Matrix& matrix, InputArray<Number> x) {
+            if (x.size() != static_cast<size_t>(matrix.n)) {
+              throw std::invalid_argument("vector length must match matrix column dimension");
+            }
+            Number* y = new Number[matrix.m];
+            spcraft::DenseVector<Index, Number> input(const_cast<Number*>(x.data()),
+                                                      static_cast<Index>(x.size()));
+            spcraft::DenseVector<Index, Number> output(y, matrix.m);
+            spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
+            nb::capsule owner(
+                y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
+            OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
+            return nb::cast(array, nb::rv_policy::reference);
+          },
+          "x"_a)
       .def("__repr__", [name](const Matrix& matrix) {
         return std::string("spcraft.") + name + "(shape=(" + std::to_string(matrix.m) + ", " +
                std::to_string(matrix.n) + "), nnz=" + std::to_string(matrix.nnz) + ")";
@@ -251,4 +272,13 @@ NB_MODULE(_spcraft, module)
   BindCsr<double>(module, "CsrMatrixF64");
   BindCoo<float>(module, "CooMatrixF32");
   BindCoo<double>(module, "CooMatrixF64");
+
+  module.def("_gen_er_graph_f32", &GenerateERGraph<float>, "vertices"_a, "expected_degree"_a,
+             "seed"_a);
+  module.def("_gen_er_graph_f64", &GenerateERGraph<double>, "vertices"_a, "expected_degree"_a,
+             "seed"_a);
+  module.def("_gen_rmat_f32", &GenerateRMAT<float>, "scale"_a, "edge_factor"_a, "seed"_a,
+             "a"_a = 0.57, "b"_a = 0.19, "c"_a = 0.19, "d"_a = 0.05);
+  module.def("_gen_rmat_f64", &GenerateRMAT<double>, "scale"_a, "edge_factor"_a, "seed"_a,
+             "a"_a = 0.57, "b"_a = 0.19, "c"_a = 0.19, "d"_a = 0.05);
 }

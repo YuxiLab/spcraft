@@ -4,7 +4,7 @@
 #include <string>
 #include <tuple>
 
-#include "CsrMatrix.h"
+#include "core/CsrMatrix.h"
 
 namespace spcraft
 {
@@ -67,4 +67,4 @@ class CooMatrix
 
 }  // namespace spcraft
 
-#include "CooMatrix-inl.h"
+#include "core/CooMatrix-inl.h"

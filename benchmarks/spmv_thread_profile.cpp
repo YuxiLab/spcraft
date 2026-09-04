@@ -111,7 +111,7 @@ int main(int argc, char** argv)
     Matrix matrix = coo.ToCsr();
     Vector x(matrix.n);
     Vector y(matrix.m);
-    std::fill(x.begin(), x.end(), 1.0);
+    std::fill_n(x.val, x.n, 1.0);
 
     spcraft::spmv_openmp<Ring>(matrix, x, y);
     const auto profiles = profile_spmv(matrix, x, y, threads, iterations);

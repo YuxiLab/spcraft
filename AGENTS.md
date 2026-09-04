@@ -1,5 +1,9 @@
 # Coding Agent Guide For Sparse Craft Library
 
+## SpCraft library Structure
+
+SpCraft library heavily use
+
 ## Formatting
 
 ## C++/CUDA Coding Rules

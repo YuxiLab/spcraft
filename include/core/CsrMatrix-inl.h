@@ -1,12 +1,15 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdlib>
+#include <new>
 #include <stdexcept>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
-#include "CsrMatrix.h"
+#include "core/CsrMatrix.h"
 
 namespace spcraft
 {
@@ -14,10 +17,26 @@ namespace spcraft
 template <class IT, class NT, class OT>
 std::tuple<OT*, IT*, NT*> CsrMatrix<IT, NT, OT>::SafeAllocate(IT m, OT nnz)
 {
-  if (nnz <= 0) throw std::invalid_argument("CsrMatrix::SafeAllocate requires nnz > 0");
-  OT* r = static_cast<OT*>(std::calloc(m + 1, sizeof(OT)));
-  IT* c = static_cast<IT*>(std::calloc(nnz, sizeof(IT)));
-  NT* v = static_cast<NT*>(std::calloc(nnz, sizeof(NT)));
+  if constexpr (std::is_signed_v<IT>) {
+    if (m < 0) throw std::invalid_argument("CsrMatrix row count must be non-negative");
+  }
+  if constexpr (std::is_signed_v<OT>) {
+    if (nnz < 0) throw std::invalid_argument("CsrMatrix nnz must be non-negative");
+  }
+
+  OT* r = static_cast<OT*>(std::calloc(static_cast<std::size_t>(m) + 1, sizeof(OT)));
+  IT* c = nullptr;
+  NT* v = nullptr;
+  if (nnz != OT{0}) {
+    c = static_cast<IT*>(std::calloc(static_cast<std::size_t>(nnz), sizeof(IT)));
+    v = static_cast<NT*>(std::calloc(static_cast<std::size_t>(nnz), sizeof(NT)));
+  }
+  if (r == nullptr || (nnz != OT{0} && (c == nullptr || v == nullptr))) {
+    std::free(r);
+    std::free(c);
+    std::free(v);
+    throw std::bad_alloc();
+  }
   return std::make_tuple(r, c, v);
 }
 
@@ -25,9 +44,12 @@ template <class IT, class NT, class OT>
 void CsrMatrix<IT, NT, OT>::SafeDelete(bool memowned, OT* row_ptr, IT* col_id, NT* val)
 {
   if (memowned) {
-    std::free(row_ptr); row_ptr = nullptr;
-    std::free(col_id); col_id = nullptr;
-    std::free(val); val = nullptr;
+    std::free(row_ptr);
+    row_ptr = nullptr;
+    std::free(col_id);
+    col_id = nullptr;
+    std::free(val);
+    val = nullptr;
   }
 }
 
@@ -78,13 +100,24 @@ CsrMatrix<IT, NT, OT>::~CsrMatrix()
 template <class IT, class NT, class OT>
 void CsrMatrix<IT, NT, OT>::Allocate(OT require_nnz, IT nRows, IT nCols)
 {
-  if (require_nnz <= 0) throw std::invalid_argument("CsrMatrix::Allocate requires nnz > 0");
+  if constexpr (std::is_signed_v<IT>) {
+    if (nRows < 0 || nCols < 0) {
+      throw std::invalid_argument("CsrMatrix dimensions must be non-negative");
+    }
+  }
+  if constexpr (std::is_signed_v<OT>) {
+    if (require_nnz < 0) {
+      throw std::invalid_argument("CsrMatrix nnz must be non-negative");
+    }
+  }
+
+  auto replacement = SafeAllocate(nRows, require_nnz);
   SafeDelete(memowned, row_ptr, col_id, val);
   m = nRows;
   n = nCols;
   nnz = require_nnz;
   memowned = true;
-  std::tie(row_ptr, col_id, val) = SafeAllocate(m, nnz);
+  std::tie(row_ptr, col_id, val) = replacement;
 }
 
 template <class IT, class NT, class OT>

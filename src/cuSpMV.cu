@@ -1,4 +1,4 @@
-#include "cuSpMV.cuh"
+#include "kernel/cuSpMV.cuh"
 
 #include <boost/preprocessor/seq/elem.hpp>
 #include <boost/preprocessor/seq/enum.hpp>

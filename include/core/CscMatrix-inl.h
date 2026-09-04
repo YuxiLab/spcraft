@@ -6,7 +6,7 @@
 #include <tuple>
 #include <utility>
 
-#include "CscMatrix.h"
+#include "core/CscMatrix.h"
 
 namespace spcraft
 {

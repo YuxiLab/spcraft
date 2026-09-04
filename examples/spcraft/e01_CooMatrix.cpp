@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "CooMatrix.h"
 #include "SpCraft.h"
 
 using namespace spcraft;

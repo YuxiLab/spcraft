@@ -11,7 +11,16 @@ from typing import Any, Optional, Union
 
 import numpy as np
 
-from ._spcraft import CooMatrixF32, CooMatrixF64, CsrMatrixF32, CsrMatrixF64
+from ._spcraft import (
+    CooMatrixF32,
+    CooMatrixF64,
+    CsrMatrixF32,
+    CsrMatrixF64,
+    _gen_er_graph_f32,
+    _gen_er_graph_f64,
+    _gen_rmat_f32,
+    _gen_rmat_f64,
+)
 
 
 def _shape(shape: tuple[int, int]) -> tuple[int, int]:
@@ -66,6 +75,45 @@ def csr_matrix(
 
     matrix_type = CsrMatrixF32 if value_array.dtype == np.float32 else CsrMatrixF64
     return matrix_type.from_arrays(offset_array, column_array, value_array, rows, columns)
+
+
+def gen_er_graph(
+    vertices: int,
+    expected_degree: float,
+    seed: int,
+    *,
+    dtype: Any = np.float64,
+) -> Union[CsrMatrixF32, CsrMatrixF64]:
+    """Generate an undirected Erdos-Renyi graph directly in CSR format."""
+
+    normalized_dtype = np.dtype(dtype)
+    if normalized_dtype == np.float32:
+        return _gen_er_graph_f32(vertices, expected_degree, seed)
+    if normalized_dtype == np.float64:
+        return _gen_er_graph_f64(vertices, expected_degree, seed)
+    raise TypeError("dtype must be numpy.float32 or numpy.float64")
+
+
+def gen_rmat(
+    scale: int,
+    edge_factor: int,
+    seed: int,
+    *,
+    a: float = 0.57,
+    b: float = 0.19,
+    c: float = 0.19,
+    d: float = 0.05,
+    dtype: Any = np.float64,
+) -> Union[CsrMatrixF32, CsrMatrixF64]:
+    """Generate a symmetric, deduplicated R-MAT graph in CSR format."""
+
+    normalized_dtype = np.dtype(dtype)
+    arguments = (scale, edge_factor, seed, a, b, c, d)
+    if normalized_dtype == np.float32:
+        return _gen_rmat_f32(*arguments)
+    if normalized_dtype == np.float64:
+        return _gen_rmat_f64(*arguments)
+    raise TypeError("dtype must be numpy.float32 or numpy.float64")
 
 
 def from_matrix_market(
@@ -145,8 +193,9 @@ __all__ = [
     "CsrMatrixF64",
     "coo_matrix",
     "csr_matrix",
+    "gen_er_graph",
+    "gen_rmat",
     "from_matrix_market",
     "from_scipy",
     "spmv",
 ]
-

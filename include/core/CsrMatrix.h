@@ -57,4 +57,4 @@ class CsrMatrix
 
 }  // namespace spcraft
 
-#include "CsrMatrix-inl.h"
+#include "core/CsrMatrix-inl.h"

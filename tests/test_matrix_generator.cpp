@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "MatrixGenerator.h"
+#include "SpCraft.h"
 
 namespace
 {

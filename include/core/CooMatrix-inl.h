@@ -12,7 +12,7 @@
 #include <fast_matrix_market/fast_matrix_market.hpp>
 #include <fmt/format.h>
 
-#include "CooMatrix.h"
+#include "core/CooMatrix.h"
 
 namespace spcraft
 {
@@ -21,9 +21,9 @@ template <class IT, class NT, class OT>
 std::tuple<IT*, IT*, NT*> CooMatrix<IT, NT, OT>::SafeAllocate(OT nnz)
 {
   if (nnz <= 0) throw std::invalid_argument("CooMatrix::SafeAllocate requires nnz > 0");
-  IT* r = static_cast<IT*>(std::calloc(nnz, sizeof(IT)));
-  IT* c = static_cast<IT*>(std::calloc(nnz, sizeof(IT)));
-  NT* v = static_cast<NT*>(std::calloc(nnz, sizeof(NT)));
+  IT* r = static_cast<IT*>(std::malloc(static_cast<std::size_t>(nnz) * sizeof(IT)));
+  IT* c = static_cast<IT*>(std::malloc(static_cast<std::size_t>(nnz) * sizeof(IT)));
+  NT* v = static_cast<NT*>(std::malloc(static_cast<std::size_t>(nnz) * sizeof(NT)));
   return std::make_tuple(r, c, v);
 }
 

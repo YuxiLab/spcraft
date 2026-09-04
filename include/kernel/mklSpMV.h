@@ -8,7 +8,7 @@
 #include <string>
 #include <type_traits>
 
-#include "CsrMatrix.h"
+#include "core/CsrMatrix.h"
 
 namespace spcraft
 {

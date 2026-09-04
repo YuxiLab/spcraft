@@ -32,13 +32,13 @@ bool TestBfsFrontierExpansion()
   std::fill(adjacency.val, adjacency.val + adjacency.nnz, true);
 
   spcraft::DenseVector<int, bool> frontier(3);
-  frontier[0] = true;
+  frontier.val[0] = true;
   spcraft::DenseVector<int, bool> next(3);
   constexpr std::array<bool, 3> expected{false, true, true};
 
   spcraft::spmv_openmp<OrAndRing>(adjacency, frontier, next);
 
-  if (!std::equal(next.begin(), next.end(), expected.begin())) {
+  if (!std::equal(expected.begin(), expected.end(), next.val)) {
     std::cerr << "BFS semiring produced an incorrect next frontier\n";
     return false;
   }

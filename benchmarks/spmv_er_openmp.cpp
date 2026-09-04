@@ -12,8 +12,7 @@
 
 #include <omp.h>
 
-#include "MatrixGenerator.h"
-#include "mtSpMV.h"
+#include "SpCraft.h"
 
 namespace
 {
@@ -68,7 +67,7 @@ int main(int argc, char** argv)
     Matrix graph = spcraft::GenERGraph<double, Index, Offset>(vertices, expected_degree, seed);
     Vector x(vertices);
     for (Index i = 0; i < vertices; ++i) {
-      x[i] = 0.5 + static_cast<double>((i * 17) % 101) / 101.0;
+      x.val[i] = 0.5 + static_cast<double>((i * 17) % 101) / 101.0;
     }
     Vector reference(vertices);
     Vector result(vertices);
@@ -102,7 +101,7 @@ int main(int argc, char** argv)
 
       double max_error = 0.0;
       for (Index row = 0; row < vertices; ++row) {
-        max_error = std::max(max_error, std::abs(reference[row] - result[row]));
+        max_error = std::max(max_error, std::abs(reference.val[row] - result.val[row]));
       }
       if (max_error != 0.0) {
         throw std::runtime_error("parallel result differs from the serial reference");
@@ -110,7 +109,7 @@ int main(int argc, char** argv)
 
       const double milliseconds = median(std::move(timings));
       const double gflops = 2.0 * static_cast<double>(graph.nnz) / (milliseconds * 1.0e6);
-      const double checksum = std::accumulate(result.begin(), result.end(), 0.0);
+      const double checksum = std::accumulate(result.val, result.val + result.n, 0.0);
       const double realized_degree = static_cast<double>(graph.nnz) / vertices;
       std::cout << vertices << ',' << graph.nnz << ',' << realized_degree << ',' << threads
                 << ',' << milliseconds << ',' << gflops << ',' << max_error << ',' << checksum

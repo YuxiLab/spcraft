@@ -60,5 +60,12 @@ print(csr.column_indices)
 print(csr.values)
 ```
 
+Generate graph inputs directly with SPCraft's C++ implementations:
+
+```python
+er = spcraft.gen_er_graph(vertices=512, expected_degree=12, seed=2026)
+rmat = spcraft.gen_rmat(scale=9, edge_factor=6, seed=2026)
+```
+
 Inputs and returned NumPy arrays are copied in this first implementation. This keeps ownership
 unambiguous: modifying a Python array cannot invalidate or modify an SPCraft matrix.

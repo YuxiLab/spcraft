@@ -1,18 +1,21 @@
 #pragma once
 
-#include "CooMatrix.h"
-#include "CscMatrix.h"
-#include "CsrMatrix.h"
-#include "DenseVector.h"
-#include "mtSpMV.h"
+#include "core/CooMatrix.h"
+#include "core/CscMatrix.h"
+#include "core/CsrMatrix.h"
+#include "core/DenseVector.h"
+#include "kernel/mtSDDMM.h"
+#include "kernel/mtSpGEMM.h"
+#include "kernel/mtSpMM.h"
+#include "kernel/mtSpMV.h"
 
-#include "MatrixGenerator.h"
-#include "SemiRing.h"
+#include "matrix_generator/MatrixGenerator.h"
+#include "semiring/SemiRing.h"
 
 #ifdef SPCRAFT_USE_MKL
-#include "mklSpMV.h"
+#include "kernel/mklSpMV.h"
 #endif
 
 #ifdef SPCRAFT_USE_CUDA
-#include "cuSpMV.cuh"
+#include "kernel/cuSpMV.cuh"
 #endif

@@ -18,7 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include "MatrixGenerator.h"
 #include "SpCraft.h"
 
 namespace
@@ -71,7 +70,7 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
   std::mt19937_64 rng(seed);
   std::uniform_real_distribution<double> dist(-1.0, 1.0);
   for (Index i = 0; i < A.n; ++i) {
-    (*x)[i] = static_cast<NT>(dist(rng));
+    x->val[i] = static_cast<NT>(dist(rng));
   }
 
   // Warmup run
@@ -98,7 +97,7 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
           omp_set_num_threads(threads);
           for (auto _ : state) {
             spcraft::spmv_openmp<spcraft::PlusTimesRing<NT>>(A, *x, *spcraft_y);
-            benchmark::DoNotOptimize(spcraft_y->data());
+            benchmark::DoNotOptimize(spcraft_y->val);
             benchmark::ClobberMemory();
           }
 
@@ -128,15 +127,15 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
     mkl_set_dynamic(0);
     mkl_set_num_threads(threads);
     auto mkl_matrix = std::make_shared<spcraft::MklCsrSpmv<Index, NT, Offset>>(A, 10000);
-    mkl_matrix->Multiply(x->data(), mkl_y->data());
+    mkl_matrix->Multiply(x->val, mkl_y->val);
 
     double max_reference = 0.0;
     double max_error = 0.0;
     for (Index row = 0; row < A.m; ++row) {
       max_reference =
-          std::max(max_reference, std::abs(static_cast<double>((*spcraft_y)[row])));
+          std::max(max_reference, std::abs(static_cast<double>(spcraft_y->val[row])));
       max_error = std::max(max_error,
-                           std::abs(static_cast<double>((*spcraft_y)[row] - (*mkl_y)[row])));
+                           std::abs(static_cast<double>(spcraft_y->val[row] - mkl_y->val[row])));
     }
     const double tolerance =
         (std::is_same_v<NT, float> ? 1.0e-4 : 1.0e-11) * std::max(1.0, max_reference);
@@ -155,8 +154,8 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
           mkl_set_dynamic(0);
           mkl_set_num_threads(threads);
           for (auto _ : state) {
-            mkl_matrix->Multiply(x->data(), mkl_y->data());
-            benchmark::DoNotOptimize(mkl_y->data());
+            mkl_matrix->Multiply(x->val, mkl_y->val);
+            benchmark::DoNotOptimize(mkl_y->val);
             benchmark::ClobberMemory();
           }
 
