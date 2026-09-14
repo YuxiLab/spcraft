@@ -23,7 +23,7 @@ pyrightconfig.json
 
 # Data & Matrix Market files
 data/
-dataset/
+dataset/output
 *.mtx
 *.tar.gz
 
