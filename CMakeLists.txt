@@ -22,6 +22,10 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -DNDEBUG")
 option(SPCRAFT_USE_MPI "Activate the MPI dependency" OFF)
 option(SPCRAFT_USE_CUDA "Activate the CUDA dependency" OFF)
 option(SPCRAFT_USE_MKL "Activate the oneMKL sparse backend" OFF)
+option(SPCRAFT_BENCH_COMBBLAS "Activate the CombBLAS comparison benchmarks" OFF)
+option(SPCRAFT_BENCH_GINKGO "Activate the GINKGO comparison benchmarks" OFF)
+option(SPCRAFT_BENCH_NETWORKX "Activate the GINKGO comparison benchmarks" OFF)
+option(SPCRAFT_BENCH_GraphBLAS "Activate the GraphBLAS comparison benchmarks" OFF)
 option(SPCRAFT_BUILD_EXAMPLES "Build SPCraft examples" ${PROJECT_IS_TOP_LEVEL})
 option(SPCRAFT_BUILD_PYTHON "Build the optional Python bindings" OFF)
 option(SPCRAFT_BUILD_BENCHMARKS "Build SPCraft benchmarks" OFF)
@@ -36,20 +40,16 @@ include(cmake/eigen3.cmake)
 include(cmake/fast_matrix_market.cmake)
 include(cmake/cxxopts.cmake)
 include(cmake/fmt.cmake)
-include(cmake/benchmark.cmake)
+include(cmake/cuda.cmake)
 
 find_boost()
 find_eigen3()
 find_fast_matrix_market()
 find_cxxopts()
 find_fmt()
-find_benchmark()
 find_package(OpenMP QUIET COMPONENTS CXX)
 
 if(SPCRAFT_USE_MKL)
-	# SPCraft is compiled with GCC/Clang OpenMP, so use MKL's GNU threading
-	# layer as well. LP64 gives MKL_INT the same 32-bit layout as the benchmark
-	# CSR matrices.
 	set(MKL_LINK dynamic)
 	set(MKL_THREADING gnu_thread)
 	set(MKL_INTERFACE lp64)
@@ -65,15 +65,17 @@ if(SPCRAFT_USE_MPI)
 endif()
 
 if(SPCRAFT_USE_CUDA)
-	if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-		set(CMAKE_CUDA_ARCHITECTURES native CACHE STRING "CUDA architectures to build")
-	endif()
-	enable_language(CUDA)
-	find_package(CUDAToolkit REQUIRED)
-	set(CMAKE_CUDA_STANDARD 20)
-	set(CMAKE_CUDA_STANDARD_REQUIRED YES)
-	set(CMAKE_CUDA_EXTENSIONS OFF)
+	find_cuda()
 endif()
+
+#################################################################
+# Cmake Binaries Settings
+#################################################################
+# Place all executables in <build_dir>/bin
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+# (Optional) Place compiled static/shared libraries in <build_dir>/lib
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 #################################################################
 # Build SPCraft main library
@@ -87,6 +89,7 @@ target_link_libraries(SPCraft
 		Boost::preprocessor
 		fast_matrix_market::fast_matrix_market
 		fmt::fmt
+		${EIGEN3_TARGET}
 )
 if(OpenMP_CXX_FOUND)
 	target_link_libraries(SPCraft INTERFACE OpenMP::OpenMP_CXX)
@@ -101,12 +104,16 @@ if(SPCRAFT_USE_MKL)
 endif()
 if(SPCRAFT_USE_CUDA)
 	target_compile_definitions(SPCraft INTERFACE SPCRAFT_USE_CUDA=1)
-	add_library(SPCraftCUDA STATIC src/cuSpMV.cu)
+	add_library(SPCraftCUDA STATIC
+    src/cuda/cuSpMV.cu
+    src/cuda/cuPageRank.cu
+    src/cuda/cuda_error.cu
+  )
 	target_include_directories(SPCraftCUDA
 		PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 	)
 	target_compile_definitions(SPCraftCUDA PUBLIC SPCRAFT_USE_CUDA=1)
-	target_link_libraries(SPCraftCUDA PUBLIC CUDA::cudart Boost::preprocessor)
+	target_link_libraries(SPCraftCUDA PUBLIC CUDA::cudart Boost::preprocessor fmt::fmt)
 	target_link_libraries(SPCraft INTERFACE SPCraftCUDA)
 endif()
 

@@ -36,8 +36,8 @@ int main(int argc, char** argv)
   std::vector<Value> values;
 
   try {
-    fast_matrix_market::read_matrix_market_triplet(
-        input, rows, columns, row_indices, column_indices, values);
+    fast_matrix_market::read_matrix_market_triplet(input, rows, columns, row_indices,
+                                                   column_indices, values);
   } catch (const std::exception& error) {
     fmt::print(stderr, "Error reading {}: {}\n", matrix_path, error.what());
     return 1;

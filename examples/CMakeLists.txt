@@ -1,3 +1,5 @@
 add_subdirectory(spcraft)
-add_subdirectory(openmp)
+add_subdirectory(fast_matrix_market)
+add_subdirectory(meta_programming)
+add_subdirectory(kernel)
 add_subdirectory(mpi)

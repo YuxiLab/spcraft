@@ -23,6 +23,7 @@ cmake.build-type = "Release"
 wheel.packages = ["python/spcraft"]
 
 [tool.scikit-build.cmake.define]
+BUILD_TESTING = "OFF"
 SPCRAFT_BUILD_EXAMPLES = "OFF"
 SPCRAFT_BUILD_PYTHON = "ON"
 

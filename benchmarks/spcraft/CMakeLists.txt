@@ -1,0 +1,2 @@
+add_executable(bench_ompspmv kernels/OmpSpMVBench.cpp)
+target_link_libraries(bench_ompspmv PRIVATE SPCraftBenchmarkCommon)

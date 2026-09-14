@@ -1,0 +1,97 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+      }
+    },
+    {
+      "name": "config-full",
+      "displayName": "Cmake Configure For Clangd",
+      "description": "Everything enabled",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "SPCRAFT_USE_MPI": true,
+        "SPCRAFT_USE_CUDA": true,
+        "CMAKE_DISABLE_FIND_PACKAGE_OpenMP": false,
+        "CMAKE_CUDA_ARCHITECTURES": "native",
+        "SPCRAFT_BUILD_EXAMPLES": true,
+        "SPCRAFT_BUILD_BENCHMARKS": true,
+        "BUILD_TESTING": true
+      }
+    },
+    {
+      "name": "cuda-openmp",
+      "displayName": "CUDA + OpenMP (RelWithDebInfo)",
+      "description": "RelWithDebInfo build with CUDA and OpenMP enabled",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "SPCRAFT_USE_CUDA": true,
+        "CMAKE_DISABLE_FIND_PACKAGE_OpenMP": false,
+        "CMAKE_CUDA_ARCHITECTURES": "native",
+        "SPCRAFT_BUILD_EXAMPLES": true,
+        "SPCRAFT_BUILD_BENCHMARKS": true,
+        "BUILD_TESTING": true
+      }
+    },
+    {
+      "name": "cuda-openmp-debug",
+      "displayName": "CUDA + OpenMP (Debug)",
+      "description": "Debug build with CUDA and OpenMP enabled",
+      "inherits": "cuda-openmp",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "openmp-examples",
+      "displayName": "OpenMP Example Only",
+      "description": "OpenMP enabled",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "SPCRAFT_USE_MPI": false,
+        "SPCRAFT_USE_CUDA": false,
+        "SPCRAFT_BUILD_EXAMPLES": true
+      }
+    },
+    {
+      "name": "default",
+      "displayName": "Default (CUDA + OpenMP)",
+      "description": "Default configuration with CUDA and OpenMP enabled",
+      "inherits": "cuda-openmp"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "cuda-openmp",
+      "displayName": "Build CUDA + OpenMP (RelWithDebInfo)",
+      "configurePreset": "cuda-openmp"
+    },
+    {
+      "name": "cuda-openmp-debug",
+      "displayName": "Build CUDA + OpenMP (Debug)",
+      "configurePreset": "cuda-openmp-debug"
+    },
+    {
+      "name": "default",
+      "displayName": "Build Default",
+      "configurePreset": "default"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utils/omp/omp_wrapper.h"
+
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
@@ -33,10 +35,7 @@ void sddmm_openmp(CsrMatrix<IT, NT, OT>& samples, const NT* left, const NT* righ
     throw std::invalid_argument("SDDMM output values must not be null");
   }
 
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static) default(none) \
-    shared(samples, left, right, feature_count)
-#endif
+  OMP_PARALLEL_FOR(schedule(static) default(none) shared(samples, left, right, feature_count))
   for (IT row = 0; row < samples.m; ++row) {
     const std::size_t left_row = static_cast<std::size_t>(row) * feature_count;
     for (OT position = samples.row_ptr[row]; position < samples.row_ptr[row + 1]; ++position) {

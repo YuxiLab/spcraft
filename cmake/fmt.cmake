@@ -5,7 +5,7 @@ function(find_fmt)
 		CPMAddPackage(
 			NAME fmt
 			GITHUB_REPOSITORY fmtlib/fmt
-			GIT_TAG 11.0.2
+			GIT_TAG 11.2.0
 		)
 	else()
 		message(STATUS "fmt found, using existing installation")

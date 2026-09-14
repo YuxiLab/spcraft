@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cstdint>
 #include <limits>
+#include <memory>
+#include <tuple>
 #include <stdexcept>
 #include <string>
 
@@ -35,6 +37,15 @@ nb::object CopyToNumpy(const T* source, size_t size)
 
   nb::capsule owner(copy, [](void* pointer) noexcept { delete[] static_cast<T*>(pointer); });
   OutputArray<T> array(copy, {size}, owner);
+  return nb::cast(array, nb::rv_policy::reference);
+}
+
+//! Hand an already-allocated buffer to NumPy, transferring ownership.
+template <class T>
+nb::object AdoptAsNumpy(T* data, size_t size)
+{
+  nb::capsule owner(data, [](void* pointer) noexcept { delete[] static_cast<T*>(pointer); });
+  OutputArray<T> array(data, {size}, owner);
   return nb::cast(array, nb::rv_policy::reference);
 }
 
@@ -85,11 +96,8 @@ spcraft::CooMatrix<Index, Number, Offset> CooFromArrays(InputArray<Index> row_in
   const Offset nnz = CheckedNnz(values.size());
   spcraft::CooMatrix<Index, Number, Offset> result;
   result.Allocate(nnz, rows, columns);
-  if (nnz != 0) {
-    std::copy(row_indices.data(), row_indices.data() + nnz, result.row_id);
-    std::copy(column_indices.data(), column_indices.data() + nnz, result.col_id);
-    std::copy(values.data(), values.data() + nnz, result.val);
-  }
+  for (Offset i = 0; i < nnz; ++i)
+    result.entries[i] = {row_indices.data()[i], column_indices.data()[i], values.data()[i]};
   return result;
 }
 
@@ -147,6 +155,71 @@ spcraft::CsrMatrix<Index, Number, Offset> GenerateRMAT(Index scale, std::size_t 
   return spcraft::GenRMAT<Number, Index, Offset>(scale, edge_factor, seed, a, b, c, d);
 }
 
+//! y = A x, returned as a fresh NumPy array. Shared by spmv, dot and @.
+template <class Number>
+nb::object SpmvToNumpy(const spcraft::CsrMatrix<Index, Number, Offset>& matrix,
+                       InputArray<Number> x)
+{
+  if (x.size() != static_cast<size_t>(matrix.n)) {
+    throw std::invalid_argument("vector length must match matrix column dimension");
+  }
+  Number* y = new Number[matrix.m];
+  // Both views borrow: SpCraft must not free NumPy's buffer or the capsule's.
+  const spcraft::DenseVector<Index, Number> input(const_cast<Number*>(x.data()),
+                                                  static_cast<Index>(x.size()));
+  spcraft::DenseVector<Index, Number> output(y, matrix.m);
+  spcraft::OmpSpMV<spcraft::PlusTimesRing<Number>>(matrix, input, output);
+  return AdoptAsNumpy(y, static_cast<size_t>(matrix.m));
+}
+
+//! Python accepts arbitrary CSR assembly; canonicalize it at this format boundary.
+//! This prepares inputs only. OmpHashSpGEMM remains the sole multiplication kernel.
+template <class Number>
+spcraft::DcscMatrix<Index, Number, Offset> CanonicalDcscFromCsr(
+    const spcraft::CsrMatrix<Index, Number, Offset>& matrix)
+{
+  using Ring = spcraft::PlusTimesRing<Number>;
+  spcraft::CooMatrix<Index, Number, Offset> coordinates;
+  coordinates.Allocate(matrix.nnz, matrix.m, matrix.n);
+  for (Index row = 0; row < matrix.m; ++row)
+    for (Offset p = matrix.row_ptr[row]; p < matrix.row_ptr[row + 1]; ++p)
+      coordinates.entries[p] = {row, matrix.col_id[p], matrix.val[p]};
+  if (matrix.nnz > 1)
+    std::stable_sort(coordinates.entries, coordinates.entries + matrix.nnz,
+                     [](const auto& a, const auto& b) {
+                       return std::tie(std::get<1>(a), std::get<0>(a)) <
+                              std::tie(std::get<1>(b), std::get<0>(b));
+                     });
+  Offset nonzeros = 0;
+  Index columns = 0;
+  for (Offset p = 0; p < matrix.nnz; ++p) {
+    const auto& entry = coordinates.entries[p];
+    if (nonzeros && std::get<0>(coordinates.entries[nonzeros - 1]) == std::get<0>(entry) &&
+        std::get<1>(coordinates.entries[nonzeros - 1]) == std::get<1>(entry)) {
+      auto& value = std::get<2>(coordinates.entries[nonzeros - 1]);
+      value = Ring::Add(value, std::get<2>(entry));
+    } else {
+      if (!nonzeros || std::get<1>(coordinates.entries[nonzeros - 1]) != std::get<1>(entry))
+        ++columns;
+      coordinates.entries[nonzeros++] = entry;
+    }
+  }
+  spcraft::DcscMatrix<Index, Number, Offset> result;
+  result.Allocate(nonzeros, matrix.m, matrix.n, columns);
+  Index column = 0;
+  for (Offset p = 0; p < nonzeros; ++p) {
+    const auto& [row, col, value] = coordinates.entries[p];
+    if (!p || col != std::get<1>(coordinates.entries[p - 1])) {
+      result.col_id[column] = col;
+      result.col_ptr[column++] = p;
+    }
+    result.row_id[p] = row;
+    result.val[p] = value;
+  }
+  result.col_ptr[columns] = nonzeros;
+  return result;
+}
+
 template <class Number>
 void BindCsr(nb::module_& module, const char* name)
 {
@@ -172,61 +245,109 @@ void BindCsr(nb::module_& module, const char* name)
                    [](const Matrix& matrix) {
                      return CopyToNumpy(matrix.val, static_cast<size_t>(matrix.nnz));
                    })
+      .def("spmv", &SpmvToNumpy<Number>, "x"_a,
+           "Multiply the sparse matrix by a dense vector x.")
+      .def("__matmul__", &SpmvToNumpy<Number>, "x"_a)
+      .def("dot", &SpmvToNumpy<Number>, "x"_a)
       .def(
-          "spmv",
-          [](const Matrix& matrix, InputArray<Number> x) {
-            if (x.size() != static_cast<size_t>(matrix.n)) {
-              throw std::invalid_argument("vector length must match matrix column dimension");
-            }
-            Number* y = new Number[matrix.m];
-            spcraft::DenseVector<Index, Number> input(const_cast<Number*>(x.data()),
-                                                      static_cast<Index>(x.size()));
-            spcraft::DenseVector<Index, Number> output(y, matrix.m);
-            spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
-            nb::capsule owner(
-                y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
-            OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
-            return nb::cast(array, nb::rv_policy::reference);
+          "spgemm",
+          [](const Matrix& matrix, const Matrix& other) {
+            if (matrix.n != other.m)
+              throw std::invalid_argument("SpGEMM matrix dimensions do not match");
+            const auto a = CanonicalDcscFromCsr(matrix), b = CanonicalDcscFromCsr(other);
+            return spcraft::OmpHashSpGEMM<spcraft::PlusTimesRing<Number>>(a, b).ToCsr();
           },
-          "x"_a, "Multiply the sparse matrix by a dense vector x.")
+          "other"_a, "Convert inputs to canonical DCSC, call OmpHashSpGEMM, and return CSR.")
       .def(
-          "__matmul__",
-          [](const Matrix& matrix, InputArray<Number> x) {
-            if (x.size() != static_cast<size_t>(matrix.n)) {
-              throw std::invalid_argument("vector length must match matrix column dimension");
-            }
-            Number* y = new Number[matrix.m];
-            spcraft::DenseVector<Index, Number> input(const_cast<Number*>(x.data()),
-                                                      static_cast<Index>(x.size()));
-            spcraft::DenseVector<Index, Number> output(y, matrix.m);
-            spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
-            nb::capsule owner(
-                y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
-            OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
-            return nb::cast(array, nb::rv_policy::reference);
+          "pagerank",
+          [](const Matrix& matrix, Number damping, Number tolerance, int max_iterations) {
+            // The adjacency matrix is transposed and normalized once here; the
+            // iteration itself is a sequence of SpMVs against the result.
+            const Matrix op = spcraft::pagerank_operator(matrix);
+            spcraft::PageRankOptions<Number> options;
+            options.damping = damping;
+            options.tolerance = tolerance;
+            options.max_iterations = max_iterations;
+
+            Number* ranks = new Number[matrix.m];
+            spcraft::DenseVector<Index, Number> rank(ranks, matrix.m);
+            const auto result = spcraft::pagerank_openmp(op, rank, options);
+
+            nb::dict info;
+            info["iterations"] = result.iterations;
+            info["residual"] = result.residual;
+            info["converged"] = result.converged;
+            return nb::make_tuple(AdoptAsNumpy(ranks, static_cast<size_t>(matrix.m)), info);
           },
-          "x"_a)
+          "damping"_a = Number{0.85}, "tolerance"_a = Number{1e-10}, "max_iterations"_a = 100,
+          "PageRank of the graph whose adjacency matrix this is. Rows are out-edges.\n"
+          "Returns (ranks, info).")
       .def(
-          "dot",
-          [](const Matrix& matrix, InputArray<Number> x) {
-            if (x.size() != static_cast<size_t>(matrix.n)) {
-              throw std::invalid_argument("vector length must match matrix column dimension");
+          "solve_cg",
+          [](const Matrix& matrix, InputArray<Number> b, Number tolerance,
+             int max_iterations) {
+            if (b.size() != static_cast<size_t>(matrix.m)) {
+              throw std::invalid_argument("right-hand side length must match the matrix");
             }
-            Number* y = new Number[matrix.m];
-            spcraft::DenseVector<Index, Number> input(const_cast<Number*>(x.data()),
-                                                      static_cast<Index>(x.size()));
-            spcraft::DenseVector<Index, Number> output(y, matrix.m);
-            spcraft::spmv_openmp<spcraft::PlusTimesRing<Number>>(matrix, input, output);
-            nb::capsule owner(
-                y, [](void* pointer) noexcept { delete[] static_cast<Number*>(pointer); });
-            OutputArray<Number> array(y, {static_cast<size_t>(matrix.m)}, owner);
-            return nb::cast(array, nb::rv_policy::reference);
+            spcraft::CgOptions<Number> options;
+            options.tolerance = tolerance;
+            options.max_iterations = max_iterations;
+
+            Number* solution = new Number[matrix.n];
+            std::fill(solution, solution + matrix.n, Number{0});
+            const spcraft::DenseVector<Index, Number> rhs(const_cast<Number*>(b.data()),
+                                                          static_cast<Index>(b.size()));
+            spcraft::DenseVector<Index, Number> x(solution, matrix.n);
+            const auto result = spcraft::cg_openmp(matrix, rhs, x, options);
+
+            nb::dict info;
+            info["iterations"] = result.iterations;
+            info["residual"] = result.residual;
+            info["converged"] = result.converged;
+            info["breakdown"] = result.breakdown;
+            return nb::make_tuple(AdoptAsNumpy(solution, static_cast<size_t>(matrix.n)), info);
           },
-          "x"_a)
+          "b"_a, "tolerance"_a = Number{1e-10}, "max_iterations"_a = 1000,
+          "Solve A x = b by conjugate gradient. A must be symmetric positive\n"
+          "definite with all nonzeros stored. Returns (x, info).")
+      .def(
+          "power_iteration",
+          [](const Matrix& matrix, Number tolerance, int max_iterations) {
+            spcraft::PowerIterationOptions<Number> options;
+            options.tolerance = tolerance;
+            options.max_iterations = max_iterations;
+
+            Number* vector = new Number[matrix.n];
+            std::fill(vector, vector + matrix.n, Number{0});  // seeded by the solver
+            spcraft::DenseVector<Index, Number> x(vector, matrix.n);
+            const auto result = spcraft::power_iteration_openmp(matrix, x, options);
+
+            nb::dict info;
+            info["iterations"] = result.iterations;
+            info["residual"] = result.residual;
+            info["converged"] = result.converged;
+            return nb::make_tuple(result.eigenvalue,
+                                  AdoptAsNumpy(vector, static_cast<size_t>(matrix.n)), info);
+          },
+          "tolerance"_a = Number{1e-10}, "max_iterations"_a = 1000,
+          "Dominant eigenpair by power iteration.\n"
+          "Returns (eigenvalue, eigenvector, info).")
       .def("__repr__", [name](const Matrix& matrix) {
         return std::string("spcraft.") + name + "(shape=(" + std::to_string(matrix.m) + ", " +
                std::to_string(matrix.n) + "), nnz=" + std::to_string(matrix.nnz) + ")";
       });
+}
+
+//! COO components are strided inside Entry; NumPy receives a contiguous owned copy.
+template <std::size_t Component, class Number>
+nb::object CooComponentToNumpy(const spcraft::CooMatrix<Index, Number, Offset>& matrix)
+{
+  using Entry = typename spcraft::CooMatrix<Index, Number, Offset>::Entry;
+  using T = std::tuple_element_t<Component, Entry>;
+  const auto size = static_cast<std::size_t>(matrix.nnz);
+  auto copy = std::make_unique<T[]>(size);
+  for (std::size_t i = 0; i < size; ++i) copy[i] = std::get<Component>(matrix.entries[i]);
+  return AdoptAsNumpy(copy.release(), size);
 }
 
 template <class Number>
@@ -245,17 +366,11 @@ void BindCoo(nb::module_& module, const char* name)
                    [](const Matrix& matrix) { return nb::make_tuple(matrix.m, matrix.n); })
       .def_ro("nnz", &Matrix::nnz)
       .def_prop_ro("row_indices",
-                   [](const Matrix& matrix) {
-                     return CopyToNumpy(matrix.row_id, static_cast<size_t>(matrix.nnz));
-                   })
+                   [](const Matrix& matrix) { return CooComponentToNumpy<0>(matrix); })
       .def_prop_ro("column_indices",
-                   [](const Matrix& matrix) {
-                     return CopyToNumpy(matrix.col_id, static_cast<size_t>(matrix.nnz));
-                   })
+                   [](const Matrix& matrix) { return CooComponentToNumpy<1>(matrix); })
       .def_prop_ro("values",
-                   [](const Matrix& matrix) {
-                     return CopyToNumpy(matrix.val, static_cast<size_t>(matrix.nnz));
-                   })
+                   [](const Matrix& matrix) { return CooComponentToNumpy<2>(matrix); })
       .def("__repr__", [name](const Matrix& matrix) {
         return std::string("spcraft.") + name + "(shape=(" + std::to_string(matrix.m) + ", " +
                std::to_string(matrix.n) + "), nnz=" + std::to_string(matrix.nnz) + ")";

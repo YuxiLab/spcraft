@@ -1,0 +1,6 @@
+# Keep the primary CPU-node experiment reproducible despite the global JSON rule.
+!bigred-8165816/**/*.json
+!columns-bigred-8165879/**/*.json
+!columns-bigred-8168162/**/*.json
+!tuples-bigred-8168173/**/*.json
+!tuples-bigred-8170854/**/*.json

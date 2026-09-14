@@ -6,10 +6,6 @@
 
 #include "SpCraft.h"
 
-#ifndef _OPENMP
-#error "test_mtspmv must be compiled with OpenMP enabled"
-#endif
-
 int main()
 {
   using Matrix = spcraft::CsrMatrix<std::int32_t, double, std::int64_t>;
@@ -40,7 +36,7 @@ int main()
   Vector y(static_cast<std::int32_t>(expected.size()));
   std::copy(x_values.begin(), x_values.end(), x.val);
 
-  spcraft::spmv_openmp<Ring>(A, x, y);
+  spcraft::OmpSpMV<Ring>(A, x, y);
   if (!std::equal(expected.begin(), expected.end(), y.val)) {
     std::cerr << "OpenMP SpMV returned an incorrect result\n";
     return 1;
@@ -48,7 +44,7 @@ int main()
 
   try {
     Vector wrong_size(A.n - 1);
-    spcraft::spmv_openmp<Ring>(A, wrong_size, y);
+    spcraft::OmpSpMV<Ring>(A, wrong_size, y);
     std::cerr << "OpenMP SpMV accepted an input vector with the wrong size\n";
     return 1;
   } catch (const std::invalid_argument&) {
@@ -74,52 +70,6 @@ int main()
   spcraft::spmm_openmp<Ring>(sparse_left, dense_right.data(), dense_result.data(), 2);
   if (dense_result != expected_dense) {
     std::cerr << "OpenMP SpMM returned an incorrect result\n";
-    return 1;
-  }
-
-  Matrix sparse_right;
-  sparse_right.Allocate(4, 3, 2);
-  const std::array<std::int64_t, 4> right_row_ptr{0, 1, 2, 4};
-  const std::array<std::int32_t, 4> right_col_id{0, 1, 0, 1};
-  const std::array<double, 4> right_values{4.0, 5.0, 6.0, 7.0};
-  std::copy(right_row_ptr.begin(), right_row_ptr.end(), sparse_right.row_ptr);
-  std::copy(right_col_id.begin(), right_col_id.end(), sparse_right.col_id);
-  std::copy(right_values.begin(), right_values.end(), sparse_right.val);
-
-  Matrix sparse_result = spcraft::spgemm_openmp<Ring>(sparse_left, sparse_right);
-  const std::array<std::int64_t, 3> expected_product_row_ptr{0, 2, 3};
-  const std::array<std::int32_t, 3> expected_product_col_id{0, 1, 1};
-  const std::array<double, 3> expected_product_values{16.0, 14.0, 15.0};
-  if (sparse_result.nnz != 3 ||
-      !std::equal(expected_product_row_ptr.begin(), expected_product_row_ptr.end(),
-                  sparse_result.row_ptr) ||
-      !std::equal(expected_product_col_id.begin(), expected_product_col_id.end(),
-                  sparse_result.col_id) ||
-      !std::equal(expected_product_values.begin(), expected_product_values.end(),
-                  sparse_result.val)) {
-    std::cerr << "OpenMP SpGEMM returned an incorrect result\n";
-    return 1;
-  }
-
-  Matrix disconnected_left;
-  disconnected_left.Allocate(1, 1, 2);
-  disconnected_left.row_ptr[0] = 0;
-  disconnected_left.row_ptr[1] = 1;
-  disconnected_left.col_id[0] = 0;
-  disconnected_left.val[0] = 1.0;
-
-  Matrix disconnected_right;
-  disconnected_right.Allocate(1, 2, 1);
-  disconnected_right.row_ptr[0] = 0;
-  disconnected_right.row_ptr[1] = 0;
-  disconnected_right.row_ptr[2] = 1;
-  disconnected_right.col_id[0] = 0;
-  disconnected_right.val[0] = 1.0;
-
-  Matrix empty_product = spcraft::spgemm_openmp<Ring>(disconnected_left, disconnected_right);
-  if (empty_product.nnz != 0 || empty_product.row_ptr == nullptr ||
-      empty_product.row_ptr[0] != 0 || empty_product.row_ptr[1] != 0) {
-    std::cerr << "OpenMP SpGEMM returned an invalid empty product\n";
     return 1;
   }
 

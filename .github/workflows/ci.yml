@@ -1,0 +1,173 @@
+name: CI
+
+# The library is header-only and template-heavy, so a configuration that is
+# never compiled is never checked. Each job below exists because something can
+# break in it that no other job would notice.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The main job: every test, under sanitizers, on both compilers. Debug turns
+  # on -fsanitize=address, so leaks and use-after-free in the containers fail
+  # the build rather than waiting to be noticed.
+  tests:
+    name: tests (${{ matrix.compiler }}, ${{ matrix.build_type }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        build_type: [Debug, RelWithDebInfo]
+    env:
+      CC: ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}
+      CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libomp-dev
+
+      # CPM downloads Boost.Preprocessor, Eigen, fast_matrix_market, cxxopts and
+      # fmt on every configure; caching them keeps a run near a minute.
+      - name: Cache CPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/CPM
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/*.cmake', 'CMakeLists.txt') }}
+          restore-keys: cpm-${{ runner.os }}-
+
+      - name: Configure
+        env:
+          CPM_SOURCE_CACHE: ~/.cache/CPM
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DSPCRAFT_BUILD_EXAMPLES=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        working-directory: build
+        # Keep ASan strict: a leak is a failure, not a warning.
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=0
+          OMP_NUM_THREADS: 4
+        run: ctest --output-on-failure
+
+  # A single-threaded build. Every OpenMP pragma is behind #ifdef _OPENMP, and
+  # nothing else checks that the serial path still compiles and gives the same
+  # answers.
+  no-openmp:
+    name: tests (no OpenMP)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/CPM
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/*.cmake', 'CMakeLists.txt') }}
+          restore-keys: cpm-${{ runner.os }}-
+      - name: Configure without OpenMP
+        env:
+          CPM_SOURCE_CACHE: ~/.cache/CPM
+        # The top-level CMakeLists skips tests/ when OpenMP is missing, so build
+        # the library and examples and rely on those to catch a broken pragma.
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DSPCRAFT_BUILD_EXAMPLES=ON
+          -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=ON
+      - run: cmake --build build --parallel
+
+  # CUDA has no runner with a GPU, so this compiles only. That is still worth
+  # doing: the .cu sources reach their kernels through explicit instantiation,
+  # where a missing type combination is a link error rather than a compile
+  # error, and nothing else would catch it.
+  cuda-build:
+    name: cuda (build only)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build libomp-dev
+      - uses: Jimver/cuda-toolkit@v0.2.19
+        id: cuda-toolkit
+        with:
+          cuda: '12.6.0'
+          method: network
+          sub-packages: '["nvcc", "cudart", "cusparse", "cusparse-dev"]'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/CPM
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/*.cmake', 'CMakeLists.txt') }}
+          restore-keys: cpm-${{ runner.os }}-
+      - name: Configure with CUDA
+        env:
+          CPM_SOURCE_CACHE: ~/.cache/CPM
+        # Pin the architecture: `native` cannot detect a GPU on a runner that
+        # has none, and would fail or silently pick the wrong target.
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DSPCRAFT_USE_CUDA=ON
+          -DCMAKE_CUDA_ARCHITECTURES=80
+      - run: cmake --build build --parallel
+
+  # The Python module is not part of the default build, so it drifts silently.
+  python:
+    name: python bindings
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build libomp-dev
+      - uses: astral-sh/setup-uv@v5
+      - name: Build and test the module
+        run: |
+          uv sync --all-extras
+          uv run pytest python/tests -q
+
+  # The slide decks pull code straight out of include/ and src/ by line range.
+  # A rename or an edit that shifts those lines shows up here as a build
+  # failure, which is the only automatic warning that a deck has gone stale.
+  slides:
+    name: beamer decks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-recommended texlive-latex-extra texlive-fonts-extra \
+            texlive-pictures latexmk
+      - name: Build every deck
+        working-directory: latex/beamer
+        run: |
+          status=0
+          for deck in *.tex; do
+            echo "::group::$deck"
+            latexmk -pdf -interaction=nonstopmode "$deck" || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
+  format:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: Check formatting
+        run: |
+          files=$(git ls-files '*.h' '*.cpp' '*.cu' '*.cuh')
+          clang-format --dry-run --Werror $files

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utils/omp/omp_wrapper.h"
+
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
@@ -10,28 +12,13 @@ namespace spcraft
 {
 
 /**
- * @brief Reference OpenMP sparse-matrix dense-matrix multiplication.
+ * @brief Reference OpenMP SpMM.
  *
- * Computes C = A * B over SemiRing. A is an m-by-k CSR matrix, B is a
- * row-major k-by-dense_columns matrix, and C is a row-major
- * m-by-dense_columns matrix. B and C must not overlap.
  */
 template <class SemiRing, class IT, class NT, class OT>
 void spmm_openmp(const CsrMatrix<IT, NT, OT>& A, const NT* B, NT* C, std::size_t dense_columns)
 {
-  static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
-                "SpMM semiring value type must match the matrix value type");
-
-  if (dense_columns != 0 && A.n != IT{0} && B == nullptr) {
-    throw std::invalid_argument("SpMM input dense matrix must not be null");
-  }
-  if (dense_columns != 0 && A.m != IT{0} && C == nullptr) {
-    throw std::invalid_argument("SpMM output dense matrix must not be null");
-  }
-
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static) default(none) shared(A, B, C, dense_columns)
-#endif
+  OMP_PARALLEL_FOR(schedule(static))
   for (IT row = 0; row < A.m; ++row) {
     const std::size_t output_row = static_cast<std::size_t>(row) * dense_columns;
     for (std::size_t column = 0; column < dense_columns; ++column) {

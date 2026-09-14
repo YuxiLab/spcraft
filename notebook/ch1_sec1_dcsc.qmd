@@ -1,0 +1,249 @@
+---
+title: "Chapter 1. Sparse Matrix Format"
+subtitle: "Section 1. Doubly Compressed Sparse Column Format (DCSC)"
+format:
+  pdf:
+    documentclass: scrartcl
+    papersize: letter
+    toc: false
+    number-sections: true
+    colorlinks: true
+    highlight-style: github
+execute:
+  echo: true
+  warning: false
+  message: false
+jupyter: python3
+---
+
+# The Core Problem: Why CSC Fails in Hypersparse Settings
+
+A matrix is **hypersparse** if the number of nonzeros ($nnz$) is significantly smaller than the dimension of the matrix ($n$), i.e., $nnz \ll n$.
+
+These matrices occur frequently in large-scale parallel graph computations (e.g., after dividing a graph's adjacency matrix across a 2D processor grid).
+
+In standard **Compressed Sparse Column (CSC)** format, we use three arrays:
+
+* `NUM` (or `data`): Nonzero values (size: $nnz$)
+* `IR` (or `indices`): Row indices of nonzeros (size: $nnz$)
+* `JC` (or `indptr`): Column pointers (size: $n + 1$)
+
+## The Bottleneck
+If a matrix is size $1,000,000 \times 1,000,000$ but only contains **4 nonzeros**, the `JC` array in CSC must still be **1,000,001 elements long**, filled with redundant, repeating pointers. This wastes memory and forces algorithms to iterate over millions of empty columns.
+
+## The DCSC Solution
+**Doubly Compressed Sparse Column (DCSC)** compresses the column pointer array by storing pointers only for **non-empty columns** ($NZC$ columns):
+
+* `NUM`: Nonzero values (size: $nnz$)
+* `IR`: Row indices (size: $nnz$)
+* `JC`: Pointers into `IR` for non-empty columns only (size: $NZC + 1$)
+* `AUX` (or `col_idx`): Column indices corresponding to each non-empty column (size: $NZC$)
+
+---
+
+# Toy Example: 9x9 Hypersparse Matrix
+
+Let's examine a small $9 \times 9$ matrix with 4 nonzeros:
+$$\text{Nonzeros: } (5, 0) = 0.1,\; (7, 0) = 0.2,\; (3, 6) = 0.3,\; (1, 7) = 0.4$$
+
+![Structural comparison between Standard CSC and DCSC storage for the $9 \times 9$ hypersparse matrix ($nnz = 4, NZC = 3$).](../latex/tikz/output/sec1_mat2dcsc.pdf){#fig-mat2dcsc fig-align="center" width=100%}
+
+
+```{python}
+#| echo: false
+import numpy as np
+import scipy.sparse as sp
+
+# Coordinates and values
+rows = np.array([5, 7, 3, 1])
+cols = np.array([0, 0, 6, 7])
+vals = np.array([0.1, 0.2, 0.3, 0.4])
+
+# 1. Standard CSC Matrix
+A_csc = sp.csc_matrix((vals, (rows, cols)), shape=(9, 9))
+
+print("=== Standard CSC Format (Size: 9x9, NNZ: 4) ===")
+print("NUM (Values):      ", A_csc.data)
+print("IR  (Row Indices): ", A_csc.indices)
+print("JC  (Col Pointers):", A_csc.indptr, f"  <-- Length {len(A_csc.indptr)} (n + 1)")
+
+# 2. DCSC Format Representation
+col_diff = np.diff(A_csc.indptr)
+dcsc_col_idx = np.where(col_diff > 0)[0]   # Non-empty column indices: [0, 6, 7]
+dcsc_jc = np.zeros(len(dcsc_col_idx) + 1, dtype=int)
+dcsc_jc[1:] = np.cumsum(col_diff[dcsc_col_idx])
+
+print("\n=== DCSC Format (NZC = 3 non-empty columns) ===")
+print("NUM (Values):      ", A_csc.data)
+print("IR  (Row Indices): ", A_csc.indices)
+print("JC  (Pointers):    ", dcsc_jc, f"  <-- Length {len(dcsc_jc)} (NZC + 1)")
+print("AUX (Col Indices): ", dcsc_col_idx, f"  <-- Length {len(dcsc_col_idx)} (NZC)")
+```
+
+---
+
+# Case Study: Analyzing the `web-Google` Matrix
+
+`web-Google` is a real-world web graph dataset from the Stanford SNAP collection (hosted in the SuiteSparse Matrix Collection). Nodes represent web pages and directed edges represent hyperlinks between them.
+
+The table below summarizes the key structural and topological properties of `web-Google`:
+
+```{python}
+#| echo: true
+import os
+import warnings
+warnings.filterwarnings('ignore')
+import scipy.io as sio
+import scipy.sparse as sp
+import numpy as np
+from IPython.display import Markdown, display
+
+# Locate web-Google matrix file
+possible_paths = [
+    "../dataset/output/web-Google/web-Google.mtx",
+    "dataset/output/web-Google/web-Google.mtx",
+    os.path.expanduser("~/Documents/spcraft/spcraft/dataset/output/web-Google/web-Google.mtx")
+]
+mat_path = next((p for p in possible_paths if os.path.exists(p)), None)
+assert mat_path is not None, f"web-Google.mtx not found in {possible_paths}"
+
+# Load matrix in Coordinate (COO) format
+A_coo = sio.mmread(mat_path).tocoo()
+num_rows, num_cols = A_coo.shape
+nnz = A_coo.nnz
+density = nnz / (num_rows * num_cols)
+
+# Convert to CSC and CSR for in-degree and out-degree analysis
+A_csc = A_coo.tocsc()
+A_csr = A_coo.tocsr()
+
+in_degrees = np.diff(A_csc.indptr)    # Column NNZ (in-links)
+out_degrees = np.diff(A_csr.indptr)   # Row NNZ (out-links)
+
+nonempty_cols = int(np.count_nonzero(in_degrees > 0))
+empty_cols = num_cols - nonempty_cols
+nonempty_rows = int(np.count_nonzero(out_degrees > 0))
+empty_rows = num_rows - nonempty_rows
+
+table_md = f"""
+| Property | Value | Notes |
+|:---|:---|:---|
+| **Matrix Name** | `web-Google` | Stanford SNAP Web Graph Collection |
+| **Dimensions ($m \\times n$)** | {num_rows:,} $\\times$ {num_cols:,} | Square adjacency matrix |
+| **Non-Zeros ($nnz$)** | {nnz:,} | Directed hyperlinks |
+| **Matrix Density** | {density:.4e} ({density * 100:.6f}%) | Sparsity: {(1 - density) * 100:.6f}% |
+| **Avg NNZ per Row / Col** | {nnz / num_cols:.2f} | Average links per web page |
+| **Non-Empty Columns ($NZC$)** | {nonempty_cols:,} ({nonempty_cols / num_cols * 100:.2f}%) | Pages with $\\ge 1$ in-link |
+| **Empty Columns (Zero In-Degree)** | {empty_cols:,} ({empty_cols / num_cols * 100:.2f}%) | *Redundant in standard CSC pointers* |
+| **Non-Empty Rows ($NZR$)** | {nonempty_rows:,} ({nonempty_rows / num_rows * 100:.2f}%) | Pages with $\\ge 1$ out-link |
+| **Empty Rows (Zero Out-Degree)** | {empty_rows:,} ({empty_rows / num_rows * 100:.2f}%) | Dead-end web pages (no outgoing links) |
+| **Max In-Degree (Col NNZ)** | {in_degrees.max():,} | Mean: {in_degrees.mean():.2f}, Median: {np.median(in_degrees):.1f} |
+| **Max Out-Degree (Row NNZ)** | {out_degrees.max():,} | Mean: {out_degrees.mean():.2f}, Median: {np.median(out_degrees):.1f} |
+"""
+display(Markdown(table_md))
+```
+
+---
+
+# Visualizing `web-Google` Matrix Structure
+
+Below are the diagnostic visualizations of the `web-Google` graph topology:
+
+1. **Sparsity Pattern (Spy Plot)**: Distribution of nonzeros across row and column coordinate space.
+2. **In-Degree and Out-Degree Distribution**: Log-log frequency plot exhibiting classic scale-free / power-law behavior.
+
+```{python}
+#| echo: false
+#| fig-cap: "Left: web-Google sparsity pattern (subsampled 80,000 nonzeros). Right: Node in-degree and out-degree distributions on a log-log scale."
+#| fig-align: center
+import matplotlib.pyplot as plt
+
+fig, axes = plt.subplots(1, 2, figsize=(13, 5.2))
+
+# --- Plot 1: Subsampled Spy Plot (Sparsity Pattern) ---
+sample_size = min(80000, A_coo.nnz)
+sample_indices = np.random.RandomState(42).choice(A_coo.nnz, sample_size, replace=False)
+
+axes[0].scatter(A_coo.col[sample_indices], A_coo.row[sample_indices],
+               s=0.15, c="#1f77b4", alpha=0.6, rasterized=True)
+axes[0].set_title(f"web-Google Sparsity Pattern\n({num_rows:,} x {num_cols:,}, NNZ: {nnz:,})", fontsize=11, fontweight="bold")
+axes[0].set_xlabel("Column Index (Source Page)", fontsize=10)
+axes[0].set_ylabel("Row Index (Target Page)", fontsize=10)
+axes[0].set_xlim(0, num_cols)
+axes[0].set_ylim(num_rows, 0)  # Invert Y-axis for matrix indexing convention
+axes[0].grid(True, linestyle=":", alpha=0.4)
+
+# --- Plot 2: In-Degree & Out-Degree Distribution (Log-Log) ---
+nonzero_in = in_degrees[in_degrees > 0]
+nonzero_out = out_degrees[out_degrees > 0]
+
+bins = np.logspace(0, np.log10(max(in_degrees.max(), out_degrees.max())), 45)
+axes[1].hist(nonzero_in, bins=bins, alpha=0.65, color="#2ca02c", label="In-Degree (In-links)", edgecolor="black", linewidth=0.5)
+axes[1].hist(nonzero_out, bins=bins, alpha=0.55, color="#ff7f0e", label="Out-Degree (Out-links)", edgecolor="black", linewidth=0.5)
+axes[1].set_xscale("log")
+axes[1].set_yscale("log")
+axes[1].set_title("Degree Distribution (Power-Law / Scale-Free)", fontsize=11, fontweight="bold")
+axes[1].set_xlabel("Degree (Number of Links per Page)", fontsize=10)
+axes[1].set_ylabel("Frequency (Count of Nodes)", fontsize=10)
+axes[1].legend(loc="upper right", frameon=True)
+axes[1].grid(True, which="both", linestyle=":", alpha=0.4)
+
+plt.tight_layout()
+plt.show()
+```
+
+---
+
+# 2D Partitioning & Hypersparsity Simulation
+
+In parallel algorithms like 2D-SpGEMM (e.g., Sparse SUMMA) and CombBLAS, the global adjacency matrix $A$ is partitioned into a $P = p \times p$ processor grid. Each processor $P(i, j)$ holds a local block $A_{ij}$ of dimension $n/p \times n/p$.
+
+Below we simulate a 2D partitioning of `web-Google` across an $8 \times 8$ grid (64 submatrices, each $\approx 114,554 \times 114,554$) and evaluate memory savings:
+
+```{python}
+#| echo: false
+# Simulate an 8x8 2D grid partitioning of web-Google
+grid_dim = 8
+tile_rows = int(np.ceil(num_rows / grid_dim))
+tile_cols = int(np.ceil(num_cols / grid_dim))
+
+tile_stats = []
+for r in range(grid_dim):
+    for c in range(grid_dim):
+        r_start, r_end = r * tile_rows, min((r + 1) * tile_rows, num_rows)
+        c_start, c_end = c * tile_cols, min((c + 1) * tile_cols, num_cols)
+        
+        mask = (A_coo.row >= r_start) & (A_coo.row < r_end) & \
+               (A_coo.col >= c_start) & (A_coo.col < c_end)
+        tile_nnz = int(np.count_nonzero(mask))
+        tile_nzc = len(np.unique(A_coo.col[mask] - c_start)) if tile_nnz > 0 else 0
+            
+        empty_col_pct = (1 - tile_nzc / tile_cols) * 100
+        csc_ptrs = tile_cols + 1
+        dcsc_ptrs = 2 * tile_nzc + 1  # JC (NZC+1) + AUX (NZC)
+        tile_stats.append((tile_nnz, tile_nzc, empty_col_pct, csc_ptrs, dcsc_ptrs))
+
+avg_empty_pct = np.mean([s[2] for s in tile_stats])
+total_csc_overhead = sum([s[3] for s in tile_stats])
+total_dcsc_overhead = sum([s[4] for s in tile_stats])
+mem_savings = (1 - total_dcsc_overhead / total_csc_overhead) * 100
+
+sim_table_md = f"""
+| Partitioning Metric | Standard CSC | DCSC Format | Improvement |
+|:---|:---|:---|:---|
+| **Grid Configuration** | $8 \\times 8$ (64 Tiles) | $8 \\times 8$ (64 Tiles) | Local tile: {tile_rows:,} $\\times$ {tile_cols:,} |
+| **Avg Empty Cols / Tile** | {avg_empty_pct:.2f}% | {avg_empty_pct:.2f}% | High local hypersparsity |
+| **Total Column Overhead** | {total_csc_overhead:,} pointers | {total_dcsc_overhead:,} pointers + indices | **{mem_savings:.2f}% memory reduction** |
+| **Overhead vs CSC** | 100.00% | {total_dcsc_overhead / total_csc_overhead * 100:.2f}% | Saves {total_csc_overhead - total_dcsc_overhead:,} array elements |
+"""
+display(Markdown(sim_table_md))
+```
+
+---
+
+# Quiz & Concept Checks
+
+1. **Hypersparsity Threshold**: For a square sparse matrix of dimension $n$, when does DCSC use strictly less pointer memory than standard CSC?
+   * *Hint*: Compare the size of CSC column pointers ($n + 1$) with DCSC column pointers and column indices ($2 \cdot NZC + 1$).
+2. **Graph Sparsity**: In `web-Google`, over $22\%$ of columns are entirely empty ($0$ in-degree). What causes empty columns in a web hyperlink graph?
+3. **Parallel SpGEMM**: Why is hypersparsity much more severe in 2D block-partitioned matrices than in 1D row-partitioned matrices?

@@ -8,6 +8,10 @@ lib/
 # Generated files & tooling cache
 compile_commands.json
 .cache/
+.lake/
+**/.lake/
+.lean-fmt-cache/
+**/.lean-fmt-cache/
 
 # IDE & Editor settings
 .vscode/
@@ -15,14 +19,16 @@ compile_commands.json
 *.swp
 *~
 .DS_Store
+pyrightconfig.json
 
 # Data & Matrix Market files
 data/
+dataset/
 *.mtx
 *.tar.gz
 
-# Reproducible raw benchmark output
-/benchmarks/results/spmv_mkl/*.json
+# Reproducible raw benchmark output: benchmarks/results/<library>/<kernel>/
+/benchmarks/results/**/*.json
 
 # Python cache
 __pycache__/
@@ -68,4 +74,13 @@ doxygen/warnings.log
 slurm/spcraft-*
 
 # CMake presets
-CMakePresets.json
+CMakeUserPresets.json
+
+# vscode-sparse-matrix
+vscode-sparse-matrix/node_modules
+vscode-sparse-matrix/*.vsix
+
+# vscode-cmake-workbench
+vscode-cmake-workbench/node_modules
+vscode-cmake-workbench/*.vsix
+.bench_plots/

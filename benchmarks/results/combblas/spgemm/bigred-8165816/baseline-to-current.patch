@@ -1,0 +1,89 @@
+--- include/kernel/mtSpGEMM.h
++++ include/kernel/mtSpGEMM.h
+@@ -9,6 +9,10 @@
+ #include <utility>
+ #include <vector>
+ 
++#ifdef _OPENMP
++#include <omp.h>
++#endif
++
+ #include "core/AllocationGuard.h"
+ #include "core/CsrMatrix.h"
+ 
+@@ -31,7 +35,11 @@
+     }
+     capacity *= 2;
+   }
+-  return CheckedElementCount<Entry>(capacity);
++  const auto size = CheckedElementCount<Entry>(capacity);
++  if (size > std::vector<Entry>().max_size()) {
++    throw std::length_error("SpGEMM hash capacity exceeds vector max_size");
++  }
++  return size;
+ }
+ 
+ template <class IT>
+@@ -57,6 +65,10 @@
+  * compacted and sorted before writing the output row.
+  * Output column indices are sorted within each CSR row. Structurally produced
+  * entries are retained even when their final value equals the additive identity.
++ * Inputs must be well-formed host CSR matrices with in-range column indices
++ * and immutable buffers for the duration of the call. Unsorted columns and
++ * duplicate entries are supported. Semiring operations must be thread-safe
++ * and must not throw inside the OpenMP loops.
+  */
+ template <class SemiRing, class IT, class NT, class OT>
+ [[nodiscard]] CsrMatrix<IT, NT, OT> spgemm_openmp(const CsrMatrix<IT, NT, OT>& A,
+@@ -77,15 +89,26 @@
+   }
+ 
+   using Entry = std::pair<IT, NT>;
+-  std::vector<std::uintmax_t> row_nonzeros(static_cast<std::size_t>(A.m));
+-  std::vector<std::size_t> table_sizes(static_cast<std::size_t>(A.m));
++  const auto row_count = detail::CheckedElementCount<std::uintmax_t>(A.m);
++  std::vector<std::uintmax_t> row_nonzeros(row_count);
++  std::vector<std::size_t> table_sizes(detail::CheckedElementCount<std::size_t>(A.m));
+   const auto max_columns = static_cast<std::uintmax_t>(B.n);
++  // Amortize queue traffic on large matrices, but retain enough independent
++  // chunks to balance small matrices with uneven row expansion costs.
++  constexpr std::size_t kMaxRowsPerChunk = 256;
++  constexpr std::size_t kChunksPerThread = 32;
++  std::size_t thread_count = 1;
++#ifdef _OPENMP
++  thread_count = static_cast<std::size_t>(omp_get_max_threads());
++#endif
++  const auto rows_per_chunk = std::max<std::size_t>(
++      1, std::min(kMaxRowsPerChunk, row_count / thread_count / kChunksPerThread));
+ 
+   // Bound the number of distinct keys by min(row expansion work, B.n).
+   // Saturation avoids overflowing the work count when many paths repeat keys.
+ #ifdef _OPENMP
+-#pragma omp parallel for schedule(dynamic) default(none) \
+-    shared(A, B, row_nonzeros, max_columns)
++#pragma omp parallel for schedule(dynamic, rows_per_chunk) default(none) \
++    shared(A, B, row_nonzeros, max_columns, rows_per_chunk)
+ #endif
+   for (IT row = 0; row < A.m; ++row) {
+     std::uintmax_t bound = 0;
+@@ -106,8 +129,8 @@
+ 
+   // Symbolic: inspect only the sparsity patterns, without semiring operations.
+ #ifdef _OPENMP
+-#pragma omp parallel for schedule(dynamic) default(none) \
+-    shared(A, B, row_nonzeros, table_sizes)
++#pragma omp parallel for schedule(dynamic, rows_per_chunk) default(none) \
++    shared(A, B, row_nonzeros, table_sizes, rows_per_chunk)
+ #endif
+   for (IT row = 0; row < A.m; ++row) {
+     const auto capacity = table_sizes[static_cast<std::size_t>(row)];
+@@ -159,7 +182,8 @@
+ 
+   // Numeric: each worker owns its hash table and its disjoint slice of C.
+ #ifdef _OPENMP
+-#pragma omp parallel for schedule(dynamic) default(none) shared(A, B, result, table_sizes)
++#pragma omp parallel for schedule(dynamic, rows_per_chunk) default(none) \
++    shared(A, B, result, table_sizes, rows_per_chunk)
+ #endif
+   for (IT row = 0; row < result.m; ++row) {
+     const auto capacity = table_sizes[static_cast<std::size_t>(row)];

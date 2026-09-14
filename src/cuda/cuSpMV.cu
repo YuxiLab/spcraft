@@ -10,8 +10,10 @@ namespace spcraft
 namespace detail
 {
 template <class SemiRing, typename IT, typename NT, typename OT, int kBlockSize>
-__global__ __launch_bounds__(kBlockSize) void SpmvBlockPerRowKernel(
-    IT num_rows, const OT* row_ptr, const IT* col_id, const NT* values, const NT* x, NT* y)
+__global__ __launch_bounds__(kBlockSize) void SpmvBlockPerRowKernel(IT num_rows, const OT* row_ptr,
+                                                                    const IT* col_id,
+                                                                    const NT* values, const NT* x,
+                                                                    NT* y)
 {
   constexpr int block_size = kBlockSize;
   const IT row = static_cast<IT>(blockIdx.x);
@@ -44,8 +46,7 @@ cudaError_t SpmvCudaBlockPerRowImpl<SemiRing, IT, NT, OT, kBlockSize>::Run(
     cudaStream_t stream)
 {
   constexpr int block_size = kBlockSize;
-  static_assert(block_size >= 1 && block_size <= 1024,
-                "BLOCK_SIZE must be in the range [1, 1024]");
+  static_assert(block_size >= 1 && block_size <= 1024, "BLOCK_SIZE must be in the range [1, 1024]");
   static_assert((block_size & (block_size - 1)) == 0, "BLOCK_SIZE must be a power of two");
 
   if (matrix.m < IT{0} || matrix.n < IT{0} || matrix.nnz < OT{0}) {

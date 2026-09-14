@@ -3,8 +3,8 @@ IndentWidth: 2
 UseTab: Never
 SortIncludes: Never
 BreakBeforeBraces: Linux
-ColumnLimit: 95
-AllowShortFunctionsOnASingleLine: false
+ColumnLimit: 100
+AllowShortFunctionsOnASingleLine: true
 StatementMacros:
   - OMP_BARRIER
   - OMP_PARALLEL

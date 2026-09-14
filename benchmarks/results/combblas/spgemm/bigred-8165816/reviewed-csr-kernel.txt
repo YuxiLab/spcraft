@@ -1,0 +1,228 @@
+#pragma once
+
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#include "core/AllocationGuard.h"
+#include "core/CsrMatrix.h"
+
+namespace spcraft
+{
+namespace detail
+{
+
+template <class Entry>
+[[nodiscard]] inline std::size_t SpGEMMHashCapacity(std::uintmax_t count)
+{
+  if (count == 0) {
+    return 0;
+  }
+  constexpr std::size_t kMinCapacity = 16;
+  std::size_t capacity = kMinCapacity;
+  while (capacity < count) {
+    if (capacity > std::numeric_limits<std::size_t>::max() / 2) {
+      throw std::overflow_error("SpGEMM hash capacity exceeds size_t");
+    }
+    capacity *= 2;
+  }
+  const auto size = CheckedElementCount<Entry>(capacity);
+  if (size > std::vector<Entry>().max_size()) {
+    throw std::length_error("SpGEMM hash capacity exceeds vector max_size");
+  }
+  return size;
+}
+
+template <class IT>
+[[nodiscard]] inline std::size_t SpGEMMHashSlot(IT column, std::size_t mask)
+{
+  // Match CombBLAS's multiplicative hash, with unsigned arithmetic so large
+  // column indices cannot trigger signed multiplication overflow.
+  constexpr std::size_t kHashScale = 107;
+  return (static_cast<std::size_t>(column) * kHashScale) & mask;
+}
+
+}  // namespace detail
+
+/**
+ * @brief Two-phase hash-based OpenMP sparse-matrix sparse-matrix multiplication.
+ *
+ * Computes C = A * B over SemiRing using the flat, power-of-two hash tables and
+ * linear probing of CombBLAS's LocalSpGEMMHash, adapted from columns to CSR rows.
+ * https://github.com/hongyx11/CombBLAS/blob/master/include/CombBLAS/mtSpGEMM.h
+ * The symbolic table stores column keys and is sized from the row expansion
+ * bound. An overflow-checked prefix sum sizes the CSR storage. The numeric table
+ * stores column/value pairs and is sized from the exact symbolic count, then
+ * compacted and sorted before writing the output row.
+ * Output column indices are sorted within each CSR row. Structurally produced
+ * entries are retained even when their final value equals the additive identity.
+ * Inputs must be well-formed host CSR matrices with in-range column indices
+ * and immutable buffers for the duration of the call. Unsorted columns and
+ * duplicate entries are supported. Semiring operations must be thread-safe
+ * and must not throw inside the OpenMP loops.
+ */
+template <class SemiRing, class IT, class NT, class OT>
+[[nodiscard]] CsrMatrix<IT, NT, OT> spgemm_openmp(const CsrMatrix<IT, NT, OT>& A,
+                                                  const CsrMatrix<IT, NT, OT>& B)
+{
+  static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
+                "SpGEMM semiring value type must match the matrix value type");
+  static_assert(std::is_integral_v<IT>, "SpGEMM index type must be integral");
+  static_assert(std::is_integral_v<OT>, "SpGEMM offset type must be integral");
+
+  if (A.n != B.m) {
+    throw std::invalid_argument("SpGEMM matrix dimensions do not match");
+  }
+  if constexpr (std::is_signed_v<IT>) {
+    if (A.m < 0 || A.n < 0 || B.m < 0 || B.n < 0) {
+      throw std::invalid_argument("SpGEMM matrix dimensions must be non-negative");
+    }
+  }
+
+  using Entry = std::pair<IT, NT>;
+  const auto row_count = detail::CheckedElementCount<std::uintmax_t>(A.m);
+  std::vector<std::uintmax_t> row_nonzeros(row_count);
+  std::vector<std::size_t> table_sizes(detail::CheckedElementCount<std::size_t>(A.m));
+  const auto max_columns = static_cast<std::uintmax_t>(B.n);
+  // Amortize queue traffic on large matrices, but retain enough independent
+  // chunks to balance small matrices with uneven row expansion costs.
+  constexpr std::size_t kMaxRowsPerChunk = 256;
+  constexpr std::size_t kChunksPerThread = 32;
+  std::size_t thread_count = 1;
+#ifdef _OPENMP
+  thread_count = static_cast<std::size_t>(omp_get_max_threads());
+#endif
+  const auto rows_per_chunk = std::max<std::size_t>(
+      1, std::min(kMaxRowsPerChunk, row_count / thread_count / kChunksPerThread));
+
+  // Bound the number of distinct keys by min(row expansion work, B.n).
+  // Saturation avoids overflowing the work count when many paths repeat keys.
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic, rows_per_chunk) default(none) \
+    shared(A, B, row_nonzeros, max_columns, rows_per_chunk)
+#endif
+  for (IT row = 0; row < A.m; ++row) {
+    std::uintmax_t bound = 0;
+    for (OT a_position = A.row_ptr[row]; a_position < A.row_ptr[row + 1]; ++a_position) {
+      const IT inner = A.col_id[a_position];
+      const auto work = static_cast<std::uintmax_t>(B.row_ptr[inner + 1] - B.row_ptr[inner]);
+      bound += std::min(work, max_columns - bound);
+      if (bound == max_columns) {
+        break;
+      }
+    }
+    row_nonzeros[static_cast<std::size_t>(row)] = bound;
+  }
+  // Check every table size before entering the parallel allocation loops.
+  for (std::size_t row = 0; row < row_nonzeros.size(); ++row) {
+    table_sizes[row] = detail::SpGEMMHashCapacity<IT>(row_nonzeros[row]);
+  }
+
+  // Symbolic: inspect only the sparsity patterns, without semiring operations.
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic, rows_per_chunk) default(none) \
+    shared(A, B, row_nonzeros, table_sizes, rows_per_chunk)
+#endif
+  for (IT row = 0; row < A.m; ++row) {
+    const auto capacity = table_sizes[static_cast<std::size_t>(row)];
+    if (capacity == 0) {
+      continue;
+    }
+    // A valid column is strictly below B.n, so max() is unused for both
+    // signed and unsigned index types, including matrices with B.n == max().
+    constexpr IT kEmptyColumn = std::numeric_limits<IT>::max();
+    std::vector<IT> keys(capacity, kEmptyColumn);
+    const auto mask = capacity - 1;
+    std::uintmax_t count = 0;
+    for (OT a_position = A.row_ptr[row]; a_position < A.row_ptr[row + 1]; ++a_position) {
+      const IT inner = A.col_id[a_position];
+      for (OT b_position = B.row_ptr[inner]; b_position < B.row_ptr[inner + 1]; ++b_position) {
+        const IT column = B.col_id[b_position];
+        auto slot = detail::SpGEMMHashSlot(column, mask);
+        while (keys[slot] != kEmptyColumn && keys[slot] != column) {
+          slot = (slot + 1) & mask;
+        }
+        if (keys[slot] == kEmptyColumn) {
+          keys[slot] = column;
+          ++count;
+        }
+      }
+    }
+    row_nonzeros[static_cast<std::size_t>(row)] = count;
+  }
+
+  std::uintmax_t nonzeros = 0;
+  constexpr std::uintmax_t kMaxOffset =
+      static_cast<std::uintmax_t>(std::numeric_limits<OT>::max());
+  for (const auto count : row_nonzeros) {
+    if (count > kMaxOffset - nonzeros) {
+      throw std::overflow_error("SpGEMM output nnz exceeds the offset type");
+    }
+    nonzeros += count;
+  }
+
+  CsrMatrix<IT, NT, OT> result;
+  result.Allocate(static_cast<OT>(nonzeros), A.m, B.n);
+  result.row_ptr[0] = OT{0};
+  for (IT row = 0; row < A.m; ++row) {
+    result.row_ptr[row + 1] =
+        result.row_ptr[row] + static_cast<OT>(row_nonzeros[static_cast<std::size_t>(row)]);
+    table_sizes[static_cast<std::size_t>(row)] =
+        detail::SpGEMMHashCapacity<Entry>(row_nonzeros[static_cast<std::size_t>(row)]);
+  }
+
+  // Numeric: each worker owns its hash table and its disjoint slice of C.
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic, rows_per_chunk) default(none) \
+    shared(A, B, result, table_sizes, rows_per_chunk)
+#endif
+  for (IT row = 0; row < result.m; ++row) {
+    const auto capacity = table_sizes[static_cast<std::size_t>(row)];
+    if (capacity == 0) {
+      continue;
+    }
+    constexpr IT kEmptyColumn = std::numeric_limits<IT>::max();
+    std::vector<Entry> table(capacity, {kEmptyColumn, SemiRing::kAdditiveIdentity});
+    const auto mask = capacity - 1;
+    for (OT a_position = A.row_ptr[row]; a_position < A.row_ptr[row + 1]; ++a_position) {
+      const IT inner = A.col_id[a_position];
+      for (OT b_position = B.row_ptr[inner]; b_position < B.row_ptr[inner + 1]; ++b_position) {
+        const IT column = B.col_id[b_position];
+        auto slot = detail::SpGEMMHashSlot(column, mask);
+        while (table[slot].first != kEmptyColumn && table[slot].first != column) {
+          slot = (slot + 1) & mask;
+        }
+        table[slot].first = column;
+        table[slot].second = SemiRing::Add(
+            table[slot].second, SemiRing::Multiply(A.val[a_position], B.val[b_position]));
+      }
+    }
+    std::size_t count = 0;
+    for (std::size_t slot = 0; slot < capacity; ++slot) {
+      if (table[slot].first != kEmptyColumn) {
+        table[count++] = table[slot];
+      }
+    }
+    std::sort(table.begin(), table.begin() + count,
+              [](const Entry& left, const Entry& right) { return left.first < right.first; });
+    OT position = result.row_ptr[row];
+    for (std::size_t entry = 0; entry < count; ++entry) {
+      result.col_id[position] = table[entry].first;
+      result.val[position] = table[entry].second;
+      ++position;
+    }
+  }
+
+  return result;
+}
+
+}  // namespace spcraft

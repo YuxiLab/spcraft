@@ -1,0 +1,121 @@
+###################################################################################
+# Common settings applied to all files.
+# Includes/system paths are pulled from compile_commands.json, so they are
+# intentionally not duplicated here. Symlink `build` -> `build_<arch>` locally.
+###################################################################################
+CompileFlags:
+  CompilationDatabase: ./build
+  Add:
+    # SPCraft is header-only, so compile_commands.json has no entries for its
+    # headers and clangd may need the dependency path while interpolating flags.
+    # Paths are relative to the compile command's directory (build/).
+    - "-I../include"
+    - "-I.."
+    - "-isystem"
+    - "_deps/fast_matrix_market-src/include"
+    - "-isystem"
+    - "_deps/fmt-src/include"
+    - "-I/opt/nvidia/hpc_sdk/Linux_x86_64/26.5/comm_libs/13.2/hpcx/hpcx-2.50/ompi5/include"
+    # The headers have no compile_commands.json entry, so clangd interpolates
+    # flags from whichever translation unit it judges nearest -- for a name with
+    # no matching stem that is often a third-party dependency compiled without
+    # this define. Everything behind `#ifdef SPCRAFT_USE_CUDA` then greys out as
+    # an inactive region. The configured build has SPCRAFT_USE_CUDA=ON, so state
+    # it here rather than depending on which TU wins interpolation.
+    - "-DSPCRAFT_USE_CUDA=1"
+
+Diagnostics:
+  Suppress:
+    - "pp_including_mainfile_in_preamble"
+    - "builtin_definition"
+    - "unused-includes"
+    - "variadic_device_fn"
+    - "attributes_not_allowed"
+
+Hover:
+  ShowAKA: No
+
+InlayHints:
+  Enabled: No
+
+---
+###################################################################################
+# Host C/C++ headers and sources.
+###################################################################################
+
+If:
+  # .cuh is here rather than in the CUDA section below on purpose: clang 20
+  # supports CUDA up to 12.8 and this toolkit is 13.2, so CUDA-mode parsing
+  # fails inside __clang_cuda_runtime_wrapper.h and leaves a broken preamble
+  # that degrades name lookup (std::string resolves to int). SpCraft's .cuh
+  # headers hold host-side declarations only -- device code lives in src/*.cu --
+  # so they parse cleanly as host C++ against cuda_runtime.h.
+  PathMatch: '.*\.(c|cc|cpp|cxx|h|hh|hpp|hxx|cuh)$'
+CompileFlags:
+  Compiler: /usr/bin/c++
+  Add:
+    - -I/usr/local/cuda/targets/x86_64-linux/include
+    - --std=c++20
+  Remove:
+    # strip nvcc-only arguments inherited by compdb header entries
+    - "-forward-unknown-to-host-compiler"
+    - "-Xfatbin*"
+    - "-gencode*"
+    - "--generate-code*"
+    - "-arch=*"
+    - "-Xcompiler=*"
+    - "-ccbin*"
+    - "--compiler-options*"
+    - "--expt-extended-lambda"
+    - "--expt-relaxed-constexpr"
+    - "-Werror=cross-execution-space-call"
+    # strip CUDA language forcing so headers parse as host C++
+    - "-x"
+    - "-xcuda"
+
+---
+###################################################################################
+# Device headers, continued.
+###################################################################################
+# The host section above strips the CUDA `-x` flags, and clang's driver does not
+# recognise the .cuh extension on its own -- without a language it treats the
+# file as a linker input and emits no compiler job at all. Name the language
+# explicitly here, after that removal, so the header still parses as host C++.
+If:
+  PathMatch: '.*\.cuh$'
+CompileFlags:
+  Add:
+    - "-xc++-header"
+
+---
+###################################################################################
+# CUDA sources.
+###################################################################################
+If:
+  PathMatch: '.*\.cu$'
+CompileFlags:
+  Compiler: /usr/local/cuda/bin/nvcc
+  Add:
+    - --cuda-path=/usr/local/cuda
+    - --cuda-gpu-arch=sm_80
+    - -I/usr/local/cuda/targets/x86_64-linux/include
+    - "-isystem"
+    - "/opt/nvidia/hpc_sdk/Linux_x86_64/26.5/math_libs/13.2/include"
+    - "-xcuda"
+    - "-ferror-limit=0"
+    - "--no-cuda-version-check"
+    - --std=c++20
+    - "-Wno-invalid-constexpr"
+  Remove:
+    # strip nvcc-only flags before clang parses CUDA mode
+    - "-Xfatbin*"
+    - "-gencode*"
+    - "--generate-code*"
+    - "-arch=*"
+    - "-Xcompiler=*"
+    - "-ccbin*"
+    - "--compiler-options*"
+    - "--expt-extended-lambda"
+    - "--expt-relaxed-constexpr"
+    - "-forward-unknown-to-host-compiler"
+    - "-Werror=cross-execution-space-call"

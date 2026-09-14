@@ -1,0 +1,4 @@
+add_executable(e01_multi_template_instantiation
+	e01_multi_template_instantiation.cpp
+)
+target_link_libraries(e01_multi_template_instantiation PRIVATE SPCraft)

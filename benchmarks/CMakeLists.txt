@@ -1,13 +1,25 @@
-add_executable(spmv_benchmark spmv_benchmark.cpp)
-target_link_libraries(spmv_benchmark
-	PRIVATE
+# Helpers shared by every benchmark folder: dataset loading, the Eigen
+# reference, warmup, and the iteration/time-budget policy.
+add_library(SPCraftBenchmarkCommon INTERFACE)
+target_include_directories(SPCraftBenchmarkCommon INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(SPCraftBenchmarkCommon
+	INTERFACE
 		SPCraft
-		benchmark::benchmark
+		${EIGEN3_TARGET}
+		OpenMP::OpenMP_CXX
 		cxxopts::cxxopts
 )
 
-add_executable(spmv_er_openmp spmv_er_openmp.cpp)
-target_link_libraries(spmv_er_openmp PRIVATE SPCraft)
+add_subdirectory(spcraft)
 
-add_executable(spmv_thread_profile spmv_thread_profile.cpp)
-target_link_libraries(spmv_thread_profile PRIVATE SPCraft cxxopts::cxxopts)
+if(SPCRAFT_BENCH_COMBBLAS)
+	add_subdirectory(combblas)
+endif()
+
+if(SPCRAFT_USE_MKL)
+	add_subdirectory(mkl)
+endif()
+
+if(SPCRAFT_USE_CUDA)
+	add_subdirectory(cusparse)
+endif()
