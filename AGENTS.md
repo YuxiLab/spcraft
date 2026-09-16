@@ -257,10 +257,8 @@ because something can break in it that no other job would notice:
   GPU that is not there.
 - **python** -- builds the nanobind module and runs `pytest`, which the default
   CMake build never touches.
-- **slides** -- builds every deck in `latex/beamer/`. The decks pull code out of
-  `include/` and `src/` by line range, so a rename or an inserted line silently
-  points a slide at the wrong code; a build failure here is the only automatic
-  warning.
+- **slides are private** -- the optional `latex/` submodule owns its own CI in
+  the private notes repository. Public SPCraft CI does not fetch private content.
 - **format** -- `clang-format --dry-run --Werror` over every tracked C++ file.
 
 Run the equivalent locally before pushing:

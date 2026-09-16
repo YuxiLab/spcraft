@@ -8,6 +8,15 @@ Please send email to `yuxihong@iu.edu` if you have any questions.
 
 [Yuxi Hong](https://hongyx11.github.io/)
 
+## Private lecture notes
+
+The optional `latex/` submodule contains private lecture notes and is not needed
+to build or use SPCraft. Authorized collaborators can check it out with:
+
+```bash
+git submodule update --init latex
+```
+
 
 ## Design Philosophy
 

@@ -136,31 +136,6 @@ jobs:
           uv sync --all-extras
           uv run pytest python/tests -q
 
-  # The slide decks pull code straight out of include/ and src/ by line range.
-  # A rename or an edit that shifts those lines shows up here as a build
-  # failure, which is the only automatic warning that a deck has gone stale.
-  slides:
-    name: beamer decks
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install TeX Live
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            texlive-latex-recommended texlive-latex-extra texlive-fonts-extra \
-            texlive-pictures latexmk
-      - name: Build every deck
-        working-directory: latex/beamer
-        run: |
-          status=0
-          for deck in *.tex; do
-            echo "::group::$deck"
-            latexmk -pdf -interaction=nonstopmode "$deck" || status=1
-            echo "::endgroup::"
-          done
-          exit $status
-
   format:
     name: clang-format
     runs-on: ubuntu-24.04

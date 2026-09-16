@@ -1,0 +1,4 @@
+[submodule "latex"]
+	path = latex
+	url = git@github.com:hongyx11/lssc_lab_notes.git
+	branch = main

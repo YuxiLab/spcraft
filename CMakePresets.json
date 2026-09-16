@@ -96,11 +96,11 @@
     },
     {
       "name": "build_mkl_spmv",
-      "description": "",
-      "displayName": "",
+      "description": "Build the oneMKL SpMV benchmark",
+      "displayName": "Build oneMKL SpMV Benchmark",
       "configurePreset": "config-full",
       "targets": [
-        "spmv_mkl_benchmark"
+        "bench_mkl_spmv"
       ]
     }
   ]
