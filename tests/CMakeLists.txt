@@ -36,6 +36,10 @@ add_executable(test_matrix_generator test_matrix_generator.cpp)
 target_link_libraries(test_matrix_generator PRIVATE SPCraft)
 add_test(NAME matrix_generator COMMAND test_matrix_generator)
 
+add_executable(test_benchmark_report test_benchmark_report.cpp)
+target_link_libraries(test_benchmark_report PRIVATE SPCraft)
+add_test(NAME benchmark_report COMMAND test_benchmark_report)
+
 add_executable(test_pagerank test_pagerank.cpp)
 target_link_libraries(test_pagerank PRIVATE SPCraft)
 add_test(NAME pagerank_openmp COMMAND test_pagerank)

@@ -1,2 +1,2 @@
-add_executable(spmv_mkl_benchmark SpMVBenchmark.cpp)
-target_link_libraries(spmv_mkl_benchmark PRIVATE SPCraftBenchmarkCommon MKL::MKL)
+add_executable(bench_mkl_spmv MKLSpMVBench.cpp)
+target_link_libraries(bench_mkl_spmv PRIVATE SPCraftBenchmarkCommon MKL::MKL)

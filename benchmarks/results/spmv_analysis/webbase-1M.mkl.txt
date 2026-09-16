@@ -1,0 +1,98 @@
+=================================================================================================================================================
+                                                                   oneMKL SpMV                                                                   
+=================================================================================================================================================
+kernel              : mkl_sparse_?_mv (CSR, inspector-executor)
+reference           : Eigen sparse product, every row verified
+oneMKL              : 2026.0.1 (GNU OpenMP, LP64)
+index               : int32 (oneMKL supports int32 only)
+numeric             : double
+offset              : int32 (oneMKL supports int32 only)
+threads             : [1, 2, 4, 8, 16]
+max iterations      : 1000
+time budget         : 3.00s
+-------------------------------------------------------------------------------------------------------------------------------------------------
+backend           kernel    dataset                    idx/off  prec threads  iters   median_ms      min_ms   cv_%   GFLOP/s      GB/s   max_err
+-------------------------------------------------------------------------------------------------------------------------------------------------
+oneMKL            SpMV      webbase-1M.mtx             i32/o32  FP64       1    453      5.5414      5.2971   2.53      1.12     13.37   7.0e-15
+oneMKL            SpMV      webbase-1M.mtx             i32/o32  FP64       2   1000      2.4535      2.4078   4.12      2.53     30.21   7.0e-15
+oneMKL            SpMV      webbase-1M.mtx             i32/o32  FP64       4   1000      1.1589      1.1492   2.90      5.36     63.95   7.0e-15
+oneMKL            SpMV      webbase-1M.mtx             i32/o32  FP64       8   1000      0.6300      0.6177  32.51      9.86    117.64   7.0e-15
+oneMKL            SpMV      webbase-1M.mtx             i32/o32  FP64      16   1000      0.3145      0.2970 104.02     19.75    235.64   7.0e-15
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+PROFILE DETAILS
+
+oneMKL / SpMV / webbase-1M.mtx
+  parameter rank count=1
+  run profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time                          453    median        5.5414        5.2971        6.2060        ms
+  rank:0 attributes: role=benchmark process memory_accounting=CSR + input vector + output vector; backend workspace excluded
+  rank:0                      csr_matrix_storage                   1       max       39.3548       39.3548       39.3548       MiB
+  rank:0                      input_vector_storage                 1       max        7.6294        7.6294        7.6294       MiB
+  rank:0                      output_vector_storage                1       max        7.6294        7.6294        7.6294       MiB
+  rank:0                      algorithm_storage                    1       max       54.6136       54.6136       54.6136       MiB
+  rank:0/cpu attributes: runtime=oneMKL requested_threads=1
+  rank:0/cpu                  process_cpu_time                   453      mean        5.5828        5.2980        6.1540        ms
+  rank:0/cpu                  effective_cpu_cores                  1      mean        0.9999        0.9999        0.9999     cores
+  rank:0/cpu                  cpu_occupancy                        1      mean        0.9999        0.9999        0.9999     ratio
+
+oneMKL / SpMV / webbase-1M.mtx
+  parameter rank count=1
+  run profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time                         1000    median        2.4535        2.4078        3.2967        ms
+  rank:0 attributes: role=benchmark process memory_accounting=CSR + input vector + output vector; backend workspace excluded
+  rank:0                      csr_matrix_storage                   1       max       39.3548       39.3548       39.3548       MiB
+  rank:0                      input_vector_storage                 1       max        7.6294        7.6294        7.6294       MiB
+  rank:0                      output_vector_storage                1       max        7.6294        7.6294        7.6294       MiB
+  rank:0                      algorithm_storage                    1       max       54.6136       54.6136       54.6136       MiB
+  rank:0/cpu attributes: runtime=oneMKL requested_threads=2
+  rank:0/cpu                  process_cpu_time                  1000      mean        5.0439        4.4090        6.7410        ms
+  rank:0/cpu                  effective_cpu_cores                  1      mean        2.0004        2.0004        2.0004     cores
+  rank:0/cpu                  cpu_occupancy                        1      mean        1.0002        1.0002        1.0002     ratio
+
+oneMKL / SpMV / webbase-1M.mtx
+  parameter rank count=1
+  run profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time                         1000    median        1.1589        1.1492        1.9469        ms
+  rank:0 attributes: role=benchmark process memory_accounting=CSR + input vector + output vector; backend workspace excluded
+  rank:0                      csr_matrix_storage                   1       max       39.3548       39.3548       39.3548       MiB
+  rank:0                      input_vector_storage                 1       max        7.6294        7.6294        7.6294       MiB
+  rank:0                      output_vector_storage                1       max        7.6294        7.6294        7.6294       MiB
+  rank:0                      algorithm_storage                    1       max       54.6136       54.6136       54.6136       MiB
+  rank:0/cpu attributes: runtime=oneMKL requested_threads=4
+  rank:0/cpu                  process_cpu_time                  1000      mean        4.6705        3.4130        7.1940        ms
+  rank:0/cpu                  effective_cpu_cores                  1      mean        4.0075        4.0075        4.0075     cores
+  rank:0/cpu                  cpu_occupancy                        1      mean        1.0019        1.0019        1.0019     ratio
+
+oneMKL / SpMV / webbase-1M.mtx
+  parameter rank count=1
+  run profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time                         1000    median        0.6300        0.6177        4.3596        ms
+  rank:0 attributes: role=benchmark process memory_accounting=CSR + input vector + output vector; backend workspace excluded
+  rank:0                      csr_matrix_storage                   1       max       39.3548       39.3548       39.3548       MiB
+  rank:0                      input_vector_storage                 1       max        7.6294        7.6294        7.6294       MiB
+  rank:0                      output_vector_storage                1       max        7.6294        7.6294        7.6294       MiB
+  rank:0                      algorithm_storage                    1       max       54.6136       54.6136       54.6136       MiB
+  rank:0/cpu attributes: runtime=oneMKL requested_threads=8
+  rank:0/cpu                  process_cpu_time                  1000      mean        5.2146        0.6200       28.7140        ms
+  rank:0/cpu                  effective_cpu_cores                  1      mean        8.0130        8.0130        8.0130     cores
+  rank:0/cpu                  cpu_occupancy                        1      mean        1.0016        1.0016        1.0016     ratio
+
+oneMKL / SpMV / webbase-1M.mtx
+  parameter rank count=1
+  run profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time                         1000    median        0.3145        0.2970        4.2987        ms
+  rank:0 attributes: role=benchmark process memory_accounting=CSR + input vector + output vector; backend workspace excluded
+  rank:0                      csr_matrix_storage                   1       max       39.3548       39.3548       39.3548       MiB
+  rank:0                      input_vector_storage                 1       max        7.6294        7.6294        7.6294       MiB
+  rank:0                      output_vector_storage                1       max        7.6294        7.6294        7.6294       MiB
+  rank:0                      algorithm_storage                    1       max       54.6136       54.6136       54.6136       MiB
+  rank:0/cpu attributes: runtime=oneMKL requested_threads=16
+  rank:0/cpu                  process_cpu_time                  1000      mean        6.1652        0.3000       75.2000        ms
+  rank:0/cpu                  effective_cpu_cores                  1      mean       15.9481       15.9481       15.9481     cores
+  rank:0/cpu                  cpu_occupancy                        1      mean        0.9968        0.9968        0.9968     ratio

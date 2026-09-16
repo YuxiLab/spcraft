@@ -71,8 +71,8 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
     // Embed the same graph in a larger shape to exercise genuinely hypersparse
     // columns without changing its scalar products or output nonzero count.
     auto embed = [stride](const Eigen::SparseMatrix<NT>& source) {
-      const auto limit = std::min<std::int64_t>(std::numeric_limits<IT>::max(),
-                                                std::numeric_limits<int>::max());
+      const auto limit =
+          std::min<std::int64_t>(std::numeric_limits<IT>::max(), std::numeric_limits<int>::max());
       if (source.rows() > limit / stride || source.cols() > limit / stride) {
         throw std::overflow_error("embedded shape exceeds index type");
       }
@@ -80,8 +80,7 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
       std::vector<Eigen::Triplet<NT>> entries;
       entries.reserve(source.nonZeros());
       for (int col = 0; col < source.outerSize(); ++col) {
-        for (typename Eigen::SparseMatrix<NT>::InnerIterator entry(source, col); entry;
-             ++entry) {
+        for (typename Eigen::SparseMatrix<NT>::InnerIterator entry(source, col); entry; ++entry) {
           entries.emplace_back(entry.row() * stride, entry.col() * stride, entry.value());
         }
       }
@@ -114,8 +113,6 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
     return std::unique_ptr<Tuples>(
         combblas::LocalSpGEMMHash<CombRing, NT>(ca, cb, false, false, true));
   };
-  report.AddInfo(dataset + "/" + PrecisionName<NT>() + "/output nnz",
-                 std::to_string(expected.nonZeros()));
   fmt::print("{}: A {}x{}, {} nnz/{} nonempty columns; B {}x{}, {} nnz/{} nonempty columns\n",
              dataset, a.m, a.n, a.nnz, da.nzc, b.m, b.n, b.nnz, db.nzc);
 
@@ -137,8 +134,7 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
         }
       }
       errors[0] = Verify(
-          expected, [&](Eigen::Index p) { return std::get<2>(u.entries[p]); },
-          "OmpHashSpGEMM");
+          expected, [&](Eigen::Index p) { return std::get<2>(u.entries[p]); }, "OmpHashSpGEMM");
       errors[1] = Verify(expected, [&](Eigen::Index p) { return t->numvalue(p); }, "CombBLAS");
     }
     auto native = [&] {
@@ -158,32 +154,38 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
     for (int i = 0; i < kWarmups; ++i)
       for (std::size_t backend = 0; backend < kBackends; ++backend) sample(backend);
     std::array<spcraft::BenchmarkRun, kBackends> runs;
+    std::array<std::vector<double>, kBackends> wall_seconds;
     const std::array<const char*, kBackends> names = {"SPCraft-Hash-Tuples",
                                                       "CombBLAS-Hash-Tuples"};
     for (std::size_t i = 0; i < kBackends; ++i) {
       DescribeRun(runs[i], csr_a, dataset, names[i]);
-      runs[i].kernel = "SpGEMM";
-      runs[i].threads = threads;
-      runs[i].columns = b.n;
-      runs[i].flops_per_iteration = 2.0 * static_cast<double>(work);
-      runs[i].bytes_per_iteration = 0;
-      runs[i].verification_error = errors[i];
+      runs[i].info.kernel = "SpGEMM";
+      runs[i].info.thread_count = threads;
+      runs[i].info.parameters.emplace_back("rank count", "1");
+      runs[i].info.parameters.emplace_back("output nonzeros", std::to_string(expected.nonZeros()));
+      runs[i].workload.columns = b.n;
+      runs[i].workload.output_nonzeros = expected.nonZeros();
+      runs[i].workload.flops_per_iteration = 2.0 * static_cast<double>(work);
+      runs[i].workload.bytes_per_iteration = 0;
+      runs[i].verification = spcraft::VerificationResult{"Eigen sparse product", errors[i], true};
     }
     const auto start = std::chrono::steady_clock::now();
     // Alternate AB/BA so each kernel occupies both positions equally.
     for (int iteration = 0; iteration < options["iterations"].as<int>(); ++iteration) {
       for (std::size_t position = 0; position < kBackends; ++position) {
         const auto backend = (position + iteration % 2) % kBackends;
-        runs[backend].seconds.push_back(sample(backend));
+        wall_seconds[backend].push_back(sample(backend));
       }
       const std::chrono::duration<double> elapsed = std::chrono::steady_clock::now() - start;
       if (elapsed.count() >= options["max-time"].as<double>()) break;
     }
     for (std::size_t backend = 0; backend < kBackends; ++backend) {
       auto& run = runs[backend];
-      fmt::print("{} / {} / {} threads: {:.3f} ms\n", dataset, run.backend, threads,
+      run.profiles.push_back(spcraft::ResourceProfile{
+          spcraft::RunScope{}, {}, {spcraft::metric::WallTime(std::move(wall_seconds[backend]))}});
+      fmt::print("{} / {} / {} threads: {:.3f} ms\n", dataset, run.info.backend, threads,
                  run.Stats().median * 1000);
-      report.Add(std::move(run));
+      report.AddRun(std::move(run));
     }
     std::fflush(stdout);
   }
@@ -221,31 +223,36 @@ int main(int argc, char** argv)
           result["generator"].as<std::string>() != "rmat")
         throw std::invalid_argument("generator must be er or rmat");
       OMP_SET_DYNAMIC(0);
-      spcraft::BenchmarkReport report("OmpHashSpGEMM / CombBLAS native tuple comparison");
-      report.AddInfo("SpCraft tuple kernel", "OmpHashSpGEMM (source-mapped baseline)");
-      report.AddInfo("CombBLAS revision", SPCRAFT_COMBBLAS_REVISION);
-      report.AddInfo("compiler", __VERSION__);
-      report.AddInfo("build type", SPCRAFT_BENCHMARK_BUILD_TYPE);
-      report.AddInfo("orientation",
-                     "All implementations compute A*B directly by column expansion");
-      report.AddInfo("timing",
-                     "symbolic + numeric + sorting + allocation + destruction; "
-                     "input conversions excluded; native tuple output on both sides");
-      report.AddInfo("tuple output",
-                     "Both native paths use std::tuple<IT,IT,NT>, sorted by column then row; "
-                     "initialized array allocation and destruction included");
-      report.AddInfo("measurement order", "native tuples only, paired AB/BA");
-      report.AddInfo("reference", "Eigen full pattern and values at every thread count");
-      report.PrintHeader();
+      spcraft::ReportInfo report_info;
+      report_info.title = "OmpHashSpGEMM / CombBLAS native tuple comparison";
+      report_info.metadata = {
+          {"SpCraft tuple kernel", "OmpHashSpGEMM (source-mapped baseline)"},
+          {"CombBLAS revision", SPCRAFT_COMBBLAS_REVISION},
+          {"compiler", __VERSION__},
+          {"build type", SPCRAFT_BENCHMARK_BUILD_TYPE},
+          {"orientation", "All implementations compute A*B directly by column expansion"},
+          {"timing",
+           "symbolic + numeric + sorting + allocation + destruction; input "
+           "conversions excluded; native tuple output on both sides"},
+          {"tuple output",
+           "Both native paths use std::tuple<IT,IT,NT>, sorted by column then "
+           "row; initialized array allocation and destruction included"},
+          {"measurement order", "native tuples only, paired AB/BA"},
+          {"reference", "Eigen full pattern and values at every thread count"}};
+      spcraft::BenchmarkReport report(std::move(report_info));
       Run<std::int32_t, float>(result, report);
       Run<std::int32_t, double>(result, report);
       Run<std::int64_t, float>(result, report);
       Run<std::int64_t, double>(result, report);
-      if (report.runs().empty())
-        throw std::invalid_argument("use matching index/offset widths");
-      report.PrintFooter();
+      if (report.runs().empty()) throw std::invalid_argument("use matching index/offset widths");
+      const spcraft::TextReportRenderer text_renderer;
+      spcraft::PrintReportToStderr(text_renderer.RenderSummary(report));
+      const auto text_path = result["text-report"].as<std::string>();
+      if (!text_path.empty()) spcraft::WriteReportFile(text_path, text_renderer.Render(report));
       const auto path = result["output"].as<std::string>();
-      if (!path.empty()) report.WriteJson(path);
+      if (!path.empty()) {
+        spcraft::WriteReportFile(path, spcraft::JsonReportRenderer{}.Render(report));
+      }
     }
   } catch (const std::exception& error) {
     fmt::print(stderr, "error: {}\n", error.what());

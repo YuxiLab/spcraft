@@ -39,9 +39,12 @@ inline void AddCommonOptions(cxxopts::Options& options, const char* default_inde
 {
   // clang-format off
   options.add_options()
-      ("m,matrix", "Path to a Matrix Market (.mtx) file; omit to generate an ER graph", cxxopts::value<std::string>())
+      ("m,matrix", "Path to a Matrix Market (.mtx) file; overrides --generator", cxxopts::value<std::string>())
+      ("generator", "Generated graph: 'er' or 'rmat'", cxxopts::value<std::string>()->default_value("er"))
       ("v,vertices", "Vertex count for the generated ER graph", cxxopts::value<std::int64_t>()->default_value("50000"))
       ("d,degree", "Expected degree for the generated ER graph", cxxopts::value<double>()->default_value("16.0"))
+      ("scale", "R-MAT log2 vertex count", cxxopts::value<std::int64_t>()->default_value("16"))
+      ("edge-factor", "R-MAT sampled edges per vertex", cxxopts::value<std::size_t>()->default_value("16"))
       ("p,precision", "Numeric type: 'float', 'double', or 'both'", cxxopts::value<std::string>()->default_value("double"))
       ("index", "Index type: 'int32', 'int64', or 'both'", cxxopts::value<std::string>()->default_value(default_index))
       ("offset", "Row-offset type: 'int32', 'int64', or 'both'", cxxopts::value<std::string>()->default_value(default_offset))
@@ -50,6 +53,9 @@ inline void AddCommonOptions(cxxopts::Options& options, const char* default_inde
       ("i,iterations", "Maximum timed iterations per configuration", cxxopts::value<int>()->default_value("1000"))
       ("max-time", "Wall-clock budget per configuration in seconds", cxxopts::value<double>()->default_value("10.0"))
       ("o,output", "Write the raw per-iteration log to this JSON file", cxxopts::value<std::string>()->default_value(""))
+      ("text-report", "Write the human-readable report to this text file", cxxopts::value<std::string>()->default_value(""))
+      ("profile-thread-count", "Collect per-thread profiles only at this team size; 0 disables", cxxopts::value<int>()->default_value("0"))
+      ("profile-iterations", "Iterations in the separate per-thread profiling stage", cxxopts::value<int>()->default_value("20"))
       ("h,help", "Print help");
   // clang-format on
 }
@@ -137,8 +143,8 @@ template <class T>
 /**
  * @brief True when every one of --index, --precision and --offset selects this variant.
  *
- * The Boost.PP product instantiates all eight combinations; this is what decides
- * which of them actually run.
+ * Drivers instantiate their supported combinations explicitly; this decides which
+ * of those variants actually run.
  */
 template <class IT, class NT, class OT>
 [[nodiscard]] inline bool VariantSelected(const cxxopts::ParseResult& result)
@@ -148,24 +154,56 @@ template <class IT, class NT, class OT>
          IntegerTypeSelected<OT>(result["offset"].as<std::string>());
 }
 
-//! Load the matrix named by --matrix, or generate an ER graph from --vertices/--degree.
+//! Load --matrix, or generate the graph selected by --generator.
 template <class IT, class NT, class OT>
 [[nodiscard]] MatrixInput<IT, NT, OT> LoadMatrix(const cxxopts::ParseResult& result)
 {
   using Csr = spcraft::CsrMatrix<IT, NT, OT>;
   if (result.count("matrix") > 0) {
     const auto path = result["matrix"].as<std::string>();
-    auto coo = spcraft::CooMatrix<IT, NT, OT>::FromMatrixMarket(path);
+    spcraft::CooMatrix<IT, NT, OT> coo(path);
     return {std::make_shared<Csr>(coo.ToCsr()), path.substr(path.find_last_of("/\\") + 1)};
   }
 
-  const auto vertices = static_cast<IT>(result["vertices"].as<std::int64_t>());
-  const auto degree = result["degree"].as<double>();
   const auto seed = static_cast<std::uint64_t>(result["seed"].as<int>());
-  std::ostringstream name;
-  name << "ER_V" << vertices << "_D" << static_cast<long>(degree);
-  return {std::make_shared<Csr>(spcraft::GenERGraph<NT, IT, OT>(vertices, degree, seed)),
-          name.str()};
+  const std::string generator = result["generator"].as<std::string>();
+  if (generator == "er") {
+    const auto vertices = static_cast<IT>(result["vertices"].as<std::int64_t>());
+    const auto degree = result["degree"].as<double>();
+    std::ostringstream name;
+    name << "ER_V" << vertices << "_D" << static_cast<long>(degree);
+    return {std::make_shared<Csr>(spcraft::GenERGraph<NT, IT, OT>(vertices, degree, seed)),
+            name.str()};
+  }
+  if (generator == "rmat") {
+    const auto scale = static_cast<IT>(result["scale"].as<std::int64_t>());
+    const auto edge_factor = result["edge-factor"].as<std::size_t>();
+    std::ostringstream name;
+    name << "RMAT_S" << scale << "_E" << edge_factor;
+    return {std::make_shared<Csr>(spcraft::GenRMAT<NT, IT, OT>(scale, edge_factor, seed)),
+            name.str()};
+  }
+  throw std::invalid_argument("generator must be 'er' or 'rmat'");
+}
+
+//! Algorithm-owned CSR and dense-vector storage, excluding opaque backend workspaces.
+template <class IT, class NT, class OT>
+[[nodiscard]] inline spcraft::ResourceProfile AlgorithmStorageProfile(
+    const spcraft::CsrMatrix<IT, NT, OT>& A)
+{
+  const std::uint64_t matrix = (static_cast<std::uint64_t>(A.m) + 1) * sizeof(OT) +
+                               static_cast<std::uint64_t>(A.nnz) * (sizeof(IT) + sizeof(NT));
+  const std::uint64_t input = static_cast<std::uint64_t>(A.n) * sizeof(NT);
+  const std::uint64_t output = static_cast<std::uint64_t>(A.m) * sizeof(NT);
+  return {spcraft::RankScope{0},
+          {{"role", "benchmark process"},
+           {"memory_accounting", "CSR + input vector + output vector; backend workspace excluded"}},
+          {spcraft::BytesSeries{"csr_matrix_storage", spcraft::MetricSummary::Maximum, {matrix}},
+           spcraft::BytesSeries{"input_vector_storage", spcraft::MetricSummary::Maximum, {input}},
+           spcraft::BytesSeries{"output_vector_storage", spcraft::MetricSummary::Maximum, {output}},
+           spcraft::BytesSeries{std::string(spcraft::metric::kAlgorithmStorage),
+                                spcraft::MetricSummary::Maximum,
+                                {matrix + input + output}}}};
 }
 
 /**
@@ -223,13 +261,13 @@ template <class IT, class NT, class OT>
   return result;
 }
 
-// //! View a SpCraft dense vector as an Eigen column vector without copying.
-// template <class IT, class NT>
-// [[nodiscard]] inline Eigen::Map<const Eigen::Matrix<NT, Eigen::Dynamic, 1>> ToEigen(
-//     const spcraft::DenseVector<IT, NT>& x)
-// {
-//   return Eigen::Map<const Eigen::Matrix<NT, Eigen::Dynamic, 1>>(x.val, x.n);
-// }
+//! View a SpCraft dense vector as an Eigen column vector without copying.
+template <class IT, class NT>
+[[nodiscard]] inline Eigen::Map<const Eigen::Matrix<NT, Eigen::Dynamic, 1>> ToEigen(
+    const spcraft::DenseVector<IT, NT>& x)
+{
+  return Eigen::Map<const Eigen::Matrix<NT, Eigen::Dynamic, 1>>(x.val, x.n);
+}
 
 /**
  * @brief Largest absolute deviation of `y` from Eigen's product, throwing if too large.
@@ -302,17 +340,17 @@ template <class IT, class NT, class OT>
 inline void DescribeRun(spcraft::BenchmarkRun& run, const spcraft::CsrMatrix<IT, NT, OT>& A,
                         const std::string& dataset, const char* backend)
 {
-  run.kernel = "SpMV";
-  run.backend = backend;
-  run.dataset = dataset;
-  run.precision = PrecisionName<NT>();
-  run.index_type = TypeName<IT>();
-  run.offset_type = TypeName<OT>();
-  run.rows = static_cast<std::int64_t>(A.m);
-  run.columns = static_cast<std::int64_t>(A.n);
-  run.nonzeros = static_cast<std::int64_t>(A.nnz);
-  run.flops_per_iteration = 2.0 * static_cast<double>(A.nnz);
-  run.bytes_per_iteration = SpmvBytes(A);
+  run.info.kernel = "SpMV";
+  run.info.backend = backend;
+  run.info.dataset = dataset;
+  run.info.precision = PrecisionName<NT>();
+  run.info.index_type = TypeName<IT>();
+  run.info.offset_type = TypeName<OT>();
+  run.workload.rows = static_cast<std::int64_t>(A.m);
+  run.workload.columns = static_cast<std::int64_t>(A.n);
+  run.workload.input_nonzeros = static_cast<std::int64_t>(A.nnz);
+  run.workload.flops_per_iteration = 2.0 * static_cast<double>(A.nnz);
+  run.workload.bytes_per_iteration = SpmvBytes(A);
 }
 
 }  // namespace spcraft::benchmarks

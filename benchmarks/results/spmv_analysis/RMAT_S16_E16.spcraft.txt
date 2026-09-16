@@ -1,0 +1,199 @@
+=================================================================================================================================================
+                                                               SPCraft OpenMP SpMV                                                               
+=================================================================================================================================================
+kernel              : SpMV (PlusTimesRing, CSR)
+reference           : Eigen sparse product, every row verified
+index               : int32
+numeric             : double
+offset              : int32
+threads             : [1, 2, 4, 8, 16]
+max iterations      : 1000
+time budget         : 3.00s
+-------------------------------------------------------------------------------------------------------------------------------------------------
+backend           kernel    dataset                    idx/off  prec threads  iters   median_ms      min_ms   cv_%   GFLOP/s      GB/s   max_err
+-------------------------------------------------------------------------------------------------------------------------------------------------
+SPCraft-OpenMP    SpMV      RMAT_S16_E16               i32/o32  FP64       1   1000      2.1506      2.0449   2.53      1.69     17.28   1.4e-13
+SPCraft-OpenMP    SpMV      RMAT_S16_E16               i32/o32  FP64       2   1000      1.4245      1.3958   2.02      2.55     26.09   1.4e-13
+SPCraft-OpenMP    SpMV      RMAT_S16_E16               i32/o32  FP64       4   1000      0.9851      0.9662   5.44      3.69     37.73   1.4e-13
+SPCraft-OpenMP    SpMV      RMAT_S16_E16               i32/o32  FP64       8   1000      0.7209      0.7102   3.50      5.05     51.56   1.4e-13
+SPCraft-OpenMP    SpMV      RMAT_S16_E16               i32/o32  FP64      16   1000      0.5422      0.5239  67.99      6.71     68.55   1.4e-13
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+PROFILE DETAILS
+
+SPCraft-OpenMP / SpMV / RMAT_S16_E16
+  parameter rank count=1
+  run profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time                         1000    median        2.1506        2.0449        3.1948        ms
+  rank:0 attributes: role=benchmark process memory_accounting=CSR + input vector + output vector; backend workspace excluded
+  rank:0                      csr_matrix_storage                   1       max       21.0677       21.0677       21.0677       MiB
+  rank:0                      input_vector_storage                 1       max        0.5000        0.5000        0.5000       MiB
+  rank:0                      output_vector_storage                1       max        0.5000        0.5000        0.5000       MiB
+  rank:0                      algorithm_storage                    1       max       22.0677       22.0677       22.0677       MiB
+  rank:0/cpu attributes: runtime=OpenMP requested_threads=1
+  rank:0/cpu                  process_cpu_time                  1000      mean        2.1516        2.0470        3.2000        ms
+  rank:0/cpu                  effective_cpu_cores                  1      mean        1.0004        1.0004        1.0004     cores
+  rank:0/cpu                  cpu_occupancy                        1      mean        1.0004        1.0004        1.0004     ratio
+
+SPCraft-OpenMP / SpMV / RMAT_S16_E16
+  parameter rank count=1
+  run profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time                         1000    median        1.4245        1.3958        2.1588        ms
+  rank:0 attributes: role=benchmark process memory_accounting=CSR + input vector + output vector; backend workspace excluded
+  rank:0                      csr_matrix_storage                   1       max       21.0677       21.0677       21.0677       MiB
+  rank:0                      input_vector_storage                 1       max        0.5000        0.5000        0.5000       MiB
+  rank:0                      output_vector_storage                1       max        0.5000        0.5000        0.5000       MiB
+  rank:0                      algorithm_storage                    1       max       22.0677       22.0677       22.0677       MiB
+  rank:0/cpu attributes: runtime=OpenMP requested_threads=2
+  rank:0/cpu                  process_cpu_time                  1000      mean        2.8554        2.3830        4.4930        ms
+  rank:0/cpu                  effective_cpu_cores                  1      mean        2.0016        2.0016        2.0016     cores
+  rank:0/cpu                  cpu_occupancy                        1      mean        1.0008        1.0008        1.0008     ratio
+
+SPCraft-OpenMP / SpMV / RMAT_S16_E16
+  parameter rank count=1
+  run profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time                         1000    median        0.9851        0.9662        2.6305        ms
+  rank:0 attributes: role=benchmark process memory_accounting=CSR + input vector + output vector; backend workspace excluded
+  rank:0                      csr_matrix_storage                   1       max       21.0677       21.0677       21.0677       MiB
+  rank:0                      input_vector_storage                 1       max        0.5000        0.5000        0.5000       MiB
+  rank:0                      output_vector_storage                1       max        0.5000        0.5000        0.5000       MiB
+  rank:0                      algorithm_storage                    1       max       22.0677       22.0677       22.0677       MiB
+  rank:0/cpu attributes: runtime=OpenMP requested_threads=4
+  rank:0/cpu                  process_cpu_time                  1000      mean        3.9519        0.9680        6.9460        ms
+  rank:0/cpu                  effective_cpu_cores                  1      mean        4.0004        4.0004        4.0004     cores
+  rank:0/cpu                  cpu_occupancy                        1      mean        1.0001        1.0001        1.0001     ratio
+
+SPCraft-OpenMP / SpMV / RMAT_S16_E16
+  parameter rank count=1
+  run profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time                         1000    median        0.7209        0.7102        1.3725        ms
+  rank:0 attributes: role=benchmark process memory_accounting=CSR + input vector + output vector; backend workspace excluded
+  rank:0                      csr_matrix_storage                   1       max       21.0677       21.0677       21.0677       MiB
+  rank:0                      input_vector_storage                 1       max        0.5000        0.5000        0.5000       MiB
+  rank:0                      output_vector_storage                1       max        0.5000        0.5000        0.5000       MiB
+  rank:0                      algorithm_storage                    1       max       22.0677       22.0677       22.0677       MiB
+  rank:0/cpu attributes: runtime=OpenMP requested_threads=8
+  rank:0/cpu                  process_cpu_time                  1000      mean        5.8051        0.7120       14.7850        ms
+  rank:0/cpu                  effective_cpu_cores                  1      mean        8.0133        8.0133        8.0133     cores
+  rank:0/cpu                  cpu_occupancy                        1      mean        1.0017        1.0017        1.0017     ratio
+
+SPCraft-OpenMP / SpMV / RMAT_S16_E16
+  parameter rank count=1
+  run profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time                         1000    median        0.5422        0.5239        5.8728        ms
+  rank:0 attributes: role=benchmark process memory_accounting=CSR + input vector + output vector; backend workspace excluded
+  rank:0                      csr_matrix_storage                   1       max       21.0677       21.0677       21.0677       MiB
+  rank:0                      input_vector_storage                 1       max        0.5000        0.5000        0.5000       MiB
+  rank:0                      output_vector_storage                1       max        0.5000        0.5000        0.5000       MiB
+  rank:0                      algorithm_storage                    1       max       22.0677       22.0677       22.0677       MiB
+  rank:0/cpu attributes: runtime=OpenMP requested_threads=16
+  rank:0/cpu                  process_cpu_time                  1000      mean        9.7571        0.5260       75.4080        ms
+  rank:0/cpu                  effective_cpu_cores                  1      mean       15.9454       15.9454       15.9454     cores
+  rank:0/cpu                  cpu_occupancy                        1      mean        0.9966        0.9966        0.9966     ratio
+  stage thread_profile iterations=30 timing=separate instrumented SpMV pass schedule=static contiguous rows
+  stage profiles
+  scope                       metric                         samples   summary      headline       minimum       maximum      unit
+  run                         wall_time_imbalance                  1      mean        4.6418        4.6418        4.6418  max/mean
+  run                         cpu_time_imbalance                   1      mean        4.5654        4.5654        4.5654  max/mean
+  run                         nonzero_imbalance                    1      mean        4.8609        4.8609        4.8609  max/mean
+  rank:0/thread:0 attributes: cpu_start=0 cpu_end=0
+  rank:0/thread:0             thread_wall_time                    30    median        0.5367        0.5204        0.5703        ms
+  rank:0/thread:0             thread_cpu_time                     30    median        0.5380        0.5220        0.5871        ms
+  rank:0/thread:0             assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:0             assigned_nonzeros                    1       max   552648.0000   552648.0000   552648.0000     count
+  rank:0/thread:0             thread_cpu_utilization               1      mean        1.0035        1.0035        1.0035     ratio
+  rank:0/thread:1 attributes: cpu_start=1 cpu_end=1
+  rank:0/thread:1             thread_wall_time                    30    median        0.1816        0.1809        0.2134        ms
+  rank:0/thread:1             thread_cpu_time                     30    median        0.1843        0.1821        0.2263        ms
+  rank:0/thread:1             assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:1             assigned_nonzeros                    1       max   194468.0000   194468.0000   194468.0000     count
+  rank:0/thread:1             thread_cpu_utilization               1      mean        1.0103        1.0103        1.0103     ratio
+  rank:0/thread:2 attributes: cpu_start=2 cpu_end=2
+  rank:0/thread:2             thread_wall_time                    30    median        0.1825        0.1812        0.2159        ms
+  rank:0/thread:2             thread_cpu_time                     30    median        0.1859        0.1824        0.2263        ms
+  rank:0/thread:2             assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:2             assigned_nonzeros                    1       max   195307.0000   195307.0000   195307.0000     count
+  rank:0/thread:2             thread_cpu_utilization               1      mean        1.0135        1.0135        1.0135     ratio
+  rank:0/thread:3 attributes: cpu_start=3 cpu_end=3
+  rank:0/thread:3             thread_wall_time                    30    median        0.0692        0.0675        0.1040        ms
+  rank:0/thread:3             thread_cpu_time                     30    median        0.0725        0.0687        0.1199        ms
+  rank:0/thread:3             assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:3             assigned_nonzeros                    1       max    65956.0000    65956.0000    65956.0000     count
+  rank:0/thread:3             thread_cpu_utilization               1      mean        1.0324        1.0324        1.0324     ratio
+  rank:0/thread:4 attributes: cpu_start=4 cpu_end=4
+  rank:0/thread:4             thread_wall_time                    30    median        0.1841        0.1818        0.2064        ms
+  rank:0/thread:4             thread_cpu_time                     30    median        0.1859        0.1830        0.2418        ms
+  rank:0/thread:4             assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:4             assigned_nonzeros                    1       max   194961.0000   194961.0000   194961.0000     count
+  rank:0/thread:4             thread_cpu_utilization               1      mean        1.0148        1.0148        1.0148     ratio
+  rank:0/thread:5 attributes: cpu_start=5 cpu_end=5
+  rank:0/thread:5             thread_wall_time                    30    median        0.0689        0.0642        0.0934        ms
+  rank:0/thread:5             thread_cpu_time                     30    median        0.0707        0.0655        0.1270        ms
+  rank:0/thread:5             assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:5             assigned_nonzeros                    1       max    65856.0000    65856.0000    65856.0000     count
+  rank:0/thread:5             thread_cpu_utilization               1      mean        1.0413        1.0413        1.0413     ratio
+  rank:0/thread:6 attributes: cpu_start=6 cpu_end=6
+  rank:0/thread:6             thread_wall_time                    30    median        0.0638        0.0633        0.1035        ms
+  rank:0/thread:6             thread_cpu_time                     30    median        0.0672        0.0645        0.1082        ms
+  rank:0/thread:6             assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:6             assigned_nonzeros                    1       max    65550.0000    65550.0000    65550.0000     count
+  rank:0/thread:6             thread_cpu_utilization               1      mean        1.0355        1.0355        1.0355     ratio
+  rank:0/thread:7 attributes: cpu_start=7 cpu_end=7
+  rank:0/thread:7             thread_wall_time                    30    median        0.0283        0.0279        0.0681        ms
+  rank:0/thread:7             thread_cpu_time                     30    median        0.0307        0.0291        0.0784        ms
+  rank:0/thread:7             assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:7             assigned_nonzeros                    1       max    21369.0000    21369.0000    21369.0000     count
+  rank:0/thread:7             thread_cpu_utilization               1      mean        1.0727        1.0727        1.0727     ratio
+  rank:0/thread:8 attributes: cpu_start=8 cpu_end=8
+  rank:0/thread:8             thread_wall_time                    30    median        0.1838        0.1807        0.2069        ms
+  rank:0/thread:8             thread_cpu_time                     30    median        0.1855        0.1822        0.2421        ms
+  rank:0/thread:8             assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:8             assigned_nonzeros                    1       max   194569.0000   194569.0000   194569.0000     count
+  rank:0/thread:8             thread_cpu_utilization               1      mean        1.0137        1.0137        1.0137     ratio
+  rank:0/thread:9 attributes: cpu_start=9 cpu_end=9
+  rank:0/thread:9             thread_wall_time                    30    median        0.0700        0.0686        0.0913        ms
+  rank:0/thread:9             thread_cpu_time                     30    median        0.0716        0.0698        0.1240        ms
+  rank:0/thread:9             assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:9             assigned_nonzeros                    1       max    65734.0000    65734.0000    65734.0000     count
+  rank:0/thread:9             thread_cpu_utilization               1      mean        1.0338        1.0338        1.0338     ratio
+  rank:0/thread:10 attributes: cpu_start=10 cpu_end=10
+  rank:0/thread:10            thread_wall_time                    30    median        0.0641        0.0637        0.0870        ms
+  rank:0/thread:10            thread_cpu_time                     30    median        0.0674        0.0650        0.1284        ms
+  rank:0/thread:10            assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:10            assigned_nonzeros                    1       max    65633.0000    65633.0000    65633.0000     count
+  rank:0/thread:10            thread_cpu_utilization               1      mean        1.0522        1.0522        1.0522     ratio
+  rank:0/thread:11 attributes: cpu_start=11 cpu_end=11
+  rank:0/thread:11            thread_wall_time                    30    median        0.0266        0.0260        0.0656        ms
+  rank:0/thread:11            thread_cpu_time                     30    median        0.0291        0.0270        0.0727        ms
+  rank:0/thread:11            assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:11            assigned_nonzeros                    1       max    21837.0000    21837.0000    21837.0000     count
+  rank:0/thread:11            thread_cpu_utilization               1      mean        1.0819        1.0819        1.0819     ratio
+  rank:0/thread:12 attributes: cpu_start=12 cpu_end=12
+  rank:0/thread:12            thread_wall_time                    30    median        0.0680        0.0631        0.0912        ms
+  rank:0/thread:12            thread_cpu_time                     30    median        0.0698        0.0642        0.1247        ms
+  rank:0/thread:12            assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:12            assigned_nonzeros                    1       max    65693.0000    65693.0000    65693.0000     count
+  rank:0/thread:12            thread_cpu_utilization               1      mean        1.0371        1.0371        1.0371     ratio
+  rank:0/thread:13 attributes: cpu_start=13 cpu_end=13
+  rank:0/thread:13            thread_wall_time                    30    median        0.0282        0.0279        0.0520        ms
+  rank:0/thread:13            thread_cpu_time                     30    median        0.0304        0.0289        0.0848        ms
+  rank:0/thread:13            assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:13            assigned_nonzeros                    1       max    21322.0000    21322.0000    21322.0000     count
+  rank:0/thread:13            thread_cpu_utilization               1      mean        1.0931        1.0931        1.0931     ratio
+  rank:0/thread:14 attributes: cpu_start=14 cpu_end=14
+  rank:0/thread:14            thread_wall_time                    30    median        0.0277        0.0275        0.0483        ms
+  rank:0/thread:14            thread_cpu_time                     30    median        0.0302        0.0286        0.0838        ms
+  rank:0/thread:14            assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:14            assigned_nonzeros                    1       max    21353.0000    21353.0000    21353.0000     count
+  rank:0/thread:14            thread_cpu_utilization               1      mean        1.1040        1.1040        1.1040     ratio
+  rank:0/thread:15 attributes: cpu_start=15 cpu_end=15
+  rank:0/thread:15            thread_wall_time                    30    median        0.0141        0.0137        0.1345        ms
+  rank:0/thread:15            thread_cpu_time                     30    median        0.0161        0.0146        0.0582        ms
+  rank:0/thread:15            assigned_rows                        1       max     4096.0000     4096.0000     4096.0000     count
+  rank:0/thread:15            assigned_nonzeros                    1       max     6820.0000     6820.0000     6820.0000     count
+  rank:0/thread:15            thread_cpu_utilization               1      mean        0.9513        0.9513        0.9513     ratio

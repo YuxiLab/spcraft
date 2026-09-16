@@ -1,5 +1,3 @@
-#include <boost/preprocessor/seq/enum.hpp>
-#include <boost/preprocessor/seq/for_each_product.hpp>
 #include <cxxopts.hpp>
 #include <fmt/format.h>
 #include <mkl.h>
@@ -7,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "BenchmarkCommon.h"
@@ -22,9 +21,8 @@ using namespace spcraft::benchmarks;
  *
  * mkl_sparse_?_create_csr takes MKL_INT for both the row offsets and the column
  * indices, so under the LP64 interface this build links against, only the
- * 32-bit combination exists. The other six variants of the shared product are
- * skipped here rather than removed from the sequence, so that what oneMKL cannot
- * do stays visible next to what it can.
+ * 32-bit combination exists. The entry point instantiates only that supported
+ * width, while this check keeps the backend constraint next to the implementation.
  */
 template <class IT, class OT>
 inline constexpr bool kMklRepresentable =
@@ -36,7 +34,6 @@ struct Settings {
   int max_iterations = 0;
   double budget = 0.0;
   int seed = 0;
-  bool header_printed = false;
 };
 
 /**
@@ -53,6 +50,11 @@ void RunVariant(const cxxopts::ParseResult& result, Settings& settings,
   if constexpr (kMklRepresentable<IT, OT>) {
     if (!VariantSelected<IT, NT, OT>(result)) return;
 
+    // Matrix conversion can enter OpenMP. Keep it from creating a larger active
+    // team whose idle CPU time would leak into the first benchmark setting.
+    OMP_SET_NUM_THREADS(settings.thread_counts.front());
+    mkl_set_dynamic(0);
+    mkl_set_num_threads(settings.thread_counts.front());
     auto input = LoadMatrix<IT, NT, OT>(result);
     const spcraft::CsrMatrix<IT, NT, OT>& A = *input.matrix;
     spcraft::DenseVector<IT, NT> x(A.n);
@@ -64,13 +66,6 @@ void RunVariant(const cxxopts::ParseResult& result, Settings& settings,
       handle.Multiply(x.val, y.val);
     }
     const double error = VerifyAgainstEigen(A, x, y.val, "oneMKL");
-
-    if (!settings.header_printed) {
-      report.AddInfo(input.name, fmt::format("rows {}, cols {}, nnz {}", A.m, A.n, A.nnz));
-      report.PrintHeader();
-      settings.header_printed = true;
-    }
-
     for (int threads : settings.thread_counts) {
       const std::string label =
           fmt::format("SpMV/oneMKL/{}/{}/{}/threads:{}", input.name, IndexOffsetName<IT, OT>(),
@@ -91,16 +86,27 @@ void RunVariant(const cxxopts::ParseResult& result, Settings& settings,
 
       spcraft::BenchmarkRun run;
       DescribeRun(run, A, input.name, "oneMKL");
-      run.threads = threads;
-      run.verification_error = error;
-      run.seconds = spcraft::TimeIterations(once, iterations);
-      report.Add(std::move(run));
+      run.info.thread_count = threads;
+      run.info.parameters.emplace_back("rank count", "1");
+      run.verification = spcraft::VerificationResult{"Eigen sparse product", error, true};
+
+      spcraft::HostTimingSamples timings = spcraft::TimeHostIterations(once, iterations);
+      spcraft::GaugeSeries effective_cores =
+          spcraft::metric::EffectiveCpuCores(timings.wall_seconds, timings.process_cpu_seconds);
+      spcraft::GaugeSeries cpu_occupancy =
+          spcraft::metric::CpuOccupancy(timings.wall_seconds, timings.process_cpu_seconds, threads);
+      run.profiles.push_back(spcraft::ResourceProfile{
+          spcraft::RunScope{}, {}, {spcraft::metric::WallTime(timings.wall_seconds)}});
+      run.profiles.push_back(AlgorithmStorageProfile(A));
+      run.profiles.push_back(spcraft::ResourceProfile{
+          spcraft::CpuScope{0},
+          {{"runtime", "oneMKL"}, {"requested_threads", std::to_string(threads)}},
+          {spcraft::metric::ProcessCpuTime(std::move(timings.process_cpu_seconds)),
+           std::move(effective_cores), std::move(cpu_occupancy)}});
+      report.AddRun(std::move(run));
     }
   }
 }
-
-#define SPCRAFT_BENCHMARK_RUN_VARIANT(r, product) \
-  RunVariant<BOOST_PP_SEQ_ENUM(product)>(result, settings, report);
 
 }  // namespace
 
@@ -135,38 +141,46 @@ int main(int argc, char** argv)
     MKLVersion version;
     mkl_get_version(&version);
 
-    spcraft::BenchmarkReport report("oneMKL SpMV");
-    report.AddInfo("kernel", "mkl_sparse_?_mv (CSR, inspector-executor)");
-    report.AddInfo("reference", "Eigen sparse product, every row verified");
-    report.AddInfo("oneMKL", fmt::format("{}.{}.{} (GNU OpenMP, LP64)", version.MajorVersion,
-                                         version.MinorVersion, version.UpdateVersion));
-    report.AddInfo(
-        "index", fmt::format("{} (oneMKL supports {} only)", result["index"].as<std::string>(),
-                             TypeName<MKL_INT>()));
-    report.AddInfo("numeric", result["precision"].as<std::string>());
-    report.AddInfo("offset",
-                   fmt::format("{} (oneMKL supports {} only)",
-                               result["offset"].as<std::string>(), TypeName<MKL_INT>()));
-    report.AddInfo("threads", "[" + thread_list + "]");
-    report.AddInfo("max iterations", std::to_string(settings.max_iterations));
-    report.AddInfo("time budget", fmt::format("{:.2f}s", settings.budget));
+    spcraft::ReportInfo report_info;
+    report_info.title = "oneMKL SpMV";
+    report_info.metadata = {
+        {"kernel", "mkl_sparse_?_mv (CSR, inspector-executor)"},
+        {"reference", "Eigen sparse product, every row verified"},
+        {"oneMKL", fmt::format("{}.{}.{} (GNU OpenMP, LP64)", version.MajorVersion,
+                               version.MinorVersion, version.UpdateVersion)},
+        {"index", fmt::format("{} (oneMKL supports {} only)", result["index"].as<std::string>(),
+                              TypeName<MKL_INT>())},
+        {"numeric", result["precision"].as<std::string>()},
+        {"offset", fmt::format("{} (oneMKL supports {} only)", result["offset"].as<std::string>(),
+                               TypeName<MKL_INT>())},
+        {"threads", "[" + thread_list + "]"},
+        {"max iterations", std::to_string(settings.max_iterations)},
+        {"time budget", fmt::format("{:.2f}s", settings.budget)}};
+    spcraft::BenchmarkReport report(std::move(report_info));
 
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(SPCRAFT_BENCHMARK_RUN_VARIANT,
-                                  SPCRAFT_BENCHMARK_TYPE_SEQUENCES)
+    RunVariant<MKL_INT, float, MKL_INT>(result, settings, report);
+    RunVariant<MKL_INT, double, MKL_INT>(result, settings, report);
 
-    if (!settings.header_printed) {
+    if (report.runs().empty()) {
       throw std::runtime_error(
           fmt::format("no type combination selected; this oneMKL build represents CSR with "
                       "MKL_INT ({}) for both index and offset, so --index and --offset must "
                       "select it",
                       TypeName<MKL_INT>()));
     }
-    report.PrintFooter();
+
+    const spcraft::TextReportRenderer text_renderer;
+    spcraft::PrintReportToStderr(text_renderer.RenderSummary(report));
+
+    const auto text_output = result["text-report"].as<std::string>();
+    if (!text_output.empty()) {
+      spcraft::WriteReportFile(text_output, text_renderer.Render(report));
+    }
 
     const auto output = result["output"].as<std::string>();
     if (!output.empty()) {
-      report.WriteJson(output);
-      fmt::print("raw per-iteration log written to {}\n", output);
+      spcraft::WriteReportFile(output, spcraft::JsonReportRenderer{}.Render(report));
+      fmt::print(stderr, "raw per-iteration log written to {}\n", output);
     }
   } catch (const std::exception& error) {
     fmt::print(stderr, "error: {}\n", error.what());
@@ -174,5 +188,3 @@ int main(int argc, char** argv)
   }
   return 0;
 }
-
-#undef SPCRAFT_BENCHMARK_RUN_VARIANT
