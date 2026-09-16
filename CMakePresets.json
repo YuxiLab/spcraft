@@ -25,6 +25,7 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "SPCRAFT_USE_MPI": true,
+        "SPCRAFT_USE_MKL": true,
         "SPCRAFT_USE_CUDA": true,
         "CMAKE_DISABLE_FIND_PACKAGE_OpenMP": false,
         "CMAKE_CUDA_ARCHITECTURES": "native",
@@ -92,6 +93,15 @@
       "name": "default",
       "displayName": "Build Default",
       "configurePreset": "default"
+    },
+    {
+      "name": "build_mkl_spmv",
+      "description": "",
+      "displayName": "",
+      "configurePreset": "config-full",
+      "targets": [
+        "spmv_mkl_benchmark"
+      ]
     }
   ]
 }

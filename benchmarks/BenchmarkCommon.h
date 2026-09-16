@@ -54,8 +54,6 @@ inline void AddCommonOptions(cxxopts::Options& options, const char* default_inde
       ("max-time", "Wall-clock budget per configuration in seconds", cxxopts::value<double>()->default_value("10.0"))
       ("o,output", "Write the raw per-iteration log to this JSON file", cxxopts::value<std::string>()->default_value(""))
       ("text-report", "Write the human-readable report to this text file", cxxopts::value<std::string>()->default_value(""))
-      ("profile-thread-count", "Collect per-thread profiles only at this team size; 0 disables", cxxopts::value<int>()->default_value("0"))
-      ("profile-iterations", "Iterations in the separate per-thread profiling stage", cxxopts::value<int>()->default_value("20"))
       ("h,help", "Print help");
   // clang-format on
 }

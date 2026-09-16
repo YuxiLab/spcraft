@@ -1,10 +1,7 @@
 #include <cxxopts.hpp>
 #include <fmt/format.h>
-#include <sched.h>
 
-#include <algorithm>
 #include <cstdint>
-#include <numeric>
 #include <string>
 #include <vector>
 
@@ -22,136 +19,7 @@ struct Settings {
   int max_iterations = 0;
   double budget = 0.0;
   int seed = 0;
-  int profile_thread_count = 0;
-  int profile_iterations = 0;
 };
-
-struct ThreadMeasurement {
-  int thread = 0;
-  int cpu_start = -1;
-  int cpu_end = -1;
-  std::uint64_t rows = 0;
-  std::uint64_t nonzeros = 0;
-  std::vector<double> wall_seconds;
-  std::vector<double> cpu_seconds;
-};
-
-template <class IT, class NT, class OT>
-std::vector<ThreadMeasurement> ProfileThreads(const spcraft::CsrMatrix<IT, NT, OT>& A,
-                                              const spcraft::DenseVector<IT, NT>& x,
-                                              spcraft::DenseVector<IT, NT>& y, int threads,
-                                              int iterations)
-{
-  std::vector<ThreadMeasurement> measurements(static_cast<std::size_t>(threads));
-  int actual_threads = 0;
-  OMP_SET_NUM_THREADS(threads);
-
-  OMP_PARALLEL()
-  {
-    const int thread = OMP_GET_THREAD_NUM();
-    ThreadMeasurement local;
-    local.thread = thread;
-    local.cpu_start = sched_getcpu();
-    local.wall_seconds.reserve(static_cast<std::size_t>(iterations));
-    local.cpu_seconds.reserve(static_cast<std::size_t>(iterations));
-
-    OMP_SINGLE
-    actual_threads = OMP_GET_NUM_THREADS();
-
-    for (int iteration = 0; iteration < iterations; ++iteration) {
-      OMP_BARRIER
-      const double cpu_start = spcraft::ThreadCpuSeconds();
-      const double wall_start = OMP_GET_WTIME();
-      OMP_FOR(schedule(static) nowait)
-      for (IT row = 0; row < A.m; ++row) {
-        NT sum = Ring<NT>::kAdditiveIdentity;
-        for (OT position = A.row_ptr[row]; position < A.row_ptr[row + 1]; ++position) {
-          sum = Ring<NT>::Add(sum, Ring<NT>::Multiply(A.val[position], x.val[A.col_id[position]]));
-        }
-        y.val[row] = sum;
-        if (iteration == 0) {
-          ++local.rows;
-          local.nonzeros += static_cast<std::uint64_t>(A.row_ptr[row + 1] - A.row_ptr[row]);
-        }
-      }
-      local.wall_seconds.push_back(OMP_GET_WTIME() - wall_start);
-      local.cpu_seconds.push_back(spcraft::ThreadCpuSeconds() - cpu_start);
-    }
-    local.cpu_end = sched_getcpu();
-    measurements[static_cast<std::size_t>(thread)] = std::move(local);
-  }
-
-  measurements.resize(static_cast<std::size_t>(actual_threads));
-  return measurements;
-}
-
-[[nodiscard]] double MaxToMean(const std::vector<double>& values)
-{
-  const double mean =
-      std::accumulate(values.begin(), values.end(), 0.0) / static_cast<double>(values.size());
-  return mean > 0.0 ? *std::max_element(values.begin(), values.end()) / mean : 0.0;
-}
-
-[[nodiscard]] spcraft::AlgorithmStage MakeThreadStage(std::vector<ThreadMeasurement> measurements,
-                                                      int iterations)
-{
-  spcraft::AlgorithmStage stage;
-  stage.name = "thread_profile";
-  stage.attributes = {{"iterations", std::to_string(iterations)},
-                      {"timing", "separate instrumented SpMV pass"},
-                      {"schedule", "static contiguous rows"}};
-
-  std::vector<double> mean_wall;
-  std::vector<double> mean_cpu;
-  std::vector<double> nonzeros;
-  mean_wall.reserve(measurements.size());
-  mean_cpu.reserve(measurements.size());
-  nonzeros.reserve(measurements.size());
-  for (const ThreadMeasurement& measurement : measurements) {
-    mean_wall.push_back(spcraft::TimingStats::From(measurement.wall_seconds).mean);
-    mean_cpu.push_back(spcraft::TimingStats::From(measurement.cpu_seconds).mean);
-    nonzeros.push_back(static_cast<double>(measurement.nonzeros));
-  }
-  stage.profiles.push_back(spcraft::ResourceProfile{
-      spcraft::RunScope{},
-      {},
-      {spcraft::GaugeSeries{std::string(spcraft::metric::kWallTimeImbalance),
-                            "max/mean",
-                            spcraft::MetricSummary::Mean,
-                            {MaxToMean(mean_wall)}},
-       spcraft::GaugeSeries{std::string(spcraft::metric::kCpuTimeImbalance),
-                            "max/mean",
-                            spcraft::MetricSummary::Mean,
-                            {MaxToMean(mean_cpu)}},
-       spcraft::GaugeSeries{std::string(spcraft::metric::kNonzeroImbalance),
-                            "max/mean",
-                            spcraft::MetricSummary::Mean,
-                            {MaxToMean(nonzeros)}}}});
-
-  for (ThreadMeasurement& measurement : measurements) {
-    spcraft::GaugeSeries utilization =
-        spcraft::metric::EffectiveCpuCores(measurement.wall_seconds, measurement.cpu_seconds);
-    utilization.name = "thread_cpu_utilization";
-    utilization.unit = "ratio";
-    stage.profiles.push_back(spcraft::ResourceProfile{
-        spcraft::ThreadScope{0, measurement.thread},
-        {{"cpu_start", std::to_string(measurement.cpu_start)},
-         {"cpu_end", std::to_string(measurement.cpu_end)}},
-        {spcraft::SecondsSeries{std::string(spcraft::metric::kThreadWallTime),
-                                spcraft::MetricSummary::Median,
-                                std::move(measurement.wall_seconds)},
-         spcraft::SecondsSeries{std::string(spcraft::metric::kThreadCpuTime),
-                                spcraft::MetricSummary::Median, std::move(measurement.cpu_seconds)},
-         spcraft::CountSeries{std::string(spcraft::metric::kAssignedRows),
-                              spcraft::MetricSummary::Maximum,
-                              {measurement.rows}},
-         spcraft::CountSeries{std::string(spcraft::metric::kAssignedNonzeros),
-                              spcraft::MetricSummary::Maximum,
-                              {measurement.nonzeros}},
-         std::move(utilization)}});
-  }
-  return stage;
-}
 
 /**
  * @brief Load, verify and time one <IT, NT, OT> combination of the SpMV kernel.
@@ -209,11 +77,6 @@ void RunVariant(const cxxopts::ParseResult& result, Settings& settings,
         {{"runtime", "OpenMP"}, {"requested_threads", std::to_string(threads)}},
         {spcraft::metric::ProcessCpuTime(std::move(timings.process_cpu_seconds)),
          std::move(effective_cores), std::move(cpu_occupancy)}});
-    if (threads == settings.profile_thread_count) {
-      run.stages.push_back(
-          MakeThreadStage(ProfileThreads(A, x, y, threads, settings.profile_iterations),
-                          settings.profile_iterations));
-    }
     report.AddRun(std::move(run));
   }
 }
@@ -239,12 +102,6 @@ int main(int argc, char** argv)
     settings.max_iterations = result["iterations"].as<int>();
     settings.budget = result["max-time"].as<double>();
     settings.seed = result["seed"].as<int>();
-    settings.profile_thread_count = result["profile-thread-count"].as<int>();
-    settings.profile_iterations = result["profile-iterations"].as<int>();
-    if (settings.profile_thread_count < 0 || settings.profile_iterations < 1) {
-      throw std::invalid_argument(
-          "profile-thread-count must be nonnegative and profile-iterations must be positive");
-    }
 
     std::string thread_list;
     for (std::size_t i = 0; i < settings.thread_counts.size(); ++i) {

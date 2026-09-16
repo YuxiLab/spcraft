@@ -104,7 +104,7 @@ class CombBLASColumnLookup
     const float cf = static_cast<float>(extent) / static_cast<float>(a.nzc);
     csize = static_cast<IT>(std::ceil(cf));
     const IT chunks = static_cast<IT>(std::ceil(static_cast<float>(extent) / std::ceil(cf)));
-    aux.resize(CheckedElementCount<IT>(static_cast<std::uintmax_t>(chunks) + 1));
+    aux.resize(detail::CheckedElementCount<IT>(static_cast<std::uintmax_t>(chunks) + 1));
     IT reg = 0, current = 0;
     aux[current++] = 0;
     for (IT i = 0; i < a.nzc; ++i) {
@@ -175,7 +175,7 @@ template <class Entry, class OT>
 void CombBLASValidateCapacities(const std::vector<OT>& counts)
 {
   const auto maximum = counts.empty() ? OT{0} : *std::max_element(counts.begin(), counts.end());
-  (void)SpGEMMHashCapacity<Entry>(std::max<std::uintmax_t>(1, maximum));
+  (void)detail::SpGEMMHashCapacity<Entry>(std::max<std::uintmax_t>(1, maximum));
 }
 
 template <class IT, class NT, class OT>
@@ -183,7 +183,7 @@ std::vector<OT> CombBLASEstimateFLOP(const DcscMatrix<IT, NT, OT>& A,
                                      const DcscMatrix<IT, NT, OT>& B)
 {
   const CombBLASColumnLookup<IT, NT, OT> lookup(A);
-  const int threads = OMP_GET_NUM_THREADS();
+  const int threads = OMP_GET_MAX_THREADS();
   std::vector<OT> flop(B.nzc);
   OMP_PARALLEL_FOR()
   for (IT i = 0; i < B.nzc; ++i) flop[i] = 0;
@@ -209,10 +209,10 @@ std::vector<OT> CombBLASEstimateNNZHash(const DcscMatrix<IT, NT, OT>& A,
                                         const std::vector<OT>& flop)
 {
   const CombBLASColumnLookup<IT, NT, OT> lookup(A);
-  const int threads = OMP_GET_NUM_THREADS();
+  const int threads = OMP_GET_MAX_THREADS();
   // Symbolic phase: count distinct output rows without computing values.
   CombBLASValidateCapacities<IT>(flop);
-  std::vector<OT> counts(CheckedElementCount<OT>(B.nzc));
+  std::vector<OT> counts(detail::CheckedElementCount<OT>(B.nzc));
   std::vector<std::vector<std::pair<OT, OT>>> colinds(threads);
   std::vector<std::vector<IT>> hash(threads);
   OMP_PARALLEL_FOR(num_threads(threads) default(none)
@@ -234,7 +234,7 @@ std::vector<OT> CombBLASEstimateNNZHash(const DcscMatrix<IT, NT, OT>& A,
     for (std::size_t j = 0; j < count; ++j) {
       for (OT k = ranges[j].first; k < ranges[j].second; ++k) {
         const IT key = A.row_id[k];
-        auto slot = SpGEMMHashSlot(key, capacity - 1);
+        auto slot = detail::SpGEMMHashSlot(key, capacity - 1);
         while (true) {
           if (keys[slot] == key) break;
           if (keys[slot] == IT(-1)) {
@@ -269,7 +269,9 @@ template <class SemiRing, class IT, class NT, class OT>
   }
   // 2. Build A's column lookup and count scalar products per output column.
   const CombBLASColumnLookup<IT, NT, OT> lookup(A);
-  const int threads = OMP_GET_NUM_THREADS();
+  // This entry point is outside a parallel region. Size scratch for every
+  // worker that the following parallel loops may create.
+  const int threads = OMP_GET_MAX_THREADS();
   auto flop = CombBLASEstimateFLOP(A, B);
   // Keep this work prefix sum to match the CombBLAS baseline.
   const auto flopptr = OmpPrefixSum(flop, threads);
@@ -284,7 +286,7 @@ template <class SemiRing, class IT, class NT, class OT>
   // 4. Allocate the exact output size and prepare column-range scratch.
   result.Allocate(offsets.back(), A.m, B.n);
   std::vector<std::vector<std::pair<OT, OT>>> colinds(threads);
-  const auto initial = CheckedElementCount<std::pair<OT, OT>>(A.nnz / threads);
+  const auto initial = detail::CheckedElementCount<std::pair<OT, OT>>(A.nnz / threads);
   for (int i = 0; i < threads; ++i) colinds[i].resize(initial);
   // 5. Numeric phase: compute each stored column of B independently.
   OMP_PARALLEL_FOR()
@@ -306,7 +308,7 @@ template <class SemiRing, class IT, class NT, class OT>
       for (OT k = ranges[j].first; k < ranges[j].second; ++k) {
         const NT product = SemiRing::Multiply(A.val[k], bval);
         const IT key = A.row_id[k];
-        auto slot = SpGEMMHashSlot(key, capacity - 1);
+        auto slot = detail::SpGEMMHashSlot(key, capacity - 1);
         while (true) {
           if (table[slot].first == key) {
             table[slot].second = SemiRing::Add(product, table[slot].second);

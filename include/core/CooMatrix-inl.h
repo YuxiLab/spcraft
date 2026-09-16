@@ -116,6 +116,7 @@ template <class IT, class NT, class OT>
 CsrMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::ToCsr() const
 {
   CsrMatrix<IT, NT, OT> csr(nnz, m, n);
+  std::fill(csr.row_ptr, csr.row_ptr + m + 1, OT{0});
   if (nnz == 0 || m == 0 || n == 0) return csr;
   // loop nnz, check each nnz quality
   int invalid_data = 0;
@@ -127,8 +128,6 @@ CsrMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::ToCsr() const
   if (invalid_data) {
     throw std::invalid_argument("CooMatrix::ToCsr index is out of range");
   }
-  // allocate memory
-  std::fill(csr.row_ptr, csr.row_ptr + m + 1, 0);
   // create row ptr - step 1: counting nnz per row
   OMP_PARALLEL_FOR(schedule(static, 32))
   for (OT i = 0; i < nnz; ++i) {
@@ -141,40 +140,13 @@ CsrMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::ToCsr() const
   for (IT row = 0; row < m; ++row) {
     csr.row_ptr[row + 1] += csr.row_ptr[row];
   }
-  // create col_id and val: step 1: put col id and value inside each row (no order)
+  // Scatter serially so duplicate coordinates retain their input order.
   std::vector<OT> next(csr.row_ptr, csr.row_ptr + m);
-  OMP_PARALLEL_FOR(schedule(static, 32))
   for (OT i = 0; i < nnz; ++i) {
     const auto& [r, c, value] = entries[i];
-    OT pos;
-    OMP_ATOMIC_CAPTURE
-    pos = next[r]++;  // atomic is necessary here.
+    const OT pos = next[r]++;
     csr.col_id[pos] = c;
     csr.val[pos] = value;
-  }
-  // create col_id and val: step 2: sort col_id and val per row.
-  OMP_PARALLEL_FOR(schedule(dynamic))
-  for (IT row = 0; row < csr.m; ++row) {
-    // get begin pos and size of current row
-    const OT begin = csr.row_ptr[row];
-    const OT size = csr.row_ptr[row + 1] - begin;
-    if (size < 2) continue;  // early exit
-    // workspace vars
-    std::vector<OT> order(size);
-    std::vector<IT> col_id_sorted(size);
-    std::vector<NT> val_sorted(size);
-    std::iota(order.begin(), order.end(), OT{0});
-    // sorting based on col_id
-    std::sort(order.begin(), order.end(),
-              [&](OT a, OT b) { return csr.col_id[begin + a] < csr.col_id[begin + b]; });
-    // store sorted col_id and val.
-    for (OT j = 0; j < order.size(); j++) {
-      col_id_sorted[j] = csr.col_id[begin + order[j]];
-      val_sorted[j] = csr.val[begin + order[j]];
-    }
-    // copy back
-    std::copy(col_id_sorted.begin(), col_id_sorted.end(), csr.col_id + begin);
-    std::copy(val_sorted.begin(), val_sorted.end(), csr.val + begin);
   }
   return csr;
 }

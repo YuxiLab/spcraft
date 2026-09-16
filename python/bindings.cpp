@@ -140,8 +140,7 @@ spcraft::CsrMatrix<Index, Number, Offset> CsrFromArrays(InputArray<Offset> row_o
 }
 
 template <class Number>
-spcraft::CsrMatrix<Index, Number, Offset> GenerateERGraph(Index vertices,
-                                                          double expected_degree,
+spcraft::CsrMatrix<Index, Number, Offset> GenerateERGraph(Index vertices, double expected_degree,
                                                           std::uint64_t seed)
 {
   return spcraft::GenERGraph<Number, Index, Offset>(vertices, expected_degree, seed);
@@ -187,20 +186,18 @@ spcraft::DcscMatrix<Index, Number, Offset> CanonicalDcscFromCsr(
   if (matrix.nnz > 1)
     std::stable_sort(coordinates.entries, coordinates.entries + matrix.nnz,
                      [](const auto& a, const auto& b) {
-                       return std::tie(std::get<1>(a), std::get<0>(a)) <
-                              std::tie(std::get<1>(b), std::get<0>(b));
+                       return std::tie(a.col, a.row) < std::tie(b.col, b.row);
                      });
   Offset nonzeros = 0;
   Index columns = 0;
   for (Offset p = 0; p < matrix.nnz; ++p) {
     const auto& entry = coordinates.entries[p];
-    if (nonzeros && std::get<0>(coordinates.entries[nonzeros - 1]) == std::get<0>(entry) &&
-        std::get<1>(coordinates.entries[nonzeros - 1]) == std::get<1>(entry)) {
-      auto& value = std::get<2>(coordinates.entries[nonzeros - 1]);
-      value = Ring::Add(value, std::get<2>(entry));
+    if (nonzeros && coordinates.entries[nonzeros - 1].row == entry.row &&
+        coordinates.entries[nonzeros - 1].col == entry.col) {
+      auto& value = coordinates.entries[nonzeros - 1].val;
+      value = Ring::Add(value, entry.val);
     } else {
-      if (!nonzeros || std::get<1>(coordinates.entries[nonzeros - 1]) != std::get<1>(entry))
-        ++columns;
+      if (!nonzeros || coordinates.entries[nonzeros - 1].col != entry.col) ++columns;
       coordinates.entries[nonzeros++] = entry;
     }
   }
@@ -209,7 +206,7 @@ spcraft::DcscMatrix<Index, Number, Offset> CanonicalDcscFromCsr(
   Index column = 0;
   for (Offset p = 0; p < nonzeros; ++p) {
     const auto& [row, col, value] = coordinates.entries[p];
-    if (!p || col != std::get<1>(coordinates.entries[p - 1])) {
+    if (!p || col != coordinates.entries[p - 1].col) {
       result.col_id[column] = col;
       result.col_ptr[column++] = p;
     }
@@ -230,8 +227,7 @@ void BindCsr(nb::module_& module, const char* name)
                   "values"_a, "rows"_a, "columns"_a,
                   "Create a matrix by copying one-dimensional NumPy arrays.")
       .def("clone", &Matrix::Clone)
-      .def_prop_ro("shape",
-                   [](const Matrix& matrix) { return nb::make_tuple(matrix.m, matrix.n); })
+      .def_prop_ro("shape", [](const Matrix& matrix) { return nb::make_tuple(matrix.m, matrix.n); })
       .def_ro("nnz", &Matrix::nnz)
       .def_prop_ro("row_offsets",
                    [](const Matrix& matrix) {
@@ -245,8 +241,7 @@ void BindCsr(nb::module_& module, const char* name)
                    [](const Matrix& matrix) {
                      return CopyToNumpy(matrix.val, static_cast<size_t>(matrix.nnz));
                    })
-      .def("spmv", &SpmvToNumpy<Number>, "x"_a,
-           "Multiply the sparse matrix by a dense vector x.")
+      .def("spmv", &SpmvToNumpy<Number>, "x"_a, "Multiply the sparse matrix by a dense vector x.")
       .def("__matmul__", &SpmvToNumpy<Number>, "x"_a)
       .def("dot", &SpmvToNumpy<Number>, "x"_a)
       .def(
@@ -284,8 +279,7 @@ void BindCsr(nb::module_& module, const char* name)
           "Returns (ranks, info).")
       .def(
           "solve_cg",
-          [](const Matrix& matrix, InputArray<Number> b, Number tolerance,
-             int max_iterations) {
+          [](const Matrix& matrix, InputArray<Number> b, Number tolerance, int max_iterations) {
             if (b.size() != static_cast<size_t>(matrix.m)) {
               throw std::invalid_argument("right-hand side length must match the matrix");
             }
@@ -342,11 +336,19 @@ void BindCsr(nb::module_& module, const char* name)
 template <std::size_t Component, class Number>
 nb::object CooComponentToNumpy(const spcraft::CooMatrix<Index, Number, Offset>& matrix)
 {
-  using Entry = typename spcraft::CooMatrix<Index, Number, Offset>::Entry;
-  using T = std::tuple_element_t<Component, Entry>;
+  static_assert(Component < 3, "COO entries have row, column and value components");
+  using T = std::conditional_t<Component == 2, Number, Index>;
   const auto size = static_cast<std::size_t>(matrix.nnz);
   auto copy = std::make_unique<T[]>(size);
-  for (std::size_t i = 0; i < size; ++i) copy[i] = std::get<Component>(matrix.entries[i]);
+  for (std::size_t i = 0; i < size; ++i) {
+    if constexpr (Component == 0) {
+      copy[i] = matrix.entries[i].row;
+    } else if constexpr (Component == 1) {
+      copy[i] = matrix.entries[i].col;
+    } else {
+      copy[i] = matrix.entries[i].val;
+    }
+  }
   return AdoptAsNumpy(copy.release(), size);
 }
 
@@ -359,18 +361,18 @@ void BindCoo(nb::module_& module, const char* name)
       .def_static("from_arrays", &CooFromArrays<Number>, "row_indices"_a, "column_indices"_a,
                   "values"_a, "rows"_a, "columns"_a,
                   "Create a matrix by copying one-dimensional NumPy arrays.")
-      .def_static("from_matrix_market", &Matrix::FromMatrixMarket, "filename"_a)
+      .def_static(
+          "from_matrix_market", [](const std::string& filename) { return Matrix(filename); },
+          "filename"_a)
       .def("clone", &Matrix::Clone)
       .def("to_csr", &Matrix::ToCsr)
-      .def_prop_ro("shape",
-                   [](const Matrix& matrix) { return nb::make_tuple(matrix.m, matrix.n); })
+      .def_prop_ro("shape", [](const Matrix& matrix) { return nb::make_tuple(matrix.m, matrix.n); })
       .def_ro("nnz", &Matrix::nnz)
       .def_prop_ro("row_indices",
                    [](const Matrix& matrix) { return CooComponentToNumpy<0>(matrix); })
       .def_prop_ro("column_indices",
                    [](const Matrix& matrix) { return CooComponentToNumpy<1>(matrix); })
-      .def_prop_ro("values",
-                   [](const Matrix& matrix) { return CooComponentToNumpy<2>(matrix); })
+      .def_prop_ro("values", [](const Matrix& matrix) { return CooComponentToNumpy<2>(matrix); })
       .def("__repr__", [name](const Matrix& matrix) {
         return std::string("spcraft.") + name + "(shape=(" + std::to_string(matrix.m) + ", " +
                std::to_string(matrix.n) + "), nnz=" + std::to_string(matrix.nnz) + ")";
