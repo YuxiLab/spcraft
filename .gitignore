@@ -84,3 +84,6 @@ vscode-sparse-matrix/*.vsix
 vscode-cmake-workbench/node_modules
 vscode-cmake-workbench/*.vsix
 .bench_plots/
+
+# results
+benchmarks/results
