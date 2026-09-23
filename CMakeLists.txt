@@ -120,6 +120,11 @@ endif()
 #################################################################
 # Build Binaries
 #################################################################
+# Optional compiled input utilities; the core SPCraft target stays header-only.
+# EXCLUDE_FROM_ALL avoids compiling the reader unless a consumer uses it.
+add_library(SPCraftInput STATIC EXCLUDE_FROM_ALL src/utils/MatrixInput.cpp)
+target_link_libraries(SPCraftInput PUBLIC SPCraft PRIVATE cxxopts::cxxopts)
+
 include(CTest)
 if(BUILD_TESTING)
 	if(OpenMP_CXX_FOUND)

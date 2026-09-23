@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils/omp/omp_wrapper.h"
+#include "utils/MatrixInput.h"
 
 #include "core/CooMatrix.h"
 #include "core/CscMatrix.h"

@@ -15,6 +15,8 @@ CompileFlags:
     - "_deps/fast_matrix_market-src/include"
     - "-isystem"
     - "_deps/fmt-src/include"
+    - "-isystem"
+    - "_deps/boost_preprocessor-src/include"
     - "-I/opt/nvidia/hpc_sdk/Linux_x86_64/26.5/comm_libs/13.2/hpcx/hpcx-2.50/ompi5/include"
     # The headers have no compile_commands.json entry, so clangd interpolates
     # flags from whichever translation unit it judges nearest -- for a name with
@@ -44,12 +46,10 @@ InlayHints:
 ###################################################################################
 
 If:
-  # .cuh is here rather than in the CUDA section below on purpose: clang 20
-  # supports CUDA up to 12.8 and this toolkit is 13.2, so CUDA-mode parsing
-  # fails inside __clang_cuda_runtime_wrapper.h and leaves a broken preamble
-  # that degrades name lookup (std::string resolves to int). SpCraft's .cuh
-  # headers hold host-side declarations only -- device code lives in src/*.cu --
-  # so they parse cleanly as host C++ against cuda_runtime.h.
+  # .cuh is here rather than in the CUDA section below on purpose. SpCraft's
+  # .cuh headers hold host-side declarations only -- device code lives in
+  # src/*.cu -- so parsing them as host C++ avoids unnecessary CUDA preamble
+  # failures while retaining declarations from cuda_runtime.h.
   PathMatch: '.*\.(c|cc|cpp|cxx|h|hh|hpp|hxx|cuh)$'
 CompileFlags:
   Compiler: /usr/bin/c++

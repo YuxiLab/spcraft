@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <fast_matrix_market/fast_matrix_market.hpp>
+#include "core/CscMatrix.h"
 #include "utils/omp/omp_wrapper.h"
 #include "core/CsrMatrix.h"
 
@@ -69,6 +70,7 @@ class CooMatrix
   void Allocate(OT count, IT rows, IT columns);
   [[nodiscard]] CooMatrix Clone() const;
   void Reset() noexcept;
+  [[nodiscard]] CscMatrix<IT, NT, OT> ToCsc() const;
   [[nodiscard]] CsrMatrix<IT, NT, OT> ToCsr() const;
 
  private:

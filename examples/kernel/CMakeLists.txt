@@ -1,10 +1,26 @@
+add_library(spcraft_example_eigeninterface STATIC ../eigeninterface.cpp)
+target_link_libraries(spcraft_example_eigeninterface PRIVATE ${EIGEN3_TARGET} SPCraft)
+target_include_directories(spcraft_example_eigeninterface PUBLIC ${PROJECT_SOURCE_DIR}/examples)
+if(MSVC)
+  target_compile_options(spcraft_example_eigeninterface PRIVATE /Od)
+else()
+  target_compile_options(spcraft_example_eigeninterface PRIVATE -O0)
+endif()
+
 set(OPENMP_EXAMPLES ex01_spmv ex02_spgemm)
 foreach(example IN LISTS OPENMP_EXAMPLES)
   add_executable(${example} ${example}.cpp)
   target_link_libraries(
     ${example} PRIVATE
-    ${EIGEN3_TARGET}
     SPCraft
+    spcraft_example_eigeninterface
+    SPCraftInput
     cxxopts::cxxopts fmt::fmt)
   target_include_directories(${example} PRIVATE ${PROJECT_SOURCE_DIR}/examples)
+  target_precompile_headers(${example} PRIVATE <utils/StablePch.h>)
+  if(MSVC)
+    target_compile_options(${example} PRIVATE /Od)
+  else()
+    target_compile_options(${example} PRIVATE -O0)
+  endif()
 endforeach()

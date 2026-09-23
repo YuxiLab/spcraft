@@ -20,6 +20,7 @@
 #include "utils/omp/omp_wrapper.h"
 #include "core/AllocationGuard.h"
 #include "core/CooMatrix.h"
+#include "core/CscMatrix.h"
 #include "core/CsrMatrix.h"
 
 namespace spcraft
@@ -110,6 +111,46 @@ void CooMatrix<IT, NT, OT>::Reset() noexcept
   nnz = 0;
   m = n = 0;
   memowned = false;
+}
+
+template <class IT, class NT, class OT>
+CscMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::ToCsc() const
+{
+  CscMatrix<IT, NT, OT> csc;
+  csc.Allocate(nnz, m, n);
+  if (nnz == 0 || m == 0 || n == 0) return csc;
+
+  int invalid_data = 0;
+  OMP_PARALLEL_FOR(reduction(| : invalid_data))
+  for (OT i = 0; i < nnz; ++i) {
+    const auto& [row, col, value] = entries[i];
+    bool invalid = row >= m || col >= n;
+    if constexpr (std::is_signed_v<IT>) invalid |= row < 0 || col < 0;
+    invalid_data |= invalid;
+  }
+  if (invalid_data) {
+    throw std::invalid_argument("CooMatrix::ToCsc index is out of range");
+  }
+
+  OMP_PARALLEL_FOR()
+  for (OT i = 0; i < nnz; ++i) {
+    const IT col = entries[i].col;
+    OMP_ATOMIC
+    csc.col_ptr[col + 1]++;
+  }
+  for (IT col = 0; col < n; ++col) {
+    csc.col_ptr[col + 1] += csc.col_ptr[col];
+  }
+
+  // Scatter serially so duplicate coordinates retain their input order.
+  std::vector<OT> next(csc.col_ptr, csc.col_ptr + n);
+  for (OT i = 0; i < nnz; ++i) {
+    const auto& [row, col, value] = entries[i];
+    const OT pos = next[col]++;
+    csc.row_id[pos] = row;
+    csc.val[pos] = value;
+  }
+  return csc;
 }
 
 template <class IT, class NT, class OT>

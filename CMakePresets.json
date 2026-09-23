@@ -72,6 +72,21 @@
       }
     },
     {
+      "name": "cpu",
+      "displayName": "CPU (oneMKL + OpenMP)",
+      "description": "CPU-only RelWithDebInfo build with oneMKL and OpenMP enabled",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "SPCRAFT_USE_MPI": false,
+        "SPCRAFT_USE_MKL": true,
+        "SPCRAFT_USE_CUDA": false,
+        "CMAKE_DISABLE_FIND_PACKAGE_OpenMP": false,
+        "SPCRAFT_BUILD_EXAMPLES": true
+      }
+    },
+    {
       "name": "default",
       "displayName": "Default (CUDA + OpenMP)",
       "description": "Default configuration with CUDA and OpenMP enabled",
@@ -93,6 +108,16 @@
       "name": "default",
       "displayName": "Build Default",
       "configurePreset": "default"
+    },
+    {
+      "name": "examples",
+      "displayName": "Build Kernel Examples",
+      "description": "Build the ex01 SpMV and ex02 SpGEMM examples with the CPU preset",
+      "configurePreset": "cpu",
+      "targets": [
+        "ex01_spmv",
+        "ex02_spgemm"
+      ]
     },
     {
       "name": "build_mkl_spmv",

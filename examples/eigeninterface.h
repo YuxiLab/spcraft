@@ -1,47 +1,38 @@
 #pragma once
-#include "SpCraft.h"
-#include "Eigen/Sparse"
-#include "core/CsrMatrix.h"
+
+#include <cstdint>
+
 namespace spcraft
 {
-// Mutable view: allows writing directly into vec.val
+
+template <class IT, class NT, class OT>
+class CscMatrix;
+
+template <class IT, class NT, class OT>
+class CsrMatrix;
+
 template <class IT, class NT>
-Eigen::Map<Eigen::Matrix<NT, Eigen::Dynamic, 1>> ToEigen(DenseVector<IT, NT>& vec)
-{
-  return Eigen::Map<Eigen::Matrix<NT, Eigen::Dynamic, 1>>(vec.val,
-                                                          static_cast<Eigen::Index>(vec.n));
-}
+class DenseVector;
 
-// Read-only view: enforces const-correctness
-template <class IT, class NT>
-Eigen::Map<const Eigen::Matrix<NT, Eigen::Dynamic, 1>> ToEigen(const DenseVector<IT, NT>& vec)
-{
-  return Eigen::Map<const Eigen::Matrix<NT, Eigen::Dynamic, 1>>(vec.val,
-                                                                static_cast<Eigen::Index>(vec.n));
-}
+struct EigenComparison {
+  bool matches;
+  double error;
+};
 
-// Mutable CSR view: allows modifying existing non-zero values in-place
-template <class IT, class NT, class OT = IT>
-Eigen::Map<Eigen::SparseMatrix<NT, Eigen::RowMajor, IT>> ToEigen(CsrMatrix<IT, NT, OT>& csr)
-{
-  return Eigen::Map<Eigen::SparseMatrix<NT, Eigen::RowMajor, IT>>(
-      static_cast<Eigen::Index>(csr.m), static_cast<Eigen::Index>(csr.n),
-      static_cast<Eigen::Index>(csr.nnz),
-      csr.row_ptr,  // Outer starts: size nrows + 1
-      csr.col_id,   // Inner indices: size nnz
-      csr.val,      // Values: size nnz
-      nullptr       // Inner non-zeros array: nullptr means fully compressed
-  );
-}
+using EigenInterfaceIndex = std::int64_t;
+using EigenInterfaceValue = double;
+using EigenInterfaceCsc = CscMatrix<EigenInterfaceIndex, EigenInterfaceValue, EigenInterfaceIndex>;
+using EigenInterfaceCsr = CsrMatrix<EigenInterfaceIndex, EigenInterfaceValue, EigenInterfaceIndex>;
+using EigenInterfaceVector = DenseVector<EigenInterfaceIndex, EigenInterfaceValue>;
 
-// Read-only CSR view: enforces const-correctness
-template <class IT, class NT, class OT = IT>
-Eigen::Map<const Eigen::SparseMatrix<NT, Eigen::RowMajor, IT>> ToEigen(
-    const CsrMatrix<IT, NT, OT>& csr)
-{
-  return Eigen::Map<const Eigen::SparseMatrix<NT, Eigen::RowMajor, IT>>(
-      static_cast<Eigen::Index>(csr.m), static_cast<Eigen::Index>(csr.n),
-      static_cast<Eigen::Index>(csr.nnz), csr.row_ptr, csr.col_id, csr.val, nullptr);
-}
+[[nodiscard]] EigenComparison CompareSpMVWithEigen(const EigenInterfaceCsr& matrix,
+                                                   const EigenInterfaceVector& input,
+                                                   const EigenInterfaceVector& result,
+                                                   EigenInterfaceValue tolerance);
+
+[[nodiscard]] EigenComparison CompareSpGEMMWithEigen(const EigenInterfaceCsc& lhs,
+                                                     const EigenInterfaceCsc& rhs,
+                                                     const EigenInterfaceCsc& result,
+                                                     EigenInterfaceValue tolerance);
 
 }  // namespace spcraft
