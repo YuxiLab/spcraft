@@ -18,7 +18,7 @@ std::vector<OT> OmpPrefixSum(const std::vector<OT>& in, int threads)
     // First, sum each thread's own block.
     OMP_FOR(schedule(static))
     for (std::size_t i = 0; i < size; ++i) {
-      sum = CombBLASCheckedSum(sum, in[i], local_overflow);
+      sum += in[i];
       out[i + 1] = sum;
     }
     tsum[thread + 1] = sum;
@@ -26,11 +26,11 @@ std::vector<OT> OmpPrefixSum(const std::vector<OT>& in, int threads)
     OT offset = 0;
     // Then add the totals from earlier blocks to get global offsets.
     for (int i = 0; i < thread + 1; ++i) {
-      offset = CombBLASCheckedSum(offset, tsum[i], local_overflow);
+      offset += tsum[i];
     }
     OMP_FOR(schedule(static))
     for (std::size_t i = 0; i < size; ++i) {
-      out[i + 1] = CombBLASCheckedSum(out[i + 1], offset, local_overflow);
+      out[i + 1] += offset;
     }
     if (local_overflow) {
       OMP_CRITICAL
