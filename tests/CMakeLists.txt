@@ -19,6 +19,14 @@ add_executable(test_dense_vector test_dense_vector.cpp)
 target_link_libraries(test_dense_vector PRIVATE SPCraft)
 add_test(NAME dense_vector COMMAND test_dense_vector)
 
+add_executable(test_print test_print.cpp)
+target_link_libraries(test_print PRIVATE SPCraft ${EIGEN3_TARGET})
+add_test(NAME print_vector COMMAND test_print)
+
+add_executable(test_print_matrix test_print_matrix.cpp)
+target_link_libraries(test_print_matrix PRIVATE SPCraft ${EIGEN3_TARGET})
+add_test(NAME print_matrix COMMAND test_print_matrix)
+
 add_executable(test_mtspmv test_mtspmv.cpp)
 target_link_libraries(test_mtspmv PRIVATE ${EIGEN3_TARGET} SPCraft)
 
@@ -27,6 +35,10 @@ add_test(NAME mtspmv_openmp COMMAND test_mtspmv)
 add_executable(test_mtspgemm test_mtspgemm.cpp)
 target_link_libraries(test_mtspgemm PRIVATE ${EIGEN3_TARGET} SPCraft)
 add_test(NAME omp_hash_spgemm COMMAND test_mtspgemm)
+
+add_executable(test_hash_spgemm_csc test_hash_spgemm_csc.cpp)
+target_link_libraries(test_hash_spgemm_csc PRIVATE SPCraft)
+add_test(NAME hash_spgemm_csc COMMAND test_hash_spgemm_csc)
 
 add_executable(test_semiring test_semiring.cpp)
 target_link_libraries(test_semiring PRIVATE SPCraft)

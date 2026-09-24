@@ -2,6 +2,9 @@
 
 #include "utils/omp/omp_wrapper.h"
 #include "utils/MatrixInput.h"
+#include "utils/MatrixMacros.h"
+#include "utils/Print.h"
+#include "utils/StdAliases.h"
 
 #include "core/CooMatrix.h"
 #include "core/CscMatrix.h"

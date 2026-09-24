@@ -17,6 +17,8 @@ class DenseVector;
 struct EigenComparison {
   bool matches;
   double error;
+  // SpGEMM reference multiplication time, excluding the correctness comparison.
+  double multiply_seconds = 0.0;
 };
 
 using EigenInterfaceIndex = std::int64_t;

@@ -1,5 +1,6 @@
 #include "eigeninterface.h"
 
+#include <chrono>
 #include <limits>
 
 #include <Eigen/Core>
@@ -62,10 +63,13 @@ EigenComparison CompareSpGEMMWithEigen(const EigenInterfaceCsc& lhs, const Eigen
     return {false, std::numeric_limits<double>::infinity()};
   }
 
+  const auto start = std::chrono::steady_clock::now();
   const EigenCsc reference = ToEigen(lhs) * ToEigen(rhs);
+  const double seconds =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
   const auto actual = ToEigen(result);
   const bool matches = reference.isApprox(actual, tolerance);
-  return {matches, matches ? 0.0 : (reference - actual).norm()};
+  return {matches, matches ? 0.0 : (reference - actual).norm(), seconds};
 }
 
 }  // namespace spcraft

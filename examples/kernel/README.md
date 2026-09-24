@@ -10,8 +10,10 @@ cmake --build build --target ex02_spgemm
 
 `cmake --build --preset examples -j 2` builds both kernel examples in `build/`.
 
-These examples use `-O0` (`/Od` on MSVC). They verify correctness; use the
-benchmark targets for performance measurements.
+These examples and their Eigen reference helper follow the selected CMake build
+type. Use `Release` or `RelWithDebInfo` for optimized execution on large matrices,
+and `Debug` for unoptimized code. They verify correctness; use the benchmark
+targets for performance measurements.
 
 Three pieces of work are cached separately:
 
@@ -38,13 +40,14 @@ target_precompile_headers(my_program PRIVATE <utils/StablePch.h>)
 ```
 
 PCH is enabled per consumer rather than forced on every SpCraft user. The input
-target inherits the selected build configuration; the example drivers retain
-`-O0` for fast kernel iteration.
+target, example drivers, and Eigen helper inherit the selected build
+configuration.
 
 ## Measured build times
 
-Local measurements with GCC 12.3, Ninja, the CPU preset (MKL/OpenMP), and
-`-O0 -g`, on 2026-09-23:
+Historical measurements with GCC 12.3, Ninja, the CPU preset (MKL/OpenMP), and
+the former forced `-O0 -g` configuration, on 2026-09-23. Optimized builds can take
+longer to compile:
 
 | Operation | Wall time |
 | --- | ---: |
@@ -76,6 +79,5 @@ PCH is optional: configure with `-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON` to build
 without it. Both examples were also built with PCH and OpenMP disabled to check
 that they do not depend on headers being implicitly supplied by the cache.
 
-The CSC SpGEMM implementation is currently incomplete. A nonempty input still
-produces a verification failure and exit code 1; compilation caching does not
-change that behavior.
+The CSC SpGEMM implementation includes symbolic and numeric phases. The example
+checks its result against Eigen and returns nonzero if verification fails.

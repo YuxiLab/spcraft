@@ -54,8 +54,39 @@ the path as input parameters.
 - Comment the surprising part. A tricky index expression, a numerical
   cancellation, or a rule that only bites on one compiler deserves a sentence;
   a loop that copies an array does not.
+- Prefer direct, readable code. Keep simple capacity-doubling loops and hash
+  expressions at the call site; introduce helper functions only when they are
+  necessary to manage meaningful complexity or substantial repeated logic.
+- Do not add defensive scaffolding for cases excluded by the documented input
+  assumptions. In per-column kernels, prefer local scratch and straightforward
+  loops over try/catch, shared exception state, and synchronization added solely
+  to recover from allocation failures. Keep required algorithmic synchronization
+  and existing public API/container checks.
 
 ## C++/CUDA Coding Rules
+
+### Supported integer range
+
+SpCraft assumes that all integer quantities and required arithmetic intermediates
+fit in `int64_t`. This includes dimensions, indices, offsets, nnz counts, FLOP
+counts, prefix sums, and integral numerical values. Problems requiring integers
+outside that range are unsupported; do not add wider-integer or arbitrary-precision
+support solely to handle them. Treat this as a supported-input assumption when
+implementing and reviewing algorithms.
+
+This does not make every `IT` or `OT` a 64-bit type. Values must still fit their
+actual storage types. Keep the existing allocation-size, narrowing, and output-nnz
+overflow checks: fitting in `int64_t` does not guarantee that a value fits in a
+narrower index/offset type or that its allocation size is representable.
+
+For CSC hash SpGEMM, assume each column's output NNZ fits `int32_t`, and each
+column's FLOP count and rounded power-of-two hash capacity fit `IT` and the
+types used to store them. These are separate input assumptions: a column's
+FLOP count can exceed its output NNZ. `VI` per-column counts and `IT` hash-slot
+indices are intentional; do not repeatedly flag these limits or add guards for
+inputs outside this supported range. Global storage offsets and total NNZ may
+exceed `int32_t`: traverse `col_ptr` ranges with `OT`, accumulate output prefixes
+in `int64_t`, and retain the output-total check before narrowing to `OT`.
 
 ### OpenMP Pragma
 use our own [omp wrapper](/home/exouser/code/iusparse/include/utils/omp/omp_wrapper.h) 

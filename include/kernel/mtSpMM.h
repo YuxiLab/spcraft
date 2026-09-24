@@ -24,8 +24,7 @@ void spmm_openmp(const CsrMatrix<IT, NT, OT>& A, const NT* B, NT* C, std::size_t
     for (std::size_t column = 0; column < dense_columns; ++column) {
       NT sum = SemiRing::kAdditiveIdentity;
       for (OT position = A.row_ptr[row]; position < A.row_ptr[row + 1]; ++position) {
-        const std::size_t input_row =
-            static_cast<std::size_t>(A.col_id[position]) * dense_columns;
+        const std::size_t input_row = static_cast<std::size_t>(A.col_id[position]) * dense_columns;
         sum = SemiRing::Add(sum, SemiRing::Multiply(A.val[position], B[input_row + column]));
       }
       C[output_row + column] = sum;

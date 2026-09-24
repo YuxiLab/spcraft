@@ -4,7 +4,9 @@
  * Date: 2026-09-01
  * *****************************************************/
 // Standard library headers.
+#include <chrono>
 #include <cstdint>
+#include <numeric>
 #include <type_traits>
 
 // Third-party dependencies.
@@ -33,7 +35,16 @@ int main(int argc, char** argv)
   CSC acsc = acoo.ToCsc();
   COO bcoo = ReadMatrixInput(*input.path);
   CSC bcsc = bcoo.ToCsc();
+
+  const auto start = std::chrono::steady_clock::now();
   const auto result = OmpHashSpGEMM<Ring, IT, NT, IT>(acsc, bcsc);
+  const double seconds =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+  // Count one multiply and one add per scalar product for both implementations.
+  const auto column_products = EstimateFLOP(acsc, bcsc);
+  const double flops = 2.0 * static_cast<double>(std::accumulate(column_products.begin(),
+                                                                 column_products.end(), IT{0}));
+  // Conversion and verification are outside both multiplication timings.
   const auto result_csc = result.ToCsc();
   constexpr NT tol = std::is_same_v<NT, float> ? 1e-6f : 1e-13;
   if (result_csc.m != acsc.m || result_csc.n != bcsc.n) {
@@ -44,6 +55,11 @@ int main(int argc, char** argv)
   const auto comparison = CompareSpGEMMWithEigen(acsc, bcsc, result_csc, tol);
   if (comparison.matches) {
     fmt::print("SpGEMM verification passed: output matches Eigen reference (tol = {})\n", tol);
+    constexpr double kFlopsPerGflop = 1e9;
+    fmt::print("FLOPs: {:.0f}\n", flops);
+    fmt::print("SpCraft: {:.6f} s, {:.3f} GFLOPS\n", seconds, flops / seconds / kFlopsPerGflop);
+    fmt::print("Eigen:   {:.6f} s, {:.3f} GFLOPS\n", comparison.multiply_seconds,
+               flops / comparison.multiply_seconds / kFlopsPerGflop);
   } else {
     fmt::print(stderr,
                "SpGEMM verification failed: output differs from Eigen reference "

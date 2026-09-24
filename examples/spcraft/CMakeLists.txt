@@ -26,3 +26,6 @@ target_link_libraries(e04_conjugate_gradient
 		cxxopts::cxxopts
 		fmt::fmt
 )
+
+add_executable(e05_print_matrix e05_print_matrix.cpp)
+target_link_libraries(e05_print_matrix PRIVATE SPCraft ${EIGEN3_TARGET} cxxopts::cxxopts)

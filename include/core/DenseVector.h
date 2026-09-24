@@ -33,6 +33,12 @@ class DenseVector
   DenseVector& operator=(DenseVector&& rhs) noexcept;
   ~DenseVector();
 
+  [[nodiscard]] IT size() const noexcept { return n; }
+
+  //! Unchecked element access; storage must be host-accessible.
+  NT& operator[](IT index) noexcept { return val[index]; }
+  const NT& operator[](IT index) const noexcept { return val[index]; }
+
   //! Replace the current storage with an uninitialized owned buffer.
   void Allocate(IT size);
   //! Return an owning copy.
