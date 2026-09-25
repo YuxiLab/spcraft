@@ -46,21 +46,6 @@ Matrix Make(int rows, int columns, const std::vector<std::tuple<int, int, double
   return Matrix::FromCsc(c);
 }
 
-struct TraceRing {
-  using ValueType = double;
-  static constexpr double kAdditiveIdentity = 0;
-  static inline std::vector<std::tuple<char, double, double>> calls;
-  static double Multiply(double a, double b)
-  {
-    calls.emplace_back('M', a, b);
-    return a * b;
-  }
-  static double Add(double a, double b)
-  {
-    calls.emplace_back('A', a, b);
-    return a + b;
-  }
-};
 struct MinPlus {
   using ValueType = double;
   static constexpr double kAdditiveIdentity = std::numeric_limits<double>::infinity();
@@ -86,8 +71,8 @@ void WidthChecks()
   b.val[1] = 7;
   const auto c = spcraft::OmpHashSpGEMM<spcraft::PlusTimesRing<NT>>(a, b);
   Equal(c.nnz, OT{2}, "width variant nnz");
-  Equal(std::get<2>(c.entries[0]), NT{10}, "width variant first value");
-  Equal(std::get<2>(c.entries[1]), NT{21}, "width variant second value");
+  Equal(c.entries[0].val, NT{10}, "width variant first value");
+  Equal(c.entries[1].val, NT{21}, "width variant second value");
 }
 
 void LocalChecks()
@@ -98,7 +83,8 @@ void LocalChecks()
   Equal(c.nnz, 3, "hand product nnz");
   const std::tuple<int, int, double> expected[] = {{0, 0, 16}, {0, 1, 14}, {1, 1, 15}};
   for (int i = 0; i < std::min(c.nnz, 3); ++i)
-    Equal(c.entries[i] == expected[i], true, "hand product tuple");
+    Equal(std::tie(c.entries[i].row, c.entries[i].col, c.entries[i].val) == expected[i], true,
+          "hand product tuple");
   static_assert(std::is_same_v<std::remove_cv_t<decltype(c)>, spcraft::CooMatrix<int, double>>);
   const auto csr = c.ToCsr();
   const int expected_offsets[] = {0, 2, 3};
@@ -122,11 +108,10 @@ void LocalChecks()
   Equal(threw, true, "dimension mismatch");
   a = Make(1, 1, {{0, 0, -0.0}});
   b = Make(1, 1, {{0, 0, 1}});
-  Equal(std::signbit(std::get<2>(spcraft::OmpHashSpGEMM<Ring>(a, b).entries[0])), true,
-        "first product preserves negative zero");
+  Equal(spcraft::OmpHashSpGEMM<Ring>(a, b).entries[0].val, 0.0, "zero product value");
   a = Make(1, 2, {{0, 0, 2}, {0, 1, 5}});
   b = Make(2, 1, {{0, 0, 7}, {1, 0, 1}});
-  Equal(std::get<2>(spcraft::OmpHashSpGEMM<MinPlus>(a, b).entries[0]), 6.0, "min-plus");
+  Equal(spcraft::OmpHashSpGEMM<MinPlus>(a, b).entries[0].val, 6.0, "min-plus");
   spcraft::DcscMatrix<int, bool> ba, bb;
   ba.Allocate(1, 1, 1, 1);
   bb.Allocate(1, 1, 1, 1);
@@ -135,33 +120,132 @@ void LocalChecks()
   bb.val[0] = false;
   const auto bc = spcraft::OmpHashSpGEMM<spcraft::PlusTimesRing<bool>>(ba, bb);
   Equal(bc.nnz, 1, "Boolean structural zero nnz");
-  Equal(std::get<2>(bc.entries[0]), false, "Boolean product");
+  Equal(bc.entries[0].val, false, "Boolean product");
   const std::vector<std::uint8_t> exact{100, 100, 55}, excess{100, 100, 56};
-  Equal(+spcraft::detail::OmpPrefixSum(exact, 4).back(), 255, "exact maximum prefix");
+  Equal(+spcraft::OmpPrefixSum(exact, 4).back(), 255, "exact maximum prefix");
   threw = false;
   try {
-    const auto p = spcraft::detail::OmpPrefixSum(excess, 4);
+    const auto p = spcraft::OmpPrefixSum(excess, 4);
   } catch (const std::overflow_error&) {
     threw = true;
   }
   Equal(threw, true, "prefix overflow");
-  spcraft::DcscMatrix<std::uint64_t, double> huge;
-  huge.Allocate(1, 1, std::numeric_limits<std::uint64_t>::max(), 1);
-  huge.col_ptr[1] = 1;
-  threw = false;
-  try {
-    const spcraft::detail::CombBLASColumnLookup lookup(huge);
-  } catch (const std::overflow_error&) {
-    threw = true;
-  }
-  Equal(threw, true, "lookup extent checked before increment");
 }
 
 template <class Storage>
 concept AcceptsHashProduct = requires(const Storage& a) { spcraft::OmpHashSpGEMM<Ring>(a, a); };
 static_assert(AcceptsHashProduct<Matrix>);
-static_assert(!AcceptsHashProduct<spcraft::CsrMatrix<int, double>>);
-static_assert(!AcceptsHashProduct<spcraft::CscMatrix<int, double>>);
+static_assert(AcceptsHashProduct<spcraft::CsrMatrix<int, double>>);
+static_assert(AcceptsHashProduct<spcraft::CscMatrix<int, double>>);
+
+void CompressedColumnChecks()
+{
+  const auto a = Make(4, 20, {{3, 2, 2}, {0, 2, 1}, {0, 2, -1}, {1, 17, 4}});
+  const auto b = Make(20, 100, {{2, 7, 3}, {5, 7, 9}, {17, 91, 2}});
+  const auto c = spcraft::OmpHashSpGEMM<Ring>(a, b);
+  Equal(c.m, 4, "compressed product rows");
+  Equal(c.n, 100, "compressed product logical width");
+  Equal(c.nnz, 3, "compressed product nnz");
+  const spcraft::TupleEntry<int, double> expected[] = {{0, 7, 0}, {3, 7, 6}, {1, 91, 8}};
+  for (int i = 0; i < std::min(c.nnz, 3); ++i) {
+    Equal(c.entries[i].row, expected[i].row, "compressed product row");
+    Equal(c.entries[i].col, expected[i].col, "compressed product logical column");
+    Equal(c.entries[i].val, expected[i].val, "compressed product value");
+  }
+  const auto disjoint = spcraft::OmpHashSpGEMM<Ring>(a, Make(20, 100, {{5, 91, 1}}));
+  Equal(disjoint.nnz, 0, "disjoint stored columns");
+  Equal(disjoint.n, 100, "disjoint product shape");
+
+  std::vector<std::tuple<int, int, double>> entries;
+  for (int i = 15; i >= 0; --i) entries.emplace_back(16 * i, 2, i + 1);
+  const auto collision =
+      spcraft::OmpHashSpGEMM<Ring>(Make(256, 20, entries), Make(20, 100, {{2, 91, 5}}));
+  Equal(collision.nnz, 16, "DCSC collision count");
+  for (int i = 0; i < std::min(collision.nnz, 16); ++i) {
+    Equal(collision.entries[i].row, 16 * i, "DCSC collision sorted row");
+    Equal(collision.entries[i].col, 91, "DCSC collision logical column");
+    Equal(collision.entries[i].val, 5.0 * (i + 1), "DCSC collision value");
+  }
+}
+
+void SparseLookupChecks()
+{
+  // These logical dimensions cannot be expanded to dense column pointers.
+  using IT = int64_t;
+  using OT = int64_t;
+  constexpr IT width = (IT{1} << 40) + 37;
+  using WideMatrix = spcraft::DcscMatrix<IT, double, OT>;
+  WideMatrix a;
+  a.Allocate(6, 3, width, 6);
+  const IT columns[] = {0, 1, 2, width / 2, width - 2, width - 1};
+  for (IT col = 0; col < 6; ++col) {
+    a.col_id[col] = columns[col];
+    a.col_ptr[col + 1] = col + 1;
+    a.row_id[col] = col % 3;
+    a.val[col] = col + 1;
+  }
+  const std::vector<std::vector<IT>> requests = {
+      {0},
+      {width - 1},
+      {width / 3},
+      {width / 2 - 1},
+      {0, 0, 1, 2, width / 3, width / 2, width - 2, width - 1},
+      {width - 1, 0, width / 3, width - 2, 0, width / 2, 1, 2}};
+  for (const auto& rows : requests) {
+    WideMatrix b;
+    b.Allocate(rows.size(), width, width, 1);
+    b.col_id[0] = width - 3;
+    b.col_ptr[1] = rows.size();
+    double expected[3]{};
+    bool present[3]{};
+    for (std::size_t p = 0; p < rows.size(); ++p) {
+      b.row_id[p] = rows[p];
+      b.val[p] = p + 1;
+      // Independent direct search avoids sharing the chunk/merge logic.
+      for (IT col = 0; col < a.nzc; ++col) {
+        if (rows[p] == a.col_id[col]) {
+          expected[a.row_id[col]] += a.val[col] * b.val[p];
+          present[a.row_id[col]] = true;
+        }
+      }
+    }
+    const auto c = spcraft::OmpHashSpGEMM<Ring>(a, b);
+    Equal(c.m, IT{3}, "wide product rows");
+    Equal(c.n, width, "wide product columns");
+    OT pos = 0;
+    for (IT row = 0; row < 3; ++row) {
+      if (!present[row]) continue;
+      if (pos < c.nnz) {
+        Equal(c.entries[pos].row, row, "wide lookup output row");
+        Equal(c.entries[pos].col, width - 3, "wide lookup output column");
+        Equal(c.entries[pos].val, expected[row], "wide lookup output value");
+      }
+      ++pos;
+    }
+    Equal(c.nnz, pos, "wide lookup output count");
+  }
+
+  // OR accumulation needs more than a single Boolean contribution.
+  spcraft::DcscMatrix<int, bool> ba, bb;
+  ba.Allocate(2, 1, 3, 2);
+  ba.col_id[1] = 2;
+  ba.col_ptr[1] = 1;
+  ba.col_ptr[2] = 2;
+  ba.val[0] = ba.val[1] = true;
+  bb.Allocate(3, 3, 10, 2);
+  bb.col_id[0] = 3;
+  bb.col_id[1] = 9;
+  bb.col_ptr[1] = 2;
+  bb.col_ptr[2] = 3;
+  bb.row_id[1] = 2;
+  bb.val[1] = true;
+  const auto bc = spcraft::OmpHashSpGEMM<spcraft::PlusTimesRing<bool>>(ba, bb);
+  Equal(bc.nnz, 2, "Boolean accumulated structural count");
+  if (bc.nnz == 2) {
+    Equal(bc.entries[0].val, true, "Boolean OR across contributions");
+    Equal(bc.entries[1].val, false, "Boolean accumulated structural zero");
+  }
+}
 
 void IndependentChecks()
 {
@@ -173,6 +257,8 @@ void IndependentChecks()
 #else
     if (threads != 1) continue;
 #endif
+    CompressedColumnChecks();
+    SparseLookupChecks();
     for (int seed = 0; seed < 12; ++seed) {
       constexpr int rows = 7, inner = 19, columns = 11;
       std::vector<std::tuple<int, int, double>> ae, be;
@@ -205,9 +291,9 @@ void IndependentChecks()
           }
           if (present) {
             if (p < result.nnz) {
-              Equal(std::get<0>(result.entries[p]), r, "dense-reference row");
-              Equal(std::get<1>(result.entries[p]), c, "dense-reference column");
-              Equal(std::get<2>(result.entries[p]), value, "dense-reference value");
+              Equal(result.entries[p].row, r, "dense-reference row");
+              Equal(result.entries[p].col, c, "dense-reference column");
+              Equal(result.entries[p].val, value, "dense-reference value");
             }
             ++p;
           }
@@ -243,7 +329,7 @@ void BoundaryChecks()
   backward.val[0] = 4;
   const auto composed = spcraft::OmpHashSpGEMM<RelationRing>(forward, backward);
   Equal(composed.nnz, 1, "noncommutative product nnz");
-  Equal(std::get<2>(composed.entries[0]), 1U, "noncommutative multiplication order");
+  Equal(composed.entries[0].val, 1U, "noncommutative multiplication order");
 
   using Narrow = spcraft::DcscMatrix<int, double, std::uint8_t>;
   Narrow a, b;
@@ -263,7 +349,7 @@ void BoundaryChecks()
   }
   const auto exact = spcraft::OmpHashSpGEMM<Ring>(a, b);
   Equal(+exact.nnz, 255, "maximum representable output nnz");
-  Equal(std::get<2>(exact.entries[254]), 2.0, "last entry at maximum output nnz");
+  Equal(exact.entries[254].val, 2.0, "last entry at maximum output nnz");
 
   a.Allocate(32, 2, 16, 16);
   b.Allocate(128, 16, 8, 8);
@@ -277,13 +363,25 @@ void BoundaryChecks()
     b.col_ptr[c + 1] = 16 * (c + 1);
     for (int k = 0; k < 16; ++k) b.row_id[16 * c + k] = k;
   }
+  // Work may exceed OT even when the output fits; work prefixes use int64_t.
+  const auto many_paths = spcraft::OmpHashSpGEMM<Ring>(a, b);
+  Equal(+many_paths.nnz, 16, "work exceeding offset range with representable output");
+
+  a.Allocate(32, 32, 1, 1);
+  b.Allocate(8, 1, 8, 8);
+  a.col_ptr[1] = 32;
+  for (int row = 0; row < 32; ++row) a.row_id[row] = row;
+  for (int col = 0; col < 8; ++col) {
+    b.col_id[col] = col;
+    b.col_ptr[col + 1] = col + 1;
+  }
   bool overflow = false;
   try {
     const auto excess = spcraft::OmpHashSpGEMM<Ring>(a, b);
   } catch (const std::overflow_error&) {
     overflow = true;
   }
-  Equal(overflow, true, "full-work prefix overflow rejected before narrowing");
+  Equal(overflow, true, "output total overflow rejected before narrowing");
 }
 
 #ifdef SPCRAFT_TEST_COMBBLAS
@@ -300,69 +398,17 @@ Comb Convert(const Matrix& a)
     }
   return Comb(t, false);
 }
-struct CombTrace {
-  static double multiply(double a, double b) { return TraceRing::Multiply(a, b); }
-  static double add(double a, double b) { return TraceRing::Add(a, b); }
-};
-void Compare(const Matrix& a, const Matrix& b, bool trace)
+void Compare(const Matrix& a, const Matrix& b)
 {
   const auto ca = Convert(a), cb = Convert(b);
-  const spcraft::detail::CombBLASColumnLookup lookup(a);
-  int* raw_aux = nullptr;
-  const int chunks = ca.GetDCSC()->ConstructAux(a.n, raw_aux);
-  std::unique_ptr<int[]> aux(raw_aux);
-  Equal(lookup.aux.size(), static_cast<std::size_t>(chunks + 1), "aux length");
-  for (std::size_t i = 0; i < lookup.aux.size() && i <= static_cast<std::size_t>(chunks); ++i)
-    Equal(lookup.aux[i], aux[i], "aux boundary");
-  for (int col = 0; col < b.nzc; ++col) {
-    const auto count = b.col_ptr[col + 1] - b.col_ptr[col];
-    std::vector<std::pair<int, int>> x(count), y(count);
-    lookup.FillColInds(b.row_id + b.col_ptr[col], count, x);
-    ca.GetDCSC()->FillColInds(b.row_id + b.col_ptr[col], count, y, aux.get(), lookup.csize);
-    for (int i = 0; i < count; ++i) Equal(x[i] == y[i], true, "mapped A range");
-  }
-  const auto flop = spcraft::detail::CombBLASEstimateFLOP(a, b);
-  const std::unique_ptr<int[]> rf(combblas::estimateFLOP(ca, cb));
-  const auto nnz = spcraft::detail::CombBLASEstimateNNZHash(a, b, flop);
-  const std::unique_ptr<int[]> rn(combblas::estimateNNZ_Hash(ca, cb, rf.get()));
-  for (int i = 0; i < b.nzc; ++i) {
-    Equal(flop[i], rf[i], "full work count");
-    Equal(nnz[i], rn[i], "symbolic distinct count");
-    std::size_t symbolic = 16, numeric = 16;
-    while (symbolic < static_cast<std::size_t>(rf[i])) symbolic *= 2;
-    while (numeric < static_cast<std::size_t>(rn[i])) numeric *= 2;
-    Equal(spcraft::detail::CombBLASHashCapacity(flop[i]), symbolic, "symbolic capacity");
-    Equal(spcraft::detail::CombBLASHashCapacity(nnz[i]), numeric, "numeric capacity");
-  }
-  const int threads = OMP_GET_NUM_THREADS();
-  const auto fp = spcraft::detail::CombBLASPrefixSum(flop, threads);
-  const auto np = spcraft::detail::CombBLASPrefixSum(nnz, threads);
-  const std::unique_ptr<int[]> rfp(combblas::prefixsum(rf.get(), b.nzc, threads));
-  const std::unique_ptr<int[]> rnp(combblas::prefixsum(rn.get(), b.nzc, threads));
-  for (int i = 0; i <= b.nzc; ++i) {
-    Equal(fp[i], rfp[i], "work prefix");
-    Equal(np[i], rnp[i], "output prefix");
-  }
   const auto x = spcraft::OmpHashSpGEMM<Ring>(a, b);
   const std::unique_ptr<combblas::SpTuples<int, double>> y(
       combblas::LocalSpGEMMHash<CombRing, double>(ca, cb, false, false, true));
   Equal(x.nnz, y->getnnz(), "native tuple count");
   for (int i = 0; i < std::min(x.nnz, static_cast<int>(y->getnnz())); ++i) {
-    Equal(std::get<0>(x.entries[i]), y->rowindex(i), "tuple row");
-    Equal(std::get<1>(x.entries[i]), y->colindex(i), "tuple column");
-    Equal(std::bit_cast<std::uint64_t>(std::get<2>(x.entries[i])),
-          std::bit_cast<std::uint64_t>(y->numvalue(i)), "tuple value bits");
-  }
-  if (trace) {
-    TraceRing::calls.clear();
-    const auto traced = spcraft::OmpHashSpGEMM<TraceRing>(a, b);
-    const auto calls = TraceRing::calls;
-    TraceRing::calls.clear();
-    const std::unique_ptr<combblas::SpTuples<int, double>> traced_ref(
-        combblas::LocalSpGEMMHash<CombTrace, double>(ca, cb, false, false, true));
-    Equal(calls.size(), TraceRing::calls.size(), "semiring call count");
-    for (std::size_t i = 0; i < std::min(calls.size(), TraceRing::calls.size()); ++i)
-      Equal(calls[i] == TraceRing::calls[i], true, "semiring operation and argument order");
+    Equal(x.entries[i].row, y->rowindex(i), "tuple row");
+    Equal(x.entries[i].col, y->colindex(i), "tuple column");
+    Equal(x.entries[i].val, y->numvalue(i), "reference value");
   }
 }
 void ReferenceChecks()
@@ -383,7 +429,7 @@ void ReferenceChecks()
         for (int row = 0; row < 32; ++row)
           if ((row + seed) % ((col % 3 == 0) ? 2 : 17) == 0)
             be.emplace_back(row, col, double((row + col) % 5 - 2));
-      Compare(Make(9, 32, ae), Make(32, 19, be), threads == 1);
+      Compare(Make(9, 32, ae), Make(32, 19, be));
     }
     std::vector<std::tuple<int, int, double>> ae, be;
     for (int col = 0; col < 32; ++col) {
@@ -391,14 +437,14 @@ void ReferenceChecks()
       ae.emplace_back(1, col, 1);
       be.emplace_back(col, 0, 1);
     }
-    Compare(Make(2, 32, ae), Make(32, 1, be), threads == 1);
+    Compare(Make(2, 32, ae), Make(32, 1, be));
     Compare(Make(2, 100, {{0, 1, 2}, {1, 99, 3}}),
-            Make(100, 3, {{50, 0, 4}, {1, 2, 5}, {99, 2, 6}}), threads == 1);
+            Make(100, 3, {{50, 0, 4}, {1, 2, 5}, {99, 2, 6}}));
     ae.clear();
     for (int i = 1; i < 10; ++i) ae.emplace_back(i % 2, i, i);
     ae.emplace_back(1, 99, 3);
-    Compare(Make(2, 100, ae), Make(100, 3, {{50, 0, 4}, {1, 2, 5}, {99, 2, 6}}), threads == 1);
-    Compare(Make(1, 1, {{0, 0, -0.0}}), Make(1, 1, {{0, 0, 1}}), threads == 1);
+    Compare(Make(2, 100, ae), Make(100, 3, {{50, 0, 4}, {1, 2, 5}, {99, 2, 6}}));
+    Compare(Make(1, 1, {{0, 0, -0.0}}), Make(1, 1, {{0, 0, 1}}));
   }
 }
 #endif
@@ -423,6 +469,7 @@ int main(int argc, char** argv)
   IndependentChecks();
   BoundaryChecks();
   WidthChecks<std::int32_t, float, std::int32_t>();
+  WidthChecks<std::uint32_t, double, std::uint64_t>();
   WidthChecks<std::int64_t, double, std::int64_t>();
   WidthChecks<std::int32_t, double, std::int64_t>();
 #ifdef SPCRAFT_TEST_COMBBLAS

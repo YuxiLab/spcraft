@@ -1,20 +1,23 @@
 #pragma once
 
 #include "omp_wrapper.h"
+#include <cstdint>
+#include <limits>
+#include <numeric>
+#include <stdexcept>
+#include <vector>
 
-template <class OT>
-std::vector<OT> OmpPrefixSum(const std::vector<OT>& in, int threads)
+namespace spcraft
 {
-  const auto size = in.size();
-  std::vector<OT> out(size + 1);
+template <class IT, class OT>
+void OmpPrefixSumImpl(const IT* in, OT* out, std::size_t size, int threads)
+{
   std::vector<OT> tsum(threads + 1);
-  int overflow = 0;
-  OMP_PARALLEL(num_threads(threads) default(none) shared(in, out, tsum, size, overflow))
+  OMP_PARALLEL(num_threads(threads))
   {
     int thread = 0;
     thread = OMP_GET_THREAD_NUM();
     OT sum = 0;
-    int local_overflow = 0;
     // First, sum each thread's own block.
     OMP_FOR(schedule(static))
     for (std::size_t i = 0; i < size; ++i) {
@@ -32,13 +35,22 @@ std::vector<OT> OmpPrefixSum(const std::vector<OT>& in, int threads)
     for (std::size_t i = 0; i < size; ++i) {
       out[i + 1] += offset;
     }
-    if (local_overflow) {
-      OMP_CRITICAL
-      overflow = 1;
-    }
   }
-  if (overflow) {
-    throw std::overflow_error("CombBLAS-mapped prefix sum exceeds offset type limit");
+}
+
+template <class IT, class OT = IT>
+std::vector<OT> OmpPrefixSum(const std::vector<IT>& in, int threads)
+{
+  // Prefix inputs are nonnegative counts; validate before narrowing any partial sum.
+  const auto total = std::accumulate(in.begin(), in.end(), int64_t{0});
+  if (static_cast<std::uintmax_t>(total) >
+      static_cast<std::uintmax_t>(std::numeric_limits<OT>::max())) {
+    throw std::overflow_error("prefix sum exceeds output type");
   }
+  const std::size_t size = in.size();
+  std::vector<OT> out(size + 1);
+  OmpPrefixSumImpl(in.data(), out.data(), size, threads);
   return out;
 }
+
+}  // namespace spcraft

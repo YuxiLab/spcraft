@@ -53,7 +53,7 @@ def summarize(output_dir, plot):
         writer=csv.DictWriter(f,fieldnames=rows[0]);writer.writeheader();writer.writerows(rows)
     report=['# Paired native tuple comparison', '',
             'Both kernels read identical DCSC inputs and return column/row-sorted '
-            'std::tuple<IT,IT,NT> arrays. Timings include initialization/allocation, '
+            'COO arrays (SpCraft TupleEntry; CombBLAS std::tuple). Timings include allocation, '
             'symbolic, numeric, sorting and destruction. No output conversion occurs. '
             'Full independent Eigen checks precede timing at each thread count. '
             'Only these two kernels run during warmup and timing. Three warmup rounds '

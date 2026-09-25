@@ -1,3 +1,5 @@
+#include "SpCraft.h"
+
 #include <CombBLAS/CombBLAS.h>
 #include <cxxopts.hpp>
 #include <fmt/format.h>
@@ -10,7 +12,6 @@
 #include <memory>
 #include <string>
 
-#include "SpCraft.h"
 #include "SpGEMMBenchmarkCommon.h"
 
 #ifndef THREADED
@@ -45,7 +46,7 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
   using DCSC = spcraft::DcscMatrix<IT, NT>;
   MatrixInput<IT, NT, IT> input;
   if (!options.count("matrix") && options["generator"].as<std::string>() == "rmat") {
-    const int scale = options["scale"].as<int>();
+    const auto scale = options["scale"].as<std::int64_t>();
     const auto edges = options["edge-factor"].as<std::size_t>();
     input = {std::make_shared<spcraft::CsrMatrix<IT, NT>>(spcraft::GenRMAT<NT, IT>(
                  static_cast<IT>(scale), edges, options["seed"].as<int>())),
@@ -62,7 +63,7 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
   std::string dataset = input.name + " squared";
   if (options.count("right-matrix")) {
     const auto path = options["right-matrix"].as<std::string>();
-    eb = ToEigen(spcraft::CooMatrix<IT, NT>::FromMatrixMarket(path).ToCsr());
+    eb = ToEigen(spcraft::CooMatrix<IT, NT>(path).ToCsr());
     dataset = input.name + " x " + path.substr(path.find_last_of("/\\") + 1);
   }
   const int stride = options["column-stride"].as<int>();
@@ -126,15 +127,15 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
         throw std::runtime_error("output nnz disagrees with Eigen");
       for (IT col = 0; col < expected_dcsc.nzc; ++col) {
         for (IT p = expected_dcsc.col_ptr[col]; p < expected_dcsc.col_ptr[col + 1]; ++p) {
-          if (std::get<0>(u.entries[p]) != expected_dcsc.row_id[p] ||
-              std::get<1>(u.entries[p]) != expected_dcsc.col_id[col] ||
+          if (u.entries[p].row != expected_dcsc.row_id[p] ||
+              u.entries[p].col != expected_dcsc.col_id[col] ||
               t->rowindex(p) != expected_dcsc.row_id[p] ||
               t->colindex(p) != expected_dcsc.col_id[col])
             throw std::runtime_error("output coordinate mismatch");
         }
       }
-      errors[0] = Verify(
-          expected, [&](Eigen::Index p) { return std::get<2>(u.entries[p]); }, "OmpHashSpGEMM");
+      errors[0] =
+          Verify(expected, [&](Eigen::Index p) { return u.entries[p].val; }, "OmpHashSpGEMM");
       errors[1] = Verify(expected, [&](Eigen::Index p) { return t->numvalue(p); }, "CombBLAS");
     }
     auto native = [&] {
@@ -208,10 +209,7 @@ int main(int argc, char** argv)
     // clang-format off
     options.add_options()
       ("right-matrix", "Right operand; default A*A", cxxopts::value<std::string>())
-      ("generator", "er or rmat", cxxopts::value<std::string>()->default_value("er"))
-      ("column-stride", "Embed row/column IDs at this stride", cxxopts::value<int>()->default_value("1"))
-      ("scale", "R-MAT scale", cxxopts::value<int>()->default_value("12"))
-      ("edge-factor", "R-MAT edge factor", cxxopts::value<std::size_t>()->default_value("8"));
+      ("column-stride", "Embed row/column IDs at this stride", cxxopts::value<int>()->default_value("1"));
     // clang-format on
     const auto result = options.parse(argc, argv);
     if (result.count("help"))
@@ -226,7 +224,7 @@ int main(int argc, char** argv)
       spcraft::ReportInfo report_info;
       report_info.title = "OmpHashSpGEMM / CombBLAS native tuple comparison";
       report_info.metadata = {
-          {"SpCraft tuple kernel", "OmpHashSpGEMM (source-mapped baseline)"},
+          {"SpCraft tuple kernel", "OmpHashSpGEMM (sparse chunked A-column lookup)"},
           {"CombBLAS revision", SPCRAFT_COMBBLAS_REVISION},
           {"compiler", __VERSION__},
           {"build type", SPCRAFT_BENCHMARK_BUILD_TYPE},
@@ -235,8 +233,9 @@ int main(int argc, char** argv)
            "symbolic + numeric + sorting + allocation + destruction; input "
            "conversions excluded; native tuple output on both sides"},
           {"tuple output",
-           "Both native paths use std::tuple<IT,IT,NT>, sorted by column then "
-           "row; initialized array allocation and destruction included"},
+           "SpCraft uses TupleEntry<IT,NT>; CombBLAS uses std::tuple<IT,IT,NT>; both sorted by "
+           "column then "
+           "row; native allocation and destruction included"},
           {"measurement order", "native tuples only, paired AB/BA"},
           {"reference", "Eigen full pattern and values at every thread count"}};
       spcraft::BenchmarkReport report(std::move(report_info));

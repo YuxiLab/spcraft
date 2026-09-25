@@ -24,27 +24,24 @@ inline void CheckMklSparseStatus(sparse_status_t status, const char* operation)
 }
 
 template <class NT>
-sparse_status_t CreateMklCsr(sparse_matrix_t*, MKL_INT, MKL_INT, MKL_INT*, MKL_INT*, MKL_INT*,
-                             NT*);
+sparse_status_t CreateMklCsr(sparse_matrix_t*, MKL_INT, MKL_INT, MKL_INT*, MKL_INT*, MKL_INT*, NT*);
 
 template <>
-inline sparse_status_t CreateMklCsr<float>(sparse_matrix_t* handle, MKL_INT rows,
-                                           MKL_INT columns, MKL_INT* row_start,
-                                           MKL_INT* row_end, MKL_INT* column_ids,
-                                           float* values)
+inline sparse_status_t CreateMklCsr<float>(sparse_matrix_t* handle, MKL_INT rows, MKL_INT columns,
+                                           MKL_INT* row_start, MKL_INT* row_end,
+                                           MKL_INT* column_ids, float* values)
 {
-  return mkl_sparse_s_create_csr(handle, SPARSE_INDEX_BASE_ZERO, rows, columns, row_start,
-                                 row_end, column_ids, values);
+  return mkl_sparse_s_create_csr(handle, SPARSE_INDEX_BASE_ZERO, rows, columns, row_start, row_end,
+                                 column_ids, values);
 }
 
 template <>
-inline sparse_status_t CreateMklCsr<double>(sparse_matrix_t* handle, MKL_INT rows,
-                                            MKL_INT columns, MKL_INT* row_start,
-                                            MKL_INT* row_end, MKL_INT* column_ids,
-                                            double* values)
+inline sparse_status_t CreateMklCsr<double>(sparse_matrix_t* handle, MKL_INT rows, MKL_INT columns,
+                                            MKL_INT* row_start, MKL_INT* row_end,
+                                            MKL_INT* column_ids, double* values)
 {
-  return mkl_sparse_d_create_csr(handle, SPARSE_INDEX_BASE_ZERO, rows, columns, row_start,
-                                 row_end, column_ids, values);
+  return mkl_sparse_d_create_csr(handle, SPARSE_INDEX_BASE_ZERO, rows, columns, row_start, row_end,
+                                 column_ids, values);
 }
 
 template <class NT>
@@ -76,10 +73,8 @@ inline sparse_status_t MklSparseMv<double>(sparse_matrix_t handle, matrix_descr 
 template <class IT, class NT, class OT = IT>
 class MklCsrSpmv
 {
-  static_assert(std::is_same_v<IT, MKL_INT>,
-                "MklCsrSpmv requires column indices matching MKL_INT");
-  static_assert(std::is_same_v<OT, MKL_INT>,
-                "MklCsrSpmv requires row offsets matching MKL_INT");
+  static_assert(std::is_same_v<IT, MKL_INT>, "MklCsrSpmv requires column indices matching MKL_INT");
+  static_assert(std::is_same_v<OT, MKL_INT>, "MklCsrSpmv requires row offsets matching MKL_INT");
   static_assert(std::is_same_v<NT, float> || std::is_same_v<NT, double>,
                 "MklCsrSpmv supports float and double values");
 
@@ -87,15 +82,14 @@ class MklCsrSpmv
   explicit MklCsrSpmv(const CsrMatrix<IT, NT, OT>& matrix, MKL_INT expected_calls = 1000)
   {
     detail::CheckMklSparseStatus(
-        detail::CreateMklCsr<NT>(&handle_, matrix.m, matrix.n, matrix.row_ptr,
-                                 matrix.row_ptr + 1, matrix.col_id, matrix.val),
+        detail::CreateMklCsr<NT>(&handle_, matrix.m, matrix.n, matrix.row_ptr, matrix.row_ptr + 1,
+                                 matrix.col_id, matrix.val),
         "mkl_sparse_create_csr");
 
     try {
-      detail::CheckMklSparseStatus(
-          mkl_sparse_set_mv_hint(handle_, SPARSE_OPERATION_NON_TRANSPOSE, descriptor_,
-                                 expected_calls),
-          "mkl_sparse_set_mv_hint");
+      detail::CheckMklSparseStatus(mkl_sparse_set_mv_hint(handle_, SPARSE_OPERATION_NON_TRANSPOSE,
+                                                          descriptor_, expected_calls),
+                                   "mkl_sparse_set_mv_hint");
       detail::CheckMklSparseStatus(mkl_sparse_optimize(handle_), "mkl_sparse_optimize");
     } catch (...) {
       mkl_sparse_destroy(handle_);
@@ -107,10 +101,7 @@ class MklCsrSpmv
   MklCsrSpmv(const MklCsrSpmv&) = delete;
   MklCsrSpmv& operator=(const MklCsrSpmv&) = delete;
 
-  MklCsrSpmv(MklCsrSpmv&& rhs) noexcept : handle_(rhs.handle_)
-  {
-    rhs.handle_ = nullptr;
-  }
+  MklCsrSpmv(MklCsrSpmv&& rhs) noexcept : handle_(rhs.handle_) { rhs.handle_ = nullptr; }
 
   MklCsrSpmv& operator=(MklCsrSpmv&& rhs) noexcept
   {
@@ -139,8 +130,7 @@ class MklCsrSpmv
 
  private:
   sparse_matrix_t handle_ = nullptr;
-  matrix_descr descriptor_{SPARSE_MATRIX_TYPE_GENERAL, SPARSE_FILL_MODE_FULL,
-                           SPARSE_DIAG_NON_UNIT};
+  matrix_descr descriptor_{SPARSE_MATRIX_TYPE_GENERAL, SPARSE_FILL_MODE_FULL, SPARSE_DIAG_NON_UNIT};
 };
 
 }  // namespace spcraft

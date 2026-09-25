@@ -8,10 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "core/CooMatrix.h"
-#include "core/DcscMatrix.h"
-#include "kernel/SpGEMMHash.h"
-#include "semiring/SemiRing.h"
+#include "utils/utils.h"
 
 namespace spcraft
 {
@@ -19,26 +16,23 @@ namespace spcraft
 /**
  * @brief Hash-based SpGEMM Algorithm with Dcsc format input and COO output.
  */
-template <class SemiRing, class IT, class NT, class OT>
-[[nodiscard]] CooMatrix<IT, NT, OT> OmpHashSpGEMM(const DcscMatrix<IT, NT, OT>& A,
-                                                  const DcscMatrix<IT, NT, OT>& B);
+SP_SR_MAT_TEMP
+SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B);
 
 /**
  * @brief Hash-based SpGEMM Algorithm with Csc format input and COO output.
  */
-template <class SemiRing, class IT, class NT, class OT>
-[[nodiscard]] CooMatrix<IT, NT, OT> OmpHashSpGEMM(const CscMatrix<IT, NT, OT>& A,
-                                                  const CscMatrix<IT, NT, OT>& B);
+SP_SR_MAT_TEMP
+SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B);
 
 /**
  * @brief Hash-based SpGEMM Algorithm with Csc format input and COO output.
  */
-template <class SemiRing, class IT, class NT, class OT>
-[[nodiscard]] CooMatrix<IT, NT, OT> OmpHashSpGEMM(const CsrMatrix<IT, NT, OT>& A,
-                                                  const CsrMatrix<IT, NT, OT>& B);
+SP_SR_MAT_TEMP
+SPND SPCOO OmpHashSpGEMM(const SPCSR& A, const SPCSR& B);
 
 }  // namespace spcraft
 
 #include "HashSpGEMMCsr_impl.h"
 #include "HashSpGEMMCsc_impl.h"
-// #include "HashSpGEMMDcsc_impl.h"
+#include "HashSpGEMMDcsc_impl.h"

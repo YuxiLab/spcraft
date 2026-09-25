@@ -4,9 +4,10 @@
 #include <optional>
 #include <string>
 
+#include "utils/MatrixMacros.h"
 namespace spcraft
 {
-template <class IT, class NT, class OT>
+SP_MAT_TEMP
 class CooMatrix;
 
 struct MatrixInput {

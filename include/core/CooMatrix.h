@@ -53,14 +53,17 @@ class CooMatrix
    *             constructor
    *************************************/
   CooMatrix() = default;
-  // clang-format off
-  CooMatrix(TupleEntry<IT, NT>* entries_, OT count, IT rows, IT columns) :entries(entries_), nnz(count), m(rows), n(columns), memowned(false){}
-  // clang-format on
+  CooMatrix(TupleEntry<IT, NT>* entries_, OT count, IT rows, IT columns)
+      : entries(entries_), nnz(count), m(rows), n(columns), memowned(false)
+  {
+  }
   CooMatrix(const CooMatrix&) = delete;
   CooMatrix& operator=(const CooMatrix&) = delete;
-  // clang-format off
-  CooMatrix(CooMatrix&& rhs) noexcept :entries(rhs.entries), nnz(rhs.nnz), m(rhs.m), n(rhs.n), memowned(rhs.memowned){rhs.Reset();}
-  // clang-format on
+  CooMatrix(CooMatrix&& rhs) noexcept
+      : entries(rhs.entries), nnz(rhs.nnz), m(rhs.m), n(rhs.n), memowned(rhs.memowned)
+  {
+    rhs.Reset();
+  }
   CooMatrix& operator=(CooMatrix&& rhs) noexcept;
   ~CooMatrix() { SafeDelete(memowned, entries); }
   explicit CooMatrix(const std::string& filename);

@@ -13,14 +13,16 @@
 #include <utility>
 #include <vector>
 
+#include "utils/MatrixMacros.h"
+
 namespace spcraft
 {
 
-template <class IT, class NT, class OT>
+SP_MAT_TEMP
 class CsrMatrix;
-template <class IT, class NT, class OT>
+SP_MAT_TEMP
 class CscMatrix;
-template <class IT, class NT, class OT>
+SP_MAT_TEMP
 class CooMatrix;
 
 /// Print up to count elements of a valid std::vector, DenseVector, or Eigen vector.

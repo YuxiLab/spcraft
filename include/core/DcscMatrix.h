@@ -26,6 +26,7 @@ class DcscMatrix
   IT* col_id = nullptr;   //!< logical column IDs, size nzc
   IT* row_id = nullptr;   //!< row IDs, size nnz
   NT* val = nullptr;      //!< values, size nnz
+
   OT nnz = 0;
   IT m = 0;
   IT n = 0;
@@ -36,18 +37,38 @@ class DcscMatrix
    *             constructor
    *************************************/
   DcscMatrix() = default;
-  // clang-format off
   //! non-owning view mode constructor
-  DcscMatrix(OT* pointers, IT* columns, IT* rows, NT* values, OT nonzeros, IT nRows, IT nCols,IT storedColumns):col_ptr(pointers),col_id(columns),row_id(rows),val(values),nnz(nonzeros),m(nRows),n(nCols),nzc(storedColumns),memowned(false){}
-  // clang-format on
+  DcscMatrix(OT* pointers, IT* columns, IT* rows, NT* values, OT nonzeros, IT nRows, IT nCols,
+             IT storedColumns)
+      : col_ptr(pointers),
+        col_id(columns),
+        row_id(rows),
+        val(values),
+        nnz(nonzeros),
+        m(nRows),
+        n(nCols),
+        nzc(storedColumns),
+        memowned(false)
+  {
+  }
   //! disable copy constructor
   DcscMatrix(const DcscMatrix&) = delete;
   //! disable copy operator
   DcscMatrix& operator=(const DcscMatrix&) = delete;
-  // clang-format off
   //! move constructor
-  DcscMatrix(DcscMatrix&& rhs) noexcept :col_ptr(rhs.col_ptr),col_id(rhs.col_id),row_id(rhs.row_id),val(rhs.val),nnz(rhs.nnz),m(rhs.m),n(rhs.n),nzc(rhs.nzc),memowned(rhs.memowned){rhs.Reset();}
-  // clang-format on
+  DcscMatrix(DcscMatrix&& rhs) noexcept
+      : col_ptr(rhs.col_ptr),
+        col_id(rhs.col_id),
+        row_id(rhs.row_id),
+        val(rhs.val),
+        nnz(rhs.nnz),
+        m(rhs.m),
+        n(rhs.n),
+        nzc(rhs.nzc),
+        memowned(rhs.memowned)
+  {
+    rhs.Reset();
+  }
   //! move operator
   DcscMatrix& operator=(DcscMatrix&& rhs) noexcept;
   //! deconstructor

@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "SpCraft.h"
+#include "utils/utils.h"
 
 namespace spcraft
 {
@@ -12,13 +12,13 @@ namespace spcraft
 /**
  * @brief Reference omp spmv.
  */
-template <class SemiRing, class IT, class NT, class OT>
-void OmpSpMV(const CsrMatrix<IT, NT, OT>& A, const DenseVector<IT, NT>& x, DenseVector<IT, NT>& y)
+SP_SR_MAT_TEMP
+void OmpSpMV(const SPCSC& A, const SPDVEC& x, SPDVEC& y)
 {
-  // clang-format off
-  if (x.n != A.n || y.n != A.m) { throw std::invalid_argument("SpMV vector dimensions do not match the matrix"); }
-  // clang-format on
-  OMP_PARALLEL_FOR()
+  if (x.n != A.n || y.n != A.m) {
+    throw std::invalid_argument("SpMV vector dimensions do not match the matrix");
+  }
+  OMP_PARALLEL_FOR(schedule(dynamic))
   // loop each row in A matrix.
   for (IT row = 0; row < A.m; ++row) {
     // sum is variable store the output of the dot product.

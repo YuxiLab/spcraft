@@ -1,277 +1,218 @@
 #pragma once
 
+#include <algorithm>
+#include <cstdint>
+#include <limits>
+#include <utility>
+#include <vector>
 #include "kernel/mtSpGEMM.h"
 
 namespace spcraft
 {
-
-// Checked arithmetic is the only change to the two-static-loop prefix algorithm.
-template <class OT>
-OT CombBLASCheckedSum(OT a, OT b, int& overflow)
+namespace detail
 {
-  if (b > std::numeric_limits<OT>::max() - a) {
-    overflow = 1;
-    return std::numeric_limits<OT>::max();
-  }
-  return a + b;
-}
 
-template <class IT, class NT, class OT>
-class CombBLASColumnLookup
+/**
+ * @brief CombBLAS-style chunk lookup with O(A.nzc) storage, built for nonempty A.
+ */
+SP_MAT_TEMP
+class DcscColumnLookup
 {
-  const DcscMatrix<IT, NT, OT>& matrix;
-
-public:
-  IT csize = 0;
-  std::vector<IT> aux;
-  explicit CombBLASColumnLookup(const DcscMatrix<IT, NT, OT>& a) : matrix(a)
+ public:
+  explicit DcscColumnLookup(const SPDCSC& A) : matrix(A)
   {
-    // Preserve upstream's float arithmetic on a range where its integer round
-    // trips are exact. DCSC storage itself supports larger logical shapes.
-    constexpr std::uintmax_t kFloatExactIntegerLimit = std::uintmax_t{1} << 24;
-    const auto width = static_cast<std::uintmax_t>(a.n);
-    if (width >= kFloatExactIntegerLimit ||
-        width >= static_cast<std::uintmax_t>(std::numeric_limits<IT>::max()))
-      throw std::overflow_error("CombBLAS-mapped lookup extent exceeds supported reference range");
-    const auto extent = width + 1;
-    // Split logical columns into chunks to narrow later column searches.
-    const float cf = static_cast<float>(extent) / static_cast<float>(a.nzc);
-    csize = static_cast<IT>(std::ceil(cf));
-    const IT chunks = static_cast<IT>(std::ceil(static_cast<float>(extent) / std::ceil(cf)));
-    aux.resize(detail::CheckedElementCount<IT>(static_cast<std::uintmax_t>(chunks) + 1));
-    IT reg = 0, current = 0;
-    aux[current++] = 0;
-    for (IT i = 0; i < a.nzc; ++i) {
-      // Widen the boundary product to avoid the upstream signed-overflow edge.
-      while (static_cast<std::uintmax_t>(a.col_id[i]) >=
-             static_cast<std::uintmax_t>(current) * csize)
-        aux[current++] = reg;
-      reg = i + 1;
+    // Integer ceiling division avoids losing column IDs through float rounding.
+    const int64_t extent = static_cast<int64_t>(A.n) + 1;
+    chunk_size = (extent - 1) / A.nzc + 1;
+    const int64_t chunks = (extent - 1) / chunk_size + 1;
+    aux.resize(CheckedElementCount<IT>(chunks + 1));
+    int64_t next_chunk = 1;
+    for (IT col = 0; col < A.nzc; ++col) {
+      const int64_t chunk = A.col_id[col] / chunk_size;
+      while (next_chunk <= chunk) aux[next_chunk++] = col;
     }
-    while (current <= chunks) aux[current++] = reg;
+    while (next_chunk <= chunks) aux[next_chunk++] = A.nzc;
   }
-  void FillColInds(const IT* columns, std::size_t count,
-                   std::vector<std::pair<OT, OT>>& ranges) const
+
+  std::vector<std::pair<OT, OT>> FillColInds(const SPDCSC& B, IT col) const
   {
-    constexpr std::size_t kScanningThreshold = 4;  // CombBLAS SpDefs.h THRESHOLD.
-    if (!count) return;
-    if (static_cast<std::size_t>(matrix.nzc) / count < kScanningThreshold) {
-      // For many requested columns, intersect the two sorted column lists.
-      using IndexPair = std::pair<IT, IT>;
-      std::vector<IndexPair> intersection(std::min(static_cast<std::size_t>(matrix.nzc), count));
-      std::vector<IndexPair> range1(matrix.nzc), range2(count);
-      for (IT i = 0; i < matrix.nzc; ++i) range1[i] = {matrix.col_id[i], i};
-      for (std::size_t i = 0; i < count; ++i) range2[i] = {columns[i], 0};
-      const auto end = std::set_intersection(
-          range1.begin(), range1.end(), range2.begin(), range2.end(), intersection.begin(),
-          [](const IndexPair& a, const IndexPair& b) { return a.first < b.first; });
-      std::size_t i = 0;
-      const auto matches = static_cast<std::size_t>(end - intersection.begin());
-      for (std::size_t j = 0; j < count; ++j) {
-        if (i == matches || intersection[i].first != columns[j])
-          ranges[j] = {0, 0};
-        else {
-          const IT slot = intersection[i++].second;
-          ranges[j] = {matrix.col_ptr[slot], matrix.col_ptr[slot + 1]};
+    const OT begin = B.col_ptr[col], end = B.col_ptr[col + 1];
+    const auto count = static_cast<std::size_t>(end - begin);
+    std::vector<std::pair<OT, OT>> ranges(count);
+    if (count == 0) return ranges;
+
+    // CombBLAS switches to scanning when many A columns are requested. Our
+    // containers also permit unsorted rows, which must use independent lookups.
+    constexpr std::size_t kScanThreshold = 4;
+    const bool scan = static_cast<std::size_t>(matrix.nzc) / count < kScanThreshold &&
+                      std::is_sorted(B.row_id + begin, B.row_id + end);
+    if (scan) {
+      IT pos = 0;
+      for (OT p = begin; p < end; ++p) {
+        const IT column = B.row_id[p];
+        while (pos < matrix.nzc && matrix.col_id[pos] < column) ++pos;
+        if (pos < matrix.nzc && matrix.col_id[pos] == column) {
+          ranges[p - begin] = {matrix.col_ptr[pos], matrix.col_ptr[pos + 1]};
         }
+        // Keep pos at a match so repeated B row IDs reuse the same A column.
       }
     } else {
-      // For a few requested columns, search only their lookup chunks.
-      for (std::size_t j = 0; j < count; ++j) {
-        const IT base = static_cast<IT>(std::floor(static_cast<float>(columns[j] / csize)));
-        const auto* begin = matrix.col_id + aux[base];
-        const auto* end = matrix.col_id + aux[base + 1];
-        const auto* found = std::find(begin, end, columns[j]);
-        if (found == end)
-          ranges[j] = {0, 0};
-        else {
-          const auto slot = found - matrix.col_id;
-          ranges[j] = {matrix.col_ptr[slot], matrix.col_ptr[slot + 1]};
-        }
-      }
-    }
-  }
-};
-
-// Upstream allocates at least 16 slots even for a zero-work/output column.
-template <class OT>
-std::size_t CombBLASHashCapacity(OT count)
-{
-  constexpr std::size_t kMinHashTableSize = 16;
-  std::size_t capacity = kMinHashTableSize;
-  while (capacity < static_cast<std::uintmax_t>(count)) capacity <<= 1;
-  return capacity;
-}
-
-// A serial maximum-size preflight keeps sizing exceptions out of worker loops;
-// each worker still calculates its capacity from flop/colptr exactly as upstream.
-template <class Entry, class OT>
-void CombBLASValidateCapacities(const std::vector<OT>& counts)
-{
-  const auto maximum = counts.empty() ? OT{0} : *std::max_element(counts.begin(), counts.end());
-  (void)detail::SpGEMMHashCapacity<Entry>(std::max<std::uintmax_t>(1, maximum));
-}
-
-template <class IT, class NT, class OT>
-std::vector<OT> CombBLASEstimateFLOP(const DcscMatrix<IT, NT, OT>& A,
-                                     const DcscMatrix<IT, NT, OT>& B)
-{
-  const CombBLASColumnLookup<IT, NT, OT> lookup(A);
-  const int threads = OMP_GET_MAX_THREADS();
-  std::vector<OT> flop(B.nzc);
-  OMP_PARALLEL_FOR()
-  for (IT i = 0; i < B.nzc; ++i) flop[i] = 0;
-  std::vector<std::vector<std::pair<OT, OT>>> colinds(threads);
-  OMP_PARALLEL_FOR()
-  for (IT i = 0; i < B.nzc; ++i) {
-    int thread = 0;
-    thread = OMP_GET_THREAD_NUM();
-    const auto count = static_cast<std::size_t>(B.col_ptr[i + 1] - B.col_ptr[i]);
-    auto& ranges = colinds[thread];
-    if (ranges.size() < count) ranges.resize(count);
-    lookup.FillColInds(B.row_id + B.col_ptr[i], count, ranges);
-    for (std::size_t j = 0; j < count; ++j) {
-      flop[i] += ranges[j].second - ranges[j].first;
-    }
-  }
-  return flop;
-}
-
-template <class IT, class NT, class OT>
-std::vector<OT> CombBLASEstimateNNZHash(const DcscMatrix<IT, NT, OT>& A,
-                                        const DcscMatrix<IT, NT, OT>& B,
-                                        const std::vector<OT>& flop)
-{
-  const CombBLASColumnLookup<IT, NT, OT> lookup(A);
-  const int threads = OMP_GET_MAX_THREADS();
-  // Symbolic phase: count distinct output rows without computing values.
-  CombBLASValidateCapacities<IT>(flop);
-  std::vector<OT> counts(detail::CheckedElementCount<OT>(B.nzc));
-  std::vector<std::vector<std::pair<OT, OT>>> colinds(threads);
-  std::vector<std::vector<IT>> hash(threads);
-  OMP_PARALLEL_FOR(num_threads(threads) default(none)
-                       shared(A, B, lookup, flop, counts, colinds, hash))
-  for (IT i = 0; i < B.nzc; ++i) {
-    counts[i] = 0;
-    int thread = 0;
-    thread = OMP_GET_THREAD_NUM();
-    const auto count = static_cast<std::size_t>(B.col_ptr[i + 1] - B.col_ptr[i]);
-    auto& ranges = colinds[thread];
-    if (ranges.size() < count) ranges.resize(count);
-    lookup.FillColInds(B.row_id + B.col_ptr[i], count, ranges);
-    // The product count bounds the number of distinct rows in this column.
-    const auto capacity = CombBLASHashCapacity(flop[i]);
-    auto& keys = hash[thread];
-    if (keys.size() < capacity) keys.resize(capacity);
-    std::fill_n(keys.begin(), capacity, IT(-1));
-    // Insert each row once; repeated rows share the same output entry.
-    for (std::size_t j = 0; j < count; ++j) {
-      for (OT k = ranges[j].first; k < ranges[j].second; ++k) {
-        const IT key = A.row_id[k];
-        auto slot = detail::SpGEMMHashSlot(key, capacity - 1);
-        while (true) {
-          if (keys[slot] == key) break;
-          if (keys[slot] == IT(-1)) {
-            keys[slot] = key;
-            ++counts[i];
+      for (OT p = begin; p < end; ++p) {
+        const IT column = B.row_id[p];
+        const auto chunk = column / chunk_size;
+        for (IT pos = aux[chunk]; pos < aux[chunk + 1]; ++pos) {
+          if (matrix.col_id[pos] == column) {
+            ranges[p - begin] = {matrix.col_ptr[pos], matrix.col_ptr[pos + 1]};
             break;
           }
-          // Resolve a collision by probing the next slot, wrapping at the end.
-          slot = (slot + 1) & (capacity - 1);
+          if (matrix.col_id[pos] > column) break;
         }
       }
     }
+    return ranges;
+  }
+
+ private:
+  const SPDCSC& matrix;
+  VIT aux;
+  int64_t chunk_size;
+};
+
+}  // namespace detail
+
+SP_MAT_TEMP
+VL EstimateFLOP(const SPDCSC& A, const SPDCSC& B,
+                const detail::DcscColumnLookup<IT, NT, OT>& lookup)
+{
+  VL flops(B.nzc, 0);
+  OMP_PARALLEL_FOR(schedule(dynamic))
+  for (IT col = 0; col < B.nzc; ++col) {
+    const auto ranges = lookup.FillColInds(B, col);
+    int64_t count = 0;
+    for (const auto& [begin, end] : ranges) count += end - begin;
+    flops[col] = count;
+  }
+  return flops;
+}
+
+SP_MAT_TEMP
+VL EstimateNNZHash(const SPDCSC& A, const SPDCSC& B, const VL& flop_prefixsum,
+                   const detail::DcscColumnLookup<IT, NT, OT>& lookup)
+{
+  VL counts(B.nzc, 0);
+  constexpr std::size_t kMinCapacity = 16;
+  constexpr std::size_t kHashScale = 107;
+  constexpr IT kEmpty = static_cast<IT>(-1);
+  OMP_PARALLEL_FOR(schedule(dynamic))
+  for (IT col = 0; col < B.nzc; ++col) {
+    const auto flops = flop_prefixsum[col + 1] - flop_prefixsum[col];
+    if (flops == 0) continue;
+    std::size_t capacity = kMinCapacity;
+    while (capacity < static_cast<std::size_t>(flops)) capacity <<= 1;
+    const auto mask = capacity - 1;
+    std::vector<IT> keys(capacity, kEmpty);
+    const auto ranges = lookup.FillColInds(B, col);
+    int64_t count = 0;
+    for (const auto& [begin, end] : ranges) {
+      for (OT p = begin; p < end; ++p) {
+        const IT row = A.row_id[p];
+        auto slot = (static_cast<std::size_t>(row) * kHashScale) & mask;
+        while (keys[slot] != kEmpty && keys[slot] != row) slot = (slot + 1) & mask;
+        if (keys[slot] == kEmpty) {
+          keys[slot] = row;
+          ++count;
+        }
+      }
+    }
+    counts[col] = count;
   }
   return counts;
 }
 
 /**
- * @brief Source-mapped CombBLAS LocalSpGEMMHash(A,B,false,false,true) baseline.
+ * @brief Accumulate and sort each stored B column into its reserved COO slice.
  */
-template <class SemiRing, class IT, class NT, class OT>
-[[nodiscard]] CooMatrix<IT, NT, OT> OmpHashSpGEMM(const DcscMatrix<IT, NT, OT>& A,
-                                                  const DcscMatrix<IT, NT, OT>& B)
+SP_SR_MAT_TEMP
+void NumericPhase(const SPDCSC& A, const SPDCSC& B, const VL& offsets,
+                  const detail::DcscColumnLookup<IT, NT, OT>& lookup, SPCOO& result)
 {
-  // clang-format off
+  static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
+                "Semiring value type must match matrix value type");
+  struct HashKeyEntry {
+    IT key;
+    NT value;
+  };
+  constexpr std::size_t kMinCapacity = 16;
+  constexpr std::size_t kHashScale = 107;
+  constexpr IT kEmpty = static_cast<IT>(-1);
+  OMP_PARALLEL_FOR(schedule(dynamic))
+  for (IT col = 0; col < B.nzc; ++col) {
+    const auto count = offsets[col + 1] - offsets[col];
+    if (count == 0) continue;
+    std::size_t capacity = kMinCapacity;
+    while (capacity < static_cast<std::size_t>(count)) capacity <<= 1;
+    const auto mask = capacity - 1;
+    std::vector<HashKeyEntry> table(capacity, {kEmpty, SemiRing::kAdditiveIdentity});
+    const auto ranges = lookup.FillColInds(B, col);
+    const OT begin = B.col_ptr[col], end = B.col_ptr[col + 1];
+    for (OT p = begin; p < end; ++p) {
+      const auto& [a_begin, a_end] = ranges[p - begin];
+      for (OT q = a_begin; q < a_end; ++q) {
+        const IT row = A.row_id[q];
+        auto slot = (static_cast<std::size_t>(row) * kHashScale) & mask;
+        while (table[slot].key != kEmpty && table[slot].key != row) slot = (slot + 1) & mask;
+        table[slot].key = row;
+        table[slot].value =
+            SemiRing::Add(SemiRing::Multiply(A.val[q], B.val[p]), table[slot].value);
+      }
+    }
+    std::size_t occupied = 0;
+    for (std::size_t slot = 0; slot < capacity; ++slot) {
+      if (table[slot].key != kEmpty) table[occupied++] = table[slot];
+    }
+    std::sort(table.begin(), table.begin() + occupied,
+              [](const HashKeyEntry& a, const HashKeyEntry& b) { return a.key < b.key; });
+    OT dest = static_cast<OT>(offsets[col]);
+    for (std::size_t slot = 0; slot < occupied; ++slot) {
+      result.entries[dest++] = {table[slot].key, B.col_id[col], table[slot].value};
+    }
+  }
+}
+
+/**
+ * @brief CombBLAS-style DCSC hash SpGEMM with sorted COO output.
+ * Builds one O(A.nzc) column lookup shared by work estimation, symbolic counting,
+ * and numeric accumulation. Rows may be unsorted or repeated; structural zeros
+ * are retained. Work/output prefixes use int64_t, with OT-checked output storage.
+ */
+SP_SR_MAT_TEMP
+SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B)
+{
+  static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
+                "Semiring value type must match matrix value type");
   if (A.n != B.m) throw std::invalid_argument("SpGEMM matrix dimensions do not match");
-  if (A.m < 0 || A.n < 0 || B.m < 0 || B.n < 0) throw std::invalid_argument("SpGEMM dimensions must be nonnegative");
-  // clang-format on
-  CooMatrix<IT, NT, OT> result;
+  if constexpr (std::is_signed_v<IT>) {
+    if (A.m < 0 || A.n < 0 || B.m < 0 || B.n < 0)
+      throw std::invalid_argument("SpGEMM dimensions must be nonnegative");
+  }
+  SPCOO result;
   if (!A.nnz || !B.nnz) {
     result.Allocate(0, A.m, B.n);
     return result;
   }
-  // 2. Build A's column lookup and count scalar products per output column.
-  const CombBLASColumnLookup<IT, NT, OT> lookup(A);
-  // This entry point is outside a parallel region. Size scratch for every
-  // worker that the following parallel loops may create.
   const int threads = OMP_GET_MAX_THREADS();
-  auto flop = CombBLASEstimateFLOP(A, B);
-  // Keep this work prefix sum to match the CombBLAS baseline.
-  const auto flopptr = OmpPrefixSum(flop, threads);
-  // 3. Symbolic phase: count unique rows and assign each column a COO slice.
-  auto counts = CombBLASEstimateNNZHash(A, B, flop);
+  const detail::DcscColumnLookup lookup(A);
+  const auto flops = EstimateFLOP(A, B, lookup);
+  const auto flop_prefixsum = OmpPrefixSum(flops, threads);
+  const auto counts = EstimateNNZHash(A, B, flop_prefixsum, lookup);
   const auto offsets = OmpPrefixSum(counts, threads);
-  using Entry = std::pair<IT, NT>;
-  CombBLASValidateCapacities<Entry>(counts);
-  // Release the same phase-local arrays that upstream frees before numeric work.
-  std::vector<OT>().swap(counts);
-  std::vector<OT>().swap(flop);
-  // 4. Allocate the exact output size and prepare column-range scratch.
-  result.Allocate(offsets.back(), A.m, B.n);
-  std::vector<std::vector<std::pair<OT, OT>>> colinds(threads);
-  const auto initial = detail::CheckedElementCount<std::pair<OT, OT>>(A.nnz / threads);
-  for (int i = 0; i < threads; ++i) colinds[i].resize(initial);
-  // 5. Numeric phase: compute each stored column of B independently.
-  OMP_PARALLEL_FOR()
-  for (IT i = 0; i < B.nzc; ++i) {
-    int thread = 0;
-    thread = OMP_GET_THREAD_NUM();
-    const auto count = static_cast<std::size_t>(B.col_ptr[i + 1] - B.col_ptr[i]);
-    auto& ranges = colinds[thread];
-    if (ranges.size() < count) ranges.resize(count);
-    // Find the A columns selected by this B column's row indices.
-    lookup.FillColInds(B.row_id + B.col_ptr[i], count, ranges);
-    const auto capacity = CombBLASHashCapacity(static_cast<OT>(offsets[i + 1] - offsets[i]));
-    std::vector<Entry> table(capacity);
-    // Each hash slot holds an output row and its accumulated value.
-    for (std::size_t j = 0; j < capacity; ++j) table[j].first = IT(-1);
-    // Expand A(:, k) * B(k, j) and merge products with the same output row.
-    for (std::size_t j = 0; j < count; ++j) {
-      const NT bval = B.val[B.col_ptr[i] + j];
-      for (OT k = ranges[j].first; k < ranges[j].second; ++k) {
-        const NT product = SemiRing::Multiply(A.val[k], bval);
-        const IT key = A.row_id[k];
-        auto slot = detail::SpGEMMHashSlot(key, capacity - 1);
-        while (true) {
-          if (table[slot].first == key) {
-            table[slot].second = SemiRing::Add(product, table[slot].second);
-            break;
-          }
-          if (table[slot].first == IT(-1)) {
-            // The first product initializes the value, as in CombBLAS.
-            table[slot].first = key;
-            table[slot].second = product;
-            break;
-          }
-          // Linear probing finds either this row or the next empty slot.
-          slot = (slot + 1) & (capacity - 1);
-        }
-      }
-    }
-    // 6. Compact occupied slots and sort this column by row index.
-    std::size_t occupied = 0;
-    for (std::size_t j = 0; j < capacity; ++j)
-      if (table[j].first != IT(-1)) table[occupied++] = table[j];
-    std::sort(table.begin(), table.begin() + occupied,
-              [](const Entry& a, const Entry& b) { return a.first < b.first; });
-    // 7. Write (row, column, value) tuples into this column's reserved slice.
-    OT dest = offsets[i];
-    for (std::size_t j = 0; j < occupied; ++j)
-      result.entries[dest++] = {table[j].first, B.col_id[i], table[j].second};
+  if (static_cast<std::uintmax_t>(offsets.back()) >
+      static_cast<std::uintmax_t>(std::numeric_limits<OT>::max())) {
+    throw std::overflow_error("SpGEMM output nnz exceeds offset type limit");
   }
+  result.Allocate(static_cast<OT>(offsets.back()), A.m, B.n);
+  NumericPhase<SemiRing>(A, B, offsets, lookup, result);
   return result;
 }
 
-
-} // namespace spcraft
+}  // namespace spcraft

@@ -10,6 +10,7 @@
 
 #include "core/AllocationGuard.h"
 #include "core/DcscMatrix.h"
+#include "utils/omp/omp_wrapper.h"
 
 namespace spcraft
 {
