@@ -2,6 +2,8 @@
 # Common settings applied to all files.
 # Includes/system paths are pulled from compile_commands.json, so they are
 # intentionally not duplicated here. Symlink `build` -> `build_<arch>` locally.
+# On macOS, run scripts/setup_macos_clangd.py to create a parsing-only database.
+# The database supplies the compiler and CUDA toolkit path for each machine.
 ###################################################################################
 CompileFlags:
   CompilationDatabase: ./build
@@ -17,7 +19,6 @@ CompileFlags:
     - "_deps/fmt-src/include"
     - "-isystem"
     - "_deps/boost_preprocessor-src/include"
-    - "-I/opt/nvidia/hpc_sdk/Linux_x86_64/26.5/comm_libs/13.2/hpcx/hpcx-2.50/ompi5/include"
     # The headers have no compile_commands.json entry, so clangd interpolates
     # flags from whichever translation unit it judges nearest -- for a name with
     # no matching stem that is often a third-party dependency compiled without
@@ -52,9 +53,7 @@ If:
   # failures while retaining declarations from cuda_runtime.h.
   PathMatch: '.*\.(c|cc|cpp|cxx|h|hh|hpp|hxx|cuh)$'
 CompileFlags:
-  Compiler: /usr/bin/c++
   Add:
-    - -I/usr/local/cuda/targets/x86_64-linux/include
     - --std=c++20
   Remove:
     # strip nvcc-only arguments inherited by compdb header entries
@@ -94,13 +93,8 @@ CompileFlags:
 If:
   PathMatch: '.*\.cu$'
 CompileFlags:
-  Compiler: /usr/local/cuda/bin/nvcc
   Add:
-    - --cuda-path=/usr/local/cuda
     - --cuda-gpu-arch=sm_80
-    - -I/usr/local/cuda/targets/x86_64-linux/include
-    - "-isystem"
-    - "/opt/nvidia/hpc_sdk/Linux_x86_64/26.5/math_libs/13.2/include"
     - "-xcuda"
     - "-ferror-limit=0"
     - "--no-cuda-version-check"

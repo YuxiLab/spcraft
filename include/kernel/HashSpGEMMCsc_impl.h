@@ -12,7 +12,7 @@ namespace spcraft
 {
 
 SP_MAT_TEMP
-VI EstimateNNZHash(const SPCSC& A, const SPCSC& B, VL& flop_prefixsum)
+VI HashSpGEMMCscSymbolicPhase(const SPCSC& A, const SPCSC& B, VL& flops_prefixsum)
 {
   VI outnnz(B.n);  // get memory, but no initialization.
   OMP_PARALLEL_FOR()
@@ -21,7 +21,7 @@ VI EstimateNNZHash(const SPCSC& A, const SPCSC& B, VL& flop_prefixsum)
     OT b_cur_col_st_idx = B.col_ptr[j];      // get start index of B rowid at column j
     OT b_cur_col_ed_idx = B.col_ptr[j + 1];  // get start index of B rowid at column j+1
     OT capacity = 16;                        // minimum capacity
-    OT cur_flops = flop_prefixsum[j + 1] - flop_prefixsum[j];
+    OT cur_flops = flops_prefixsum[j + 1] - flops_prefixsum[j];
     while (capacity < cur_flops) {
       capacity <<= 1;  // hshtable capacity is pow of 2 and larger than flops
     }
@@ -56,7 +56,7 @@ VI EstimateNNZHash(const SPCSC& A, const SPCSC& B, VL& flop_prefixsum)
 }
 
 SP_MAT_TEMP
-VL EstimateFLOP(const SPCSC& A, const SPCSC& B)
+VL HashSpGEMMCscEstimateFlops(const SPCSC& A, const SPCSC& B)
 {
   VL flops(B.n);  // give you memory, but no initialization.
   OMP_PARALLEL_FOR()
@@ -78,7 +78,7 @@ VL EstimateFLOP(const SPCSC& A, const SPCSC& B)
  * Entries are sorted by row within each column; structural zeros are retained.
  */
 SP_SR_MAT_TEMP
-void NumericPhase(const SPCSC& A, const SPCSC& B, const VL& offsets, SPCOO& result)
+void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const VL& offsets, SPCOO& result)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");
@@ -137,13 +137,13 @@ SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
   }
   const int threads = OMP_GET_MAX_THREADS();
   // constexpr std::size_t kPrintCount = 5;
-  VL flop = EstimateFLOP(A, B);
+  VL flop = HashSpGEMMCscEstimateFlops(A, B);
   // PrintVector(flop, kPrintCount, "flops", std::cerr);
   // Keep this work prefix sum to match the CombBLAS baseline.
   VL flop_prefixsum = OmpPrefixSum(flop, threads);
   // PrintVector(flop_prefixsum, kPrintCount, "flops prefixsum", std::cerr);
   // 3. Symbolic phase: count unique rows and assign each column a COO slice.
-  auto counts = EstimateNNZHash(A, B, flop_prefixsum);
+  auto counts = HashSpGEMMCscSymbolicPhase(A, B, flop_prefixsum);
   // PrintVector(counts, kPrintCount, "nnz per column", std::cerr);
   // Per-column counts fit int32_t, but their total may need 64-bit offsets.
   VL offsets = OmpPrefixSum(VL(counts.begin(), counts.end()), threads);
@@ -153,7 +153,7 @@ SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
   }
   // PrintVector(offsets, kPrintCount, "nnz offsets", std::cerr);
   result.Allocate(static_cast<OT>(offsets.back()), A.m, B.n);
-  NumericPhase<SemiRing>(A, B, offsets, result);
+  HashSPGEMMCscNumericPhase<SemiRing>(A, B, offsets, result);
   return result;
 }
 

@@ -8,6 +8,12 @@ Please send email to `yuxihong@iu.edu` if you have any questions.
 
 [Yuxi Hong](https://hongyx11.github.io/)
 
+## CUDA code navigation on macOS
+
+Run `python3 scripts/setup_macos_clangd.py` to prepare local clangd parsing for
+C++ and CUDA without installing a GPU driver or building the library. See
+[the setup guide](scripts/clangd/README.md) for verification and editor details.
+
 ## Private lecture notes
 
 The optional `latex/` submodule contains private lecture notes and is not needed

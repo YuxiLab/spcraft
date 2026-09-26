@@ -81,8 +81,8 @@ class DcscColumnLookup
 }  // namespace detail
 
 SP_MAT_TEMP
-VL EstimateFLOP(const SPDCSC& A, const SPDCSC& B,
-                const detail::DcscColumnLookup<IT, NT, OT>& lookup)
+VL HashSpGEMM_Csc_EstimateFlops(const SPDCSC& A, const SPDCSC& B,
+                                const detail::DcscColumnLookup<IT, NT, OT>& lookup)
 {
   VL flops(B.nzc, 0);
   OMP_PARALLEL_FOR(schedule(dynamic))
@@ -96,8 +96,8 @@ VL EstimateFLOP(const SPDCSC& A, const SPDCSC& B,
 }
 
 SP_MAT_TEMP
-VL EstimateNNZHash(const SPDCSC& A, const SPDCSC& B, const VL& flop_prefixsum,
-                   const detail::DcscColumnLookup<IT, NT, OT>& lookup)
+VL HashpSpGEMM_Csc_SymbolicPhase(const SPDCSC& A, const SPDCSC& B, const VL& flop_prefixsum,
+                                 const detail::DcscColumnLookup<IT, NT, OT>& lookup)
 {
   VL counts(B.nzc, 0);
   constexpr std::size_t kMinCapacity = 16;
@@ -133,8 +133,8 @@ VL EstimateNNZHash(const SPDCSC& A, const SPDCSC& B, const VL& flop_prefixsum,
  * @brief Accumulate and sort each stored B column into its reserved COO slice.
  */
 SP_SR_MAT_TEMP
-void NumericPhase(const SPDCSC& A, const SPDCSC& B, const VL& offsets,
-                  const detail::DcscColumnLookup<IT, NT, OT>& lookup, SPCOO& result)
+void HashSpGEMM_Dcsc_NumericPhase(const SPDCSC& A, const SPDCSC& B, const VL& offsets,
+                                  const detail::DcscColumnLookup<IT, NT, OT>& lookup, SPCOO& result)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");
@@ -202,16 +202,17 @@ SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B)
   }
   const int threads = OMP_GET_MAX_THREADS();
   const detail::DcscColumnLookup lookup(A);
-  const auto flops = EstimateFLOP(A, B, lookup);
+  const auto flops = HashSpGEMM_Csc_EstimateFlops(A, B, lookup);
   const auto flop_prefixsum = OmpPrefixSum(flops, threads);
-  const auto counts = EstimateNNZHash(A, B, flop_prefixsum, lookup);
+  const auto counts = HashpSpGEMM_Csc_SymbolicPhase(A, B, flop_prefixsum, lookup);
+
   const auto offsets = OmpPrefixSum(counts, threads);
   if (static_cast<std::uintmax_t>(offsets.back()) >
       static_cast<std::uintmax_t>(std::numeric_limits<OT>::max())) {
     throw std::overflow_error("SpGEMM output nnz exceeds offset type limit");
   }
   result.Allocate(static_cast<OT>(offsets.back()), A.m, B.n);
-  NumericPhase<SemiRing>(A, B, offsets, lookup, result);
+  HashSpGEMM_Dcsc_NumericPhase<SemiRing>(A, B, offsets, lookup, result);
   return result;
 }
 
