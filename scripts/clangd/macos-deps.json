@@ -1,5 +1,12 @@
 [
   {
+    "name": "mkl_include",
+    "version": "2025.3.0",
+    "url": "https://files.pythonhosted.org/packages/d3/e7/5f8f78044b421f859f1a9f6aa4cc957c4733bee3e716a1d54b79797f241c/mkl_include-2025.3.0-py2.py3-none-manylinux_2_28_x86_64.whl",
+    "sha256": "8fd38f51f543ce7031cf454a199529986277eeaf5b0e6a9ff8bbe27757b017e6",
+    "kind": "wheel"
+  },
+  {
     "name": "libgcc-12-dev",
     "url": "https://deb.debian.org/debian/pool/main/g/gcc-12/libgcc-12-dev_12.2.0-14+deb12u1_amd64.deb",
     "sha256": "d720259380a84f2ffc6fe516eff5cbe9c8a005138e8d6a5748747ba4b3404a82",

@@ -18,7 +18,9 @@ The native Mac clangd targets Linux x86-64 for parsing and uses actual Linux/GCC
 12 headers, CUDA 12.4.1 components, CCCL (CUB/Thrust), cuRAND, cuSPARSE, OpenMPI and
 OpenMP headers. Header dependencies match the CMake fallback versions: Boost
 Preprocessor 1.91.0, Eigen 5.0.1, fast_matrix_market 1.7.6, fmt 11.2.0 and cxxopts
-3.3.1. Download URLs and SHA-256 hashes are in `macos-deps.json`.
+3.3.1. Intel's headers-only `mkl-include` 2025.3.0 package supplies real oneMKL
+declarations, with its license retained under `build/clangd-macos/mkl_include/`.
+Download URLs and SHA-256 hashes are in `macos-deps.json`.
 
 The database contains explicit entries for project sources and headers. `.cu`
 files use CUDA mode and Clang's CUDA wrappers before GCC's C++ headers. As required
@@ -26,6 +28,12 @@ by this project's `AGENTS.md`, `.cuh` files use host C++ mode. CUDA declarations
 remain enabled with `SPCRAFT_USE_CUDA=1`. Host C++ files enable OpenMP parsing;
 CUDA files use host-only CUDA parsing, without enabling OpenMP. This does not
 validate GPU code generation, linking, or execution.
+
+MKL headers are available to all parsing commands. `SPCRAFT_USE_MKL=1` is enabled
+for the MKL wrapper, tests, benchmark/options sources, and directly opened `SpCraft.h` and
+`StablePch.h`; other targets keep their existing backend definitions. No MKL
+libraries are installed or linked. This supports MKL navigation and completion
+on Apple Silicon, but running MKL code still requires a supported build machine.
 
 The checked-in `.clangd` takes compiler/toolkit/include paths from the database
 instead of overriding them with machine-specific paths. Its existing host-header
@@ -47,12 +55,18 @@ database. This setup was checked with Apple clangd 17 from Xcode.
 python3 scripts/setup_macos_clangd.py --check
 ```
 
-This checks 12 representative sources and headers and saves diagnostics under
+This checks 15 representative sources and headers and saves diagnostics under
 `build/clangd-macos/*.check.log`. Every file is fully parsed; per-token editor
 refactoring self-tests are restricted to line 1 to avoid unrelated Apple clangd
 ExtractFunction failures. `--clangd PATH` selects the server used for these checks,
 not the editor's server configuration. A nonzero exit means diagnostics were found;
 setup remains active.
+
+The MKL wrapper, test, and benchmark passed both Homebrew clangd 22.1.8 checks
+and independent Clang syntax checks with MKL enabled. `SpCraft.h`,
+`DenseVector-inl.h`, `CooMatrix-inl.h`, and `cuSpMV.cu` also passed clangd checks.
+These checks parse declarations and template uses; they do not link or execute
+MKL binaries.
 
 At setup time, all three `src/cuda/*.cu` files, `test_cuspmv.cu`, the cuSPARSE
 benchmark, `cuCsrMatrix.cuh`, `cuSpMV.cuh`, `SpCraft.h`, and `MatrixInput.cpp`
@@ -67,7 +81,7 @@ nonzero on this revision:
 - `test_mtspmv.cpp` passes CSR to `OmpSpMV`, whose current signature takes CSC.
 
 These diagnostics were reproduced by the compiler; setup does not suppress or
-modify them. Optional MKL, CombBLAS and Python-binding dependencies are outside
+modify them. Optional CombBLAS and Python-binding dependencies are outside
 this parsing environment and require their own headers and build definitions.
 
 For a normal Linux build, restore the usual CMake-generated database link under

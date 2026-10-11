@@ -11,6 +11,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SUPPORT = ROOT / 'scripts/clangd'
@@ -55,6 +56,18 @@ def install(item, archive):
         member = next(m for m in members.splitlines() if m.startswith('data.tar'))
         data = subprocess.check_output(['ar', 'p', str(archive), member])
         run('tar', '-xf', '-', '-C', destination, input=data)
+    elif kind == 'wheel':
+        # Header-only Intel wheels keep includes under their wheel data directory.
+        with zipfile.ZipFile(archive) as wheel:
+            for member in wheel.namelist():
+                if '.data/data/include/' in member and not member.endswith('/'):
+                    target = destination / 'include' / member.split('.data/data/include/', 1)[1]
+                elif member.endswith('.dist-info/LICENSE.txt'):
+                    target = destination / 'LICENSE.txt'
+                else:
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(wheel.read(member))
     else:
         run('tar', '-xf', archive, '--strip-components=1', '-C', destination)
     # Only unpack packages. Never execute Linux binaries or package install scripts.
@@ -73,7 +86,7 @@ def database():
              '-DSPCRAFT_USE_CUDA=1', '-I../include', '-I../benchmarks', '-I..',
              f'-I{relative(BASE / "cuda/include")}']
     for dependency in ('fmt/include', 'cxxopts/include', 'boost_preprocessor/include',
-                       'fast_matrix_market/include', 'eigen'):
+                       'fast_matrix_market/include', 'eigen', 'mkl_include/include'):
         flags += ['-isystem', relative(BASE / dependency)]
     for path in ('usr/include/c++/12', 'usr/include/x86_64-linux-gnu/c++/12',
                  'usr/include/c++/12/backward', 'usr/include/x86_64-linux-gnu',
@@ -88,6 +101,12 @@ def database():
             # Per AGENTS.md, .cuh files contain host declarations, not kernels.
             cuda = source.suffix == '.cu'
             command = flags + ['-x', 'cuda' if cuda else 'c++']
+            source_path = source.relative_to(ROOT).as_posix()
+            if (source_path in ('include/SpCraft.h', 'include/utils/StablePch.h',
+                                'include/kernel/mklSpMV.h', 'tests/test_mklspmv.cpp',
+                                'tests/test_mkl_options.cpp') or
+                    source_path.startswith('benchmarks/mkl/')):
+                command += ['-DSPCRAFT_USE_MKL=1']
             if cuda:
                 # Wrappers must precede explicit GCC include paths for device new/delete.
                 command[1:1] = ['-isystem', relative(resource / 'include/cuda_wrappers')]
@@ -111,7 +130,8 @@ def check(clangd):
                'tests/test_cucsr_matrix.cu', 'tests/test_cuspmv.cu', 'tests/test_cupagerank.cu',
                'benchmarks/cusparse/SpMVBenchmark.cu', 'include/core/cuCsrMatrix.cuh',
                'include/kernel/cuSpMV.cuh', 'include/SpCraft.h', 'tests/test_mtspmv.cpp',
-               'src/utils/MatrixInput.cpp')
+               'src/utils/MatrixInput.cpp', 'include/kernel/mklSpMV.h',
+               'tests/test_mklspmv.cpp', 'benchmarks/mkl/MKLSpMVBench.cpp')
     failed = []
     for source in sources:
         log = BASE / (Path(source).stem + '.check.log')
