@@ -1,0 +1,123 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}"
+  },
+  "tasks": [
+    {
+      "label": "Configure",
+      "type": "process",
+      "command": "cmake",
+      "args": [
+        "--preset",
+        "openmp-examples"
+      ],
+      "osx": {
+        "args": [
+          "--preset",
+          "macos-openmp"
+        ]
+      }
+    },
+    {
+      "label": "Build",
+      "type": "process",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "build/openmp-examples",
+        "--target",
+        "test_csr_matrix",
+        "--parallel"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "osx": {
+        "args": [
+          "--build",
+          "--preset",
+          "macos-openmp",
+          "--target",
+          "test_csr_matrix",
+          "--parallel"
+        ]
+      }
+    },
+    {
+      "label": "Run",
+      "type": "process",
+      "command": "${workspaceFolder}/build/openmp-examples/bin/test_csr_matrix",
+      "osx": {
+        "command": "${workspaceFolder}/build/macos-openmp/bin/test_csr_matrix"
+      },
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Build and run",
+      "dependsOn": [
+        "Build",
+        "Run"
+      ],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "Configure, build and run",
+      "dependsOn": [
+        "Configure",
+        "Build",
+        "Run"
+      ],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "Build all",
+      "type": "process",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "build/openmp-examples",
+        "--parallel"
+      ],
+      "osx": {
+        "args": [
+          "--build",
+          "--preset",
+          "macos-openmp",
+          "--parallel"
+        ]
+      }
+    },
+    {
+      "label": "Test",
+      "type": "process",
+      "command": "ctest",
+      "args": [
+        "--test-dir",
+        "build/openmp-examples",
+        "--output-on-failure"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "osx": {
+        "args": [
+          "--preset",
+          "macos-openmp"
+        ]
+      }
+    },
+    {
+      "label": "Build and test",
+      "dependsOn": [
+        "Build all",
+        "Test"
+      ],
+      "dependsOrder": "sequence"
+    }
+  ]
+}

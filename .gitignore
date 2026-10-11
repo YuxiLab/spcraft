@@ -15,7 +15,8 @@ compile_commands.json
 **/.lean-fmt-cache/
 
 # IDE & Editor settings
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 .idea/
 *.swp
 *~

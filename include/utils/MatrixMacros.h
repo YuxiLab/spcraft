@@ -1,22 +1,21 @@
 #pragma once
 
+// Matrix shortcuts use the parameter names introduced by SP_MAT_TEMP.
+#define SP_VEC_TEMP template <class IT, class NT>
+#define SP_MAT_TEMP template <class IT, class NT, class OT>
+#define SP_SR_MAT_TEMP template <class SemiRing, class IT, class NT, class OT>
+#define SPCSC CscMatrix<IT, NT, OT>
+#define SPDCSC DcscMatrix<IT, NT, OT>
+#define SPCSR CsrMatrix<IT, NT, OT>
+#define SPCOO CooMatrix<IT, NT, OT>
+#define SPDVEC DenseVector<IT, NT>
+#define SPND [[nodiscard]]
+
 #include "core/CscMatrix.h"
 #include "core/CsrMatrix.h"
 #include "core/CooMatrix.h"
 #include "core/DcscMatrix.h"
 #include "core/DenseVector.h"
-
-// Matrix shortcuts use the parameter names introduced by SP_MAT_TEMP.
-#define SP_VEC_TEMP template <class IT, class NT>
-#define SP_MAT_TEMP template <class IT, class NT, class OT>
-#define SP_SR_MAT_TEMP template <class SemiRing, class IT, class NT, class OT>
-
-#define SPCSC ::spcraft::CscMatrix<IT, NT, OT>
-#define SPDCSC ::spcraft::DcscMatrix<IT, NT, OT>
-#define SPCSR ::spcraft::CsrMatrix<IT, NT, OT>
-#define SPCOO ::spcraft::CooMatrix<IT, NT, OT>
-#define SPDVEC ::spcraft::DenseVector<IT, NT>
-#define SPND [[nodiscard]]
 
 // CHECK
 #define CHECK_INTTYPE_LIMIT(val, T)                                                           \

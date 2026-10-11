@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "core/AllocationGuard.h"
+#include "utils/MatrixMacros.h"
 #include "core/DcscMatrix.h"
 #include "utils/omp/omp_wrapper.h"
 
@@ -18,8 +19,8 @@ namespace spcraft
  *             constructor
  *************************************/
 
-template <class IT, class NT, class OT>
-DcscMatrix<IT, NT, OT>& DcscMatrix<IT, NT, OT>::operator=(DcscMatrix&& rhs) noexcept
+SP_MAT_TEMP
+SPDCSC& SPDCSC::operator=(DcscMatrix&& rhs) noexcept
 {
   if (this != &rhs) {
     SafeDelete(memowned, col_ptr, col_id, row_id, val);
@@ -41,8 +42,8 @@ DcscMatrix<IT, NT, OT>& DcscMatrix<IT, NT, OT>::operator=(DcscMatrix&& rhs) noex
  *             member functions
  *************************************/
 
-template <class IT, class NT, class OT>
-void DcscMatrix<IT, NT, OT>::Allocate(OT nonzeros, IT nRows, IT nCols, IT storedColumns)
+SP_MAT_TEMP
+void SPDCSC::Allocate(OT nonzeros, IT nRows, IT nCols, IT storedColumns)
 {
   static_assert(std::is_integral_v<IT> && std::is_integral_v<OT>);
   if constexpr (std::is_signed_v<IT>) {
@@ -68,8 +69,8 @@ void DcscMatrix<IT, NT, OT>::Allocate(OT nonzeros, IT nRows, IT nCols, IT stored
   memowned = true;
 }
 
-template <class IT, class NT, class OT>
-DcscMatrix<IT, NT, OT> DcscMatrix<IT, NT, OT>::Clone() const
+SP_MAT_TEMP
+SPDCSC SPDCSC::Clone() const
 {
   DcscMatrix result;
   result.Allocate(nnz, m, n, nzc);
@@ -82,8 +83,8 @@ DcscMatrix<IT, NT, OT> DcscMatrix<IT, NT, OT>::Clone() const
   return result;
 }
 
-template <class IT, class NT, class OT>
-void DcscMatrix<IT, NT, OT>::Reset()
+SP_MAT_TEMP
+void SPDCSC::Reset()
 {
   col_ptr = nullptr;
   col_id = nullptr;
@@ -94,8 +95,8 @@ void DcscMatrix<IT, NT, OT>::Reset()
   memowned = false;
 }
 
-template <class IT, class NT, class OT>
-DcscMatrix<IT, NT, OT> DcscMatrix<IT, NT, OT>::FromCsc(const CscMatrix<IT, NT, OT>& source)
+SP_MAT_TEMP
+SPDCSC SPDCSC::FromCsc(const CscMatrix<IT, NT, OT>& source)
 {
   IT columns = 0;
   for (IT col = 0; col < source.n; ++col) {
@@ -118,8 +119,8 @@ DcscMatrix<IT, NT, OT> DcscMatrix<IT, NT, OT>::FromCsc(const CscMatrix<IT, NT, O
   return result;
 }
 
-template <class IT, class NT, class OT>
-CscMatrix<IT, NT, OT> DcscMatrix<IT, NT, OT>::ToCsc() const
+SP_MAT_TEMP
+CscMatrix<IT, NT, OT> SPDCSC::ToCsc() const
 {
   CscMatrix<IT, NT, OT> result;
   result.Allocate(nnz, m, n);
@@ -141,8 +142,8 @@ CscMatrix<IT, NT, OT> DcscMatrix<IT, NT, OT>::ToCsc() const
  *             Static Members
  *************************************/
 
-template <class IT, class NT, class OT>
-std::tuple<OT*, IT*, IT*, NT*> DcscMatrix<IT, NT, OT>::SafeAllocate(IT nzc, OT nnz)
+SP_MAT_TEMP
+std::tuple<OT*, IT*, IT*, NT*> SPDCSC::SafeAllocate(IT nzc, OT nnz)
 {
   const auto columns = detail::CheckedElementCount<IT>(nzc);
   const auto offsets = detail::CheckedElementCount<OT>(nzc);
@@ -163,8 +164,8 @@ std::tuple<OT*, IT*, IT*, NT*> DcscMatrix<IT, NT, OT>::SafeAllocate(IT nzc, OT n
   return {p, c, r, v};
 }
 
-template <class IT, class NT, class OT>
-void DcscMatrix<IT, NT, OT>::SafeDelete(bool owned, OT* pointers, IT* columns, IT* rows, NT* values)
+SP_MAT_TEMP
+void SPDCSC::SafeDelete(bool owned, OT* pointers, IT* columns, IT* rows, NT* values)
 {
   if (owned) {
     std::free(pointers);

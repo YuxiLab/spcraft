@@ -87,6 +87,31 @@
       }
     },
     {
+      "name": "macos-openmp",
+      "displayName": "macOS + OpenMP (RelWithDebInfo)",
+      "description": "Apple Clang with libomp; set OpenMP_ROOT to the libomp installation prefix",
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "SPCRAFT_USE_CUDA": false,
+        "SPCRAFT_USE_MPI": false,
+        "SPCRAFT_USE_MKL": false,
+        "CMAKE_DISABLE_FIND_PACKAGE_OpenMP": false,
+        "CMAKE_REQUIRE_FIND_PACKAGE_OpenMP": true,
+        "OpenMP_ROOT": "$env{OpenMP_ROOT}",
+        "SPCRAFT_BUILD_EXAMPLES": true,
+        "SPCRAFT_BUILD_BENCHMARKS": true,
+        "BUILD_TESTING": true
+      }
+    },
+    {
       "name": "default",
       "displayName": "Default (CUDA + OpenMP)",
       "description": "Default configuration with CUDA and OpenMP enabled",
@@ -127,6 +152,21 @@
       "targets": [
         "bench_mkl_spmv"
       ]
+    },
+    {
+      "name": "macos-openmp",
+      "displayName": "Build macOS + OpenMP",
+      "configurePreset": "macos-openmp"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "macos-openmp",
+      "displayName": "Test macOS + OpenMP",
+      "configurePreset": "macos-openmp",
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }

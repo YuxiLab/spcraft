@@ -10,6 +10,8 @@
 #include <stdexcept>
 
 #include "core/AllocationGuard.h"
+
+#include "utils/MatrixMacros.h"
 #include "core/DenseVector.h"
 #include "utils/omp/omp_wrapper.h"
 
@@ -19,16 +21,16 @@ namespace spcraft
  *             constructor
  *************************************/
 
-template <class IT, class NT>
-DenseVector<IT, NT>::DenseVector(IT size)
+SP_VEC_TEMP
+SPDVEC::DenseVector(IT size)
 {
   val = SafeAllocate(size);
   n = size;
   memowned = true;
 }
 
-template <class IT, class NT>
-DenseVector<IT, NT>::DenseVector(IT size, NT initval)
+SP_VEC_TEMP
+SPDVEC::DenseVector(IT size, NT initval)
 {
   val = SafeAllocate(size);
   n = size;
@@ -39,15 +41,14 @@ DenseVector<IT, NT>::DenseVector(IT size, NT initval)
   }
 }
 
-template <class IT, class NT>
-DenseVector<IT, NT>::DenseVector(DenseVector<IT, NT>&& rhs) noexcept
-    : val(rhs.val), n(rhs.n), memowned(rhs.memowned)
+SP_VEC_TEMP
+SPDVEC::DenseVector(SPDVEC&& rhs) noexcept : val(rhs.val), n(rhs.n), memowned(rhs.memowned)
 {
   rhs.Reset();
 }
 
-template <class IT, class NT>
-DenseVector<IT, NT>& DenseVector<IT, NT>::operator=(DenseVector<IT, NT>&& rhs) noexcept
+SP_VEC_TEMP
+SPDVEC& SPDVEC::operator=(SPDVEC&& rhs) noexcept
 {
   if (this != &rhs) {
     SafeDelete(memowned, val);
@@ -59,17 +60,14 @@ DenseVector<IT, NT>& DenseVector<IT, NT>::operator=(DenseVector<IT, NT>&& rhs) n
   return *this;
 }
 
-template <class IT, class NT>
-DenseVector<IT, NT>::~DenseVector()
-{
-  SafeDelete(memowned, val);
-}
+SP_VEC_TEMP
+SPDVEC::~DenseVector() { SafeDelete(memowned, val); }
 /*************************************
  *             member functions
  *************************************/
 
-template <class IT, class NT>
-void DenseVector<IT, NT>::Allocate(IT size)
+SP_VEC_TEMP
+void SPDVEC::Allocate(IT size)
 {
   NT* replacement = SafeAllocate(size);
   SafeDelete(memowned, val);
@@ -79,10 +77,10 @@ void DenseVector<IT, NT>::Allocate(IT size)
 }
 
 //! return a deep copy instance with owned memory.
-template <class IT, class NT>
-DenseVector<IT, NT> DenseVector<IT, NT>::Clone() const
+SP_VEC_TEMP
+SPDVEC SPDVEC::Clone() const
 {
-  DenseVector<IT, NT> ret(n);  //! own-memoried inst with uninit memory.
+  SPDVEC ret(n);  //! own-memoried inst with uninit memory.
   OMP_PARALLEL_FOR()
   for (IT i = 0; i < n; ++i) {
     ret.val[i] = val[i];
@@ -90,16 +88,16 @@ DenseVector<IT, NT> DenseVector<IT, NT>::Clone() const
   return ret;
 }
 
-template <class IT, class NT>
-void DenseVector<IT, NT>::Reset() noexcept
+SP_VEC_TEMP
+void SPDVEC::Reset() noexcept
 {
   val = nullptr;
   n = 0;
   memowned = false;
 }
 
-template <class IT, class NT>
-void DenseVector<IT, NT>::Random(int seed)
+SP_VEC_TEMP
+void SPDVEC::Random(int seed)
 {
   static_assert(std::is_arithmetic_v<NT>, "DenseVector::Random requires an arithmetic value type");
   std::mt19937_64 rng(static_cast<std::mt19937_64::result_type>(seed));
@@ -120,8 +118,8 @@ void DenseVector<IT, NT>::Random(int seed)
 /*************************************
  *             Static Members
  *************************************/
-template <class IT, class NT>
-NT* DenseVector<IT, NT>::SafeAllocate(IT size)
+SP_VEC_TEMP
+NT* SPDVEC::SafeAllocate(IT size)
 {
   // size should be >= 0
   if constexpr (std::is_signed_v<IT>) {
@@ -139,8 +137,8 @@ NT* DenseVector<IT, NT>::SafeAllocate(IT size)
   return ptr;
 }
 
-template <class IT, class NT>
-void DenseVector<IT, NT>::SafeDelete(bool owned, NT* ptr) noexcept
+SP_VEC_TEMP
+void SPDVEC::SafeDelete(bool owned, NT* ptr) noexcept
 {
   if (owned && ptr != nullptr) free(ptr);
 }

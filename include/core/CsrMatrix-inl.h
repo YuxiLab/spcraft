@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include <fmt/format.h>
+#include "utils/MatrixMacros.h"
 #include "core/CsrMatrix.h"
 #include "core/AllocationGuard.h"
 
@@ -20,14 +21,11 @@ namespace spcraft
 /*************************************
  *             constructor
  *************************************/
-template <class IT, class NT, class OT>
-CsrMatrix<IT, NT, OT>::CsrMatrix(OT nnz_, IT m_, IT n_) : nnz(nnz_), m(m_), n(n_)
-{
-  Allocate(nnz, m, n);
-}
+SP_MAT_TEMP
+SPCSR::CsrMatrix(OT nnz_, IT m_, IT n_) : nnz(nnz_), m(m_), n(n_) { Allocate(nnz, m, n); }
 
-template <class IT, class NT, class OT>
-CsrMatrix<IT, NT, OT>::CsrMatrix(CsrMatrix<IT, NT, OT>&& rhs) noexcept
+SP_MAT_TEMP
+SPCSR::CsrMatrix(SPCSR&& rhs) noexcept
     : row_ptr(rhs.row_ptr),
       col_id(rhs.col_id),
       val(rhs.val),
@@ -45,8 +43,8 @@ CsrMatrix<IT, NT, OT>::CsrMatrix(CsrMatrix<IT, NT, OT>&& rhs) noexcept
   rhs.n = 0;
 }
 
-template <class IT, class NT, class OT>
-CsrMatrix<IT, NT, OT>& CsrMatrix<IT, NT, OT>::operator=(CsrMatrix<IT, NT, OT>&& rhs) noexcept
+SP_MAT_TEMP
+SPCSR& SPCSR::operator=(SPCSR&& rhs) noexcept
 {
   if (this != &rhs) {
     SafeDelete(memowned, row_ptr, col_id, val);
@@ -62,20 +60,17 @@ CsrMatrix<IT, NT, OT>& CsrMatrix<IT, NT, OT>::operator=(CsrMatrix<IT, NT, OT>&& 
   return *this;
 }
 
-template <class IT, class NT, class OT>
-CsrMatrix<IT, NT, OT>::~CsrMatrix()
-{
-  SafeDelete(memowned, row_ptr, col_id, val);
-}
+SP_MAT_TEMP
+SPCSR::~CsrMatrix() { SafeDelete(memowned, row_ptr, col_id, val); }
 
 /*************************************
  *             member functions
  *************************************/
 
-template <class IT, class NT, class OT>
-CsrMatrix<IT, NT, OT> CsrMatrix<IT, NT, OT>::Clone() const
+SP_MAT_TEMP
+SPCSR SPCSR::Clone() const
 {
-  CsrMatrix<IT, NT, OT> res;
+  SPCSR res;
   res.Allocate(nnz, m, n);
   if (row_ptr) {
     std::copy(row_ptr, row_ptr + m + 1, res.row_ptr);
@@ -89,8 +84,8 @@ CsrMatrix<IT, NT, OT> CsrMatrix<IT, NT, OT>::Clone() const
   return res;
 }
 
-template <class IT, class NT, class OT>
-void CsrMatrix<IT, NT, OT>::Allocate(OT require_nnz, IT nRows, IT nCols)
+SP_MAT_TEMP
+void SPCSR::Allocate(OT require_nnz, IT nRows, IT nCols)
 {
   auto replacement = SafeAllocate(require_nnz, nRows, nCols);
   SafeDelete(memowned, row_ptr, col_id, val);
@@ -101,8 +96,8 @@ void CsrMatrix<IT, NT, OT>::Allocate(OT require_nnz, IT nRows, IT nCols)
   memowned = true;
 }
 
-template <class IT, class NT, class OT>
-void CsrMatrix<IT, NT, OT>::Reset() noexcept
+SP_MAT_TEMP
+void SPCSR::Reset() noexcept
 {
   row_ptr = nullptr;
   col_id = nullptr;
@@ -116,8 +111,8 @@ void CsrMatrix<IT, NT, OT>::Reset() noexcept
 /*************************************
  *             Static Members
  *************************************/
-template <class IT, class NT, class OT>
-std::tuple<OT*, IT*, NT*> CsrMatrix<IT, NT, OT>::SafeAllocate(OT required_nnz, IT rows, IT columns)
+SP_MAT_TEMP
+std::tuple<OT*, IT*, NT*> SPCSR::SafeAllocate(OT required_nnz, IT rows, IT columns)
 {
   // if IT is signed type, chk row,col >= 0
   if constexpr (std::is_signed_v<IT>) {
@@ -166,8 +161,8 @@ std::tuple<OT*, IT*, NT*> CsrMatrix<IT, NT, OT>::SafeAllocate(OT required_nnz, I
   return {new_row_ptr, new_col_id, new_val};
 }
 
-template <class IT, class NT, class OT>
-void CsrMatrix<IT, NT, OT>::SafeDelete(bool owned, OT* row_ptr, IT* col_id, NT* val) noexcept
+SP_MAT_TEMP
+void SPCSR::SafeDelete(bool owned, OT* row_ptr, IT* col_id, NT* val) noexcept
 {
   if (!owned) return;
   std::free(row_ptr);

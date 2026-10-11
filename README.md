@@ -8,6 +8,24 @@ Please send email to `yuxihong@iu.edu` if you have any questions.
 
 [Yuxi Hong](https://hongyx11.github.io/)
 
+## Build on macOS with OpenMP
+
+Install the Xcode Command Line Tools and the build dependencies (`brew install
+cmake ninja libomp`). The `macos-openmp` preset uses Clang and libomp, disables
+CUDA, MPI, and MKL, and builds the examples, CPU benchmarks, and tests.
+
+```bash
+export OpenMP_ROOT="$(brew --prefix libomp)"
+cmake --preset macos-openmp
+cmake --build --preset macos-openmp --parallel
+ctest --preset macos-openmp
+```
+
+For a non-Homebrew installation, set `OpenMP_ROOT` to your libomp installation
+prefix containing `include/omp.h` and `lib/libomp.dylib`. OpenMP is required by
+this preset, so configuration fails if it cannot be found. Build output goes to
+`build/macos-openmp`.
+
 ## CUDA code navigation on macOS
 
 Run `python3 scripts/setup_macos_clangd.py` to prepare local clangd parsing for

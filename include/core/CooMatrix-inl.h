@@ -18,6 +18,8 @@
 
 #include <fast_matrix_market/fast_matrix_market.hpp>
 #include "utils/omp/omp_wrapper.h"
+#include "utils/MatrixInput.h"
+
 #include "core/AllocationGuard.h"
 #include "core/CooMatrix.h"
 #include "core/CscMatrix.h"
@@ -29,8 +31,8 @@ namespace spcraft
  *             constructor
  *************************************/
 
-template <class IT, class NT, class OT>
-CooMatrix<IT, NT, OT>& CooMatrix<IT, NT, OT>::operator=(CooMatrix<IT, NT, OT>&& rhs) noexcept
+SP_MAT_TEMP
+SPCOO& SPCOO::operator=(SPCOO&& rhs) noexcept
 {
   if (this != &rhs) {
     SafeDelete(memowned, entries);
@@ -44,8 +46,8 @@ CooMatrix<IT, NT, OT>& CooMatrix<IT, NT, OT>::operator=(CooMatrix<IT, NT, OT>&& 
   return *this;
 }
 
-template <class IT, class NT, class OT>
-CooMatrix<IT, NT, OT>::CooMatrix(const std::string& filename)
+SP_MAT_TEMP
+SPCOO::CooMatrix(const std::string& filename)
 {
   std::ifstream ifs(filename);
   if (!ifs.is_open()) {
@@ -67,7 +69,7 @@ CooMatrix<IT, NT, OT>::CooMatrix(const std::string& filename)
   // clang-format off
     if (!std::in_range<OT>(r_vec.size())) throw std::overflow_error("Matrix Market nonzeros exceed COO offset range");
   // clang-format on
-  CooMatrix<IT, NT, OT> coo;
+  SPCOO coo;
   coo.Allocate(r_vec.size(), header.nrows, header.ncols);
   OMP_PARALLEL_FOR()
   for (auto i = 0; i < r_vec.size(); ++i) coo.entries[i] = {r_vec[i], c_vec[i], v_vec[i]};
@@ -78,8 +80,8 @@ CooMatrix<IT, NT, OT>::CooMatrix(const std::string& filename)
  *             member functions
  *************************************/
 
-template <class IT, class NT, class OT>
-void CooMatrix<IT, NT, OT>::Allocate(OT count, IT rows, IT columns)
+SP_MAT_TEMP
+void SPCOO::Allocate(OT count, IT rows, IT columns)
 {
   Entry* replacement = SafeAllocate(count, rows, columns);
   SafeDelete(memowned, entries);
@@ -90,8 +92,8 @@ void CooMatrix<IT, NT, OT>::Allocate(OT count, IT rows, IT columns)
   memowned = true;
 }
 
-template <class IT, class NT, class OT>
-CooMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::Clone() const
+SP_MAT_TEMP
+SPCOO SPCOO::Clone() const
 {
   CooMatrix ret;
   ret.Allocate(nnz, m, n);
@@ -104,8 +106,8 @@ CooMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::Clone() const
   return ret;
 }
 
-template <class IT, class NT, class OT>
-void CooMatrix<IT, NT, OT>::Reset() noexcept
+SP_MAT_TEMP
+void SPCOO::Reset() noexcept
 {
   entries = nullptr;
   nnz = 0;
@@ -113,8 +115,8 @@ void CooMatrix<IT, NT, OT>::Reset() noexcept
   memowned = false;
 }
 
-template <class IT, class NT, class OT>
-CscMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::ToCsc() const
+SP_MAT_TEMP
+CscMatrix<IT, NT, OT> SPCOO::ToCsc() const
 {
   CscMatrix<IT, NT, OT> csc;
   csc.Allocate(nnz, m, n);
@@ -153,8 +155,8 @@ CscMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::ToCsc() const
   return csc;
 }
 
-template <class IT, class NT, class OT>
-CsrMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::ToCsr() const
+SP_MAT_TEMP
+CsrMatrix<IT, NT, OT> SPCOO::ToCsr() const
 {
   CsrMatrix<IT, NT, OT> csr(nnz, m, n);
   std::fill(csr.row_ptr, csr.row_ptr + m + 1, OT{0});
@@ -196,9 +198,8 @@ CsrMatrix<IT, NT, OT> CooMatrix<IT, NT, OT>::ToCsr() const
  *             Static Members
  *************************************/
 
-template <class IT, class NT, class OT>
-typename CooMatrix<IT, NT, OT>::Entry* CooMatrix<IT, NT, OT>::SafeAllocate(OT count, IT rows,
-                                                                           IT columns)
+SP_MAT_TEMP
+typename SPCOO::Entry* SPCOO::SafeAllocate(OT count, IT rows, IT columns)
 {
   static_assert(std::is_trivially_copyable_v<Entry>,
                 "CooMatrix entries must be trivially copyable");
@@ -229,8 +230,8 @@ typename CooMatrix<IT, NT, OT>::Entry* CooMatrix<IT, NT, OT>::SafeAllocate(OT co
   return result;
 }
 
-template <class IT, class NT, class OT>
-void CooMatrix<IT, NT, OT>::SafeDelete(bool owned, Entry* entries) noexcept
+SP_MAT_TEMP
+void SPCOO::SafeDelete(bool owned, Entry* entries) noexcept
 {
   if (!owned || entries == nullptr) return;
   std::free(entries);

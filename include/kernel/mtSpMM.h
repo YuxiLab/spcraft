@@ -1,13 +1,11 @@
 #pragma once
 
-#include "utils/omp/omp_wrapper.h"
-
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
 
 #include "core/CsrMatrix.h"
-
+#include "utils/omp/omp_wrapper.h"
 namespace spcraft
 {
 

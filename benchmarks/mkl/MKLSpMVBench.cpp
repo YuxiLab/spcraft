@@ -1,11 +1,11 @@
-#include <fmt/format.h>
-#include <mkl.h>
-
 #include <cstdint>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include <fmt/format.h>
+#include <mkl.h>
 
 #include "BenchmarkCommon.h"
 #include "common/BenchmarkOptions.h"
