@@ -1,4 +1,3 @@
-#include <cxxopts.hpp>
 #include <fmt/format.h>
 #include <mkl.h>
 
@@ -9,6 +8,8 @@
 #include <vector>
 
 #include "BenchmarkCommon.h"
+#include "common/BenchmarkOptions.h"
+#include "mkl/MKLOptions.h"
 #include "SpCraft.h"
 
 namespace
@@ -28,14 +29,6 @@ template <class IT, class OT>
 inline constexpr bool kMklRepresentable =
     std::is_same_v<IT, MKL_INT> && std::is_same_v<OT, MKL_INT>;
 
-//! Everything a variant needs that does not depend on the type combination.
-struct Settings {
-  std::vector<int> thread_counts;
-  int max_iterations = 0;
-  double budget = 0.0;
-  int seed = 0;
-};
-
 /**
  * @brief Load, verify and time one <IT, NT, OT> combination against oneMKL.
  *
@@ -44,29 +37,29 @@ struct Settings {
  * reused across the sweep.
  */
 template <class IT, class NT, class OT>
-void RunVariant(const cxxopts::ParseResult& result, Settings& settings,
+void RunVariant(const BenchmarkOptions& benchmark, const MKLOptions& options,
                 spcraft::BenchmarkReport& report)
 {
   if constexpr (kMklRepresentable<IT, OT>) {
-    if (!VariantSelected<IT, NT, OT>(result)) return;
+    if (!VariantSelected<IT, NT, OT>(options.types)) return;
 
     // Matrix conversion can enter OpenMP. Keep it from creating a larger active
     // team whose idle CPU time would leak into the first benchmark setting.
-    OMP_SET_NUM_THREADS(settings.thread_counts.front());
+    OMP_SET_NUM_THREADS(options.thread_counts.front());
     mkl_set_dynamic(0);
-    mkl_set_num_threads(settings.thread_counts.front());
-    auto input = LoadMatrix<IT, NT, OT>(result);
+    mkl_set_num_threads(options.thread_counts.front());
+    auto input = LoadMatrix<IT, NT, OT>(options.matrix);
     const spcraft::CsrMatrix<IT, NT, OT>& A = *input.matrix;
     spcraft::DenseVector<IT, NT> x(A.n);
     spcraft::DenseVector<IT, NT> y(A.m);
-    x.Random(settings.seed);
+    x.Random(options.matrix.seed);
 
     {
       const spcraft::MklCsrSpmv<IT, NT, OT> handle(A);
       handle.Multiply(x.val, y.val);
     }
     const double error = VerifyAgainstEigen(A, x, y.val, "oneMKL");
-    for (int threads : settings.thread_counts) {
+    for (int threads : options.thread_counts) {
       const std::string label =
           fmt::format("SpMV/oneMKL/{}/{}/{}/threads:{}", input.name, IndexOffsetName<IT, OT>(),
                       PrecisionName<NT>(), threads);
@@ -77,12 +70,12 @@ void RunVariant(const cxxopts::ParseResult& result, Settings& settings,
       OMP_SET_NUM_THREADS(threads);
       mkl_set_dynamic(0);
       mkl_set_num_threads(threads);
-      const spcraft::MklCsrSpmv<IT, NT, OT> handle(A, settings.max_iterations);
+      const spcraft::MklCsrSpmv<IT, NT, OT> handle(A, benchmark.max_iterations);
 
       const auto once = [&] { handle.Multiply(x.val, y.val); };
       const double per_iteration = WarmUp(once);
-      const int iterations =
-          PlanIterations(per_iteration, settings.max_iterations, settings.budget, label);
+      const int iterations = PlanIterations(per_iteration, benchmark.max_iterations,
+                                            benchmark.max_time_seconds, label);
 
       spcraft::BenchmarkRun run;
       DescribeRun(run, A, input.name, "oneMKL");
@@ -113,29 +106,16 @@ void RunVariant(const cxxopts::ParseResult& result, Settings& settings,
 int main(int argc, char** argv)
 {
   try {
-    cxxopts::Options options("spmv_mkl_benchmark",
-                             "oneMKL SpMV benchmark over a thread-count sweep");
-    // oneMKL's CSR is MKL_INT on both index and offset, so the shared 64-bit
-    // offset default would select no variant at all here.
-    AddCommonOptions(options, TypeName<MKL_INT>(), TypeName<MKL_INT>());
-    const auto result = options.parse(argc, argv);
-
-    if (result.count("help") > 0) {
-      fmt::print("{}\n", options.help());
-      return 0;
-    }
+    const auto parsed = ParseMKLSpMVOptions(argc, argv);
+    if (!parsed) return 0;
+    const BenchmarkOptions& benchmark = parsed->benchmark;
+    const MKLOptions& options = parsed->input;
 
     OMP_SET_DYNAMIC(0);
 
-    Settings settings;
-    settings.thread_counts = ParseThreadCounts(result["threads"].as<std::string>());
-    settings.max_iterations = result["iterations"].as<int>();
-    settings.budget = result["max-time"].as<double>();
-    settings.seed = result["seed"].as<int>();
-
     std::string thread_list;
-    for (std::size_t i = 0; i < settings.thread_counts.size(); ++i) {
-      thread_list += (i == 0 ? "" : ", ") + std::to_string(settings.thread_counts[i]);
+    for (std::size_t i = 0; i < options.thread_counts.size(); ++i) {
+      thread_list += (i == 0 ? "" : ", ") + std::to_string(options.thread_counts[i]);
     }
 
     MKLVersion version;
@@ -148,18 +128,18 @@ int main(int argc, char** argv)
         {"reference", "Eigen sparse product, every row verified"},
         {"oneMKL", fmt::format("{}.{}.{} (GNU OpenMP, LP64)", version.MajorVersion,
                                version.MinorVersion, version.UpdateVersion)},
-        {"index", fmt::format("{} (oneMKL supports {} only)", result["index"].as<std::string>(),
-                              TypeName<MKL_INT>())},
-        {"numeric", result["precision"].as<std::string>()},
-        {"offset", fmt::format("{} (oneMKL supports {} only)", result["offset"].as<std::string>(),
-                               TypeName<MKL_INT>())},
+        {"index",
+         fmt::format("{} (oneMKL supports {} only)", options.types.index, TypeName<MKL_INT>())},
+        {"numeric", options.types.precision},
+        {"offset",
+         fmt::format("{} (oneMKL supports {} only)", options.types.offset, TypeName<MKL_INT>())},
         {"threads", "[" + thread_list + "]"},
-        {"max iterations", std::to_string(settings.max_iterations)},
-        {"time budget", fmt::format("{:.2f}s", settings.budget)}};
+        {"max iterations", std::to_string(benchmark.max_iterations)},
+        {"time budget", fmt::format("{:.2f}s", benchmark.max_time_seconds)}};
     spcraft::BenchmarkReport report(std::move(report_info));
 
-    RunVariant<MKL_INT, float, MKL_INT>(result, settings, report);
-    RunVariant<MKL_INT, double, MKL_INT>(result, settings, report);
+    RunVariant<MKL_INT, float, MKL_INT>(benchmark, options, report);
+    RunVariant<MKL_INT, double, MKL_INT>(benchmark, options, report);
 
     if (report.runs().empty()) {
       throw std::runtime_error(
@@ -172,12 +152,12 @@ int main(int argc, char** argv)
     const spcraft::TextReportRenderer text_renderer;
     spcraft::PrintReportToStderr(text_renderer.RenderSummary(report));
 
-    const auto text_output = result["text-report"].as<std::string>();
+    const auto text_output = benchmark.text_report_path;
     if (!text_output.empty()) {
       spcraft::WriteReportFile(text_output, text_renderer.Render(report));
     }
 
-    const auto output = result["output"].as<std::string>();
+    const auto output = benchmark.output_path;
     if (!output.empty()) {
       spcraft::WriteReportFile(output, spcraft::JsonReportRenderer{}.Render(report));
       fmt::print(stderr, "raw per-iteration log written to {}\n", output);

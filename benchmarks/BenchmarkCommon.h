@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Eigen/SparseCore>
-#include <cxxopts.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -15,6 +14,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "common/BenchmarkInput.h"
+#include "common/BenchmarkOptions.h"
 #include "SpCraft.h"
 
 namespace spcraft::benchmarks
@@ -27,59 +28,10 @@ struct MatrixInput {
   std::string name;
 };
 
-/**
- * @brief Options every SPCraft kernel benchmark accepts.
- *
- * The index and offset defaults are arguments because a backend's representable
- * set is its own: oneMKL's CSR is MKL_INT on both, so its driver defaults the
- * offset to 32 bits rather than leaving a default that selects nothing.
- */
-inline void AddCommonOptions(cxxopts::Options& options, const char* default_index = "int32",
-                             const char* default_offset = "int64")
-{
-  // clang-format off
-  options.add_options()
-      ("m,matrix", "Path to a Matrix Market (.mtx) file; overrides --generator", cxxopts::value<std::string>())
-      ("generator", "Generated graph: 'er' or 'rmat'", cxxopts::value<std::string>()->default_value("er"))
-      ("v,vertices", "Vertex count for the generated ER graph", cxxopts::value<std::int64_t>()->default_value("50000"))
-      ("d,degree", "Expected degree for the generated ER graph", cxxopts::value<double>()->default_value("16.0"))
-      ("scale", "R-MAT log2 vertex count", cxxopts::value<std::int64_t>()->default_value("16"))
-      ("edge-factor", "R-MAT sampled edges per vertex", cxxopts::value<std::size_t>()->default_value("16"))
-      ("p,precision", "Numeric type: 'float', 'double', or 'both'", cxxopts::value<std::string>()->default_value("double"))
-      ("index", "Index type: 'int32', 'int64', or 'both'", cxxopts::value<std::string>()->default_value(default_index))
-      ("offset", "Row-offset type: 'int32', 'int64', or 'both'", cxxopts::value<std::string>()->default_value(default_offset))
-      ("t,threads", "Comma-separated thread counts, e.g. '1,2,4,8'; empty means powers of two up to the maximum", cxxopts::value<std::string>()->default_value(""))
-      ("s,seed", "Random seed for the graph generator and input vector", cxxopts::value<int>()->default_value("42"))
-      ("i,iterations", "Maximum timed iterations per configuration", cxxopts::value<int>()->default_value("1000"))
-      ("max-time", "Wall-clock budget per configuration in seconds", cxxopts::value<double>()->default_value("10.0"))
-      ("o,output", "Write the raw per-iteration log to this JSON file", cxxopts::value<std::string>()->default_value(""))
-      ("text-report", "Write the human-readable report to this text file", cxxopts::value<std::string>()->default_value(""))
-      ("h,help", "Print help");
-  // clang-format on
-}
-
-//! Parse "1,2,4"; an empty argument yields powers of two up to OMP_GET_MAX_THREADS().
+//! An empty argument yields powers of two up to the OpenMP runtime maximum.
 [[nodiscard]] inline std::vector<int> ParseThreadCounts(const std::string& argument)
 {
-  std::vector<int> threads;
-  std::stringstream stream(argument);
-  std::string token;
-  while (std::getline(stream, token, ',')) {
-    if (token.find_first_not_of(" \t") == std::string::npos) continue;
-    const int count = std::stoi(token);
-    if (count <= 0) {
-      throw std::invalid_argument("thread counts must be positive");
-    }
-    threads.push_back(count);
-  }
-  if (threads.empty()) {
-    const int maximum = OMP_GET_MAX_THREADS();
-    for (int count = 1; count < maximum; count *= 2) {
-      threads.push_back(count);
-    }
-    threads.push_back(maximum);
-  }
-  return threads;
+  return ParseThreadCounts(argument, OMP_GET_MAX_THREADS());
 }
 
 //! "int32", "int64", "float" or "double"; the name a report row carries.
@@ -145,43 +97,62 @@ template <class T>
  * of those variants actually run.
  */
 template <class IT, class NT, class OT>
-[[nodiscard]] inline bool VariantSelected(const cxxopts::ParseResult& result)
+[[nodiscard]] inline bool VariantSelected(const TypeSelection& types)
 {
-  return IntegerTypeSelected<IT>(result["index"].as<std::string>()) &&
-         PrecisionSelected<NT>(result["precision"].as<std::string>()) &&
-         IntegerTypeSelected<OT>(result["offset"].as<std::string>());
+  return IntegerTypeSelected<IT>(types.index) && PrecisionSelected<NT>(types.precision) &&
+         IntegerTypeSelected<OT>(types.offset);
 }
 
 //! Load --matrix, or generate the graph selected by --generator.
 template <class IT, class NT, class OT>
-[[nodiscard]] MatrixInput<IT, NT, OT> LoadMatrix(const cxxopts::ParseResult& result)
+[[nodiscard]] MatrixInput<IT, NT, OT> LoadMatrix(const MatrixSourceOptions& options)
 {
   using Csr = spcraft::CsrMatrix<IT, NT, OT>;
-  if (result.count("matrix") > 0) {
-    const auto path = result["matrix"].as<std::string>();
+  if (options.matrix_path) {
+    const auto& path = *options.matrix_path;
     spcraft::CooMatrix<IT, NT, OT> coo(path);
-    return {std::make_shared<Csr>(coo.ToCsr()), path.substr(path.find_last_of("/\\") + 1)};
+    MatrixInput<IT, NT, OT> input;
+    input.matrix = std::make_shared<Csr>(coo.ToCsr());
+    input.name = path.substr(path.find_last_of("/\\") + 1);
+    return input;
   }
 
-  const auto seed = static_cast<std::uint64_t>(result["seed"].as<int>());
-  const std::string generator = result["generator"].as<std::string>();
+  const auto seed = static_cast<std::uint64_t>(options.seed);
+  const auto& generator = options.generator;
   if (generator == "er") {
-    const auto vertices = static_cast<IT>(result["vertices"].as<std::int64_t>());
-    const auto degree = result["degree"].as<double>();
+    const auto vertices = static_cast<IT>(options.vertices);
+    const auto degree = options.degree;
     std::ostringstream name;
-    name << "ER_V" << vertices << "_D" << static_cast<long>(degree);
-    return {std::make_shared<Csr>(spcraft::GenERGraph<NT, IT, OT>(vertices, degree, seed)),
-            name.str()};
+    name << "ER_V" << vertices << "_D" << static_cast<std::int64_t>(degree);
+    MatrixInput<IT, NT, OT> input;
+    input.matrix = std::make_shared<Csr>(spcraft::GenERGraph<NT, IT, OT>(vertices, degree, seed));
+    input.name = name.str();
+    return input;
   }
   if (generator == "rmat") {
-    const auto scale = static_cast<IT>(result["scale"].as<std::int64_t>());
-    const auto edge_factor = result["edge-factor"].as<std::size_t>();
+    const auto scale = static_cast<IT>(options.scale);
+    const auto edge_factor = static_cast<std::size_t>(options.edge_factor);
     std::ostringstream name;
     name << "RMAT_S" << scale << "_E" << edge_factor;
-    return {std::make_shared<Csr>(spcraft::GenRMAT<NT, IT, OT>(scale, edge_factor, seed)),
-            name.str()};
+    MatrixInput<IT, NT, OT> input;
+    input.matrix = std::make_shared<Csr>(spcraft::GenRMAT<NT, IT, OT>(scale, edge_factor, seed));
+    input.name = name.str();
+    return input;
   }
   throw std::invalid_argument("generator must be 'er' or 'rmat'");
+}
+
+// Keep parser-based callers at the boundary; matrix and type helpers use plain data.
+template <class IT, class NT, class OT>
+[[nodiscard]] inline bool VariantSelected(const cxxopts::ParseResult& result)
+{
+  return VariantSelected<IT, NT, OT>(ReadTypeSelection(result));
+}
+
+template <class IT, class NT, class OT>
+[[nodiscard]] MatrixInput<IT, NT, OT> LoadMatrix(const cxxopts::ParseResult& result)
+{
+  return LoadMatrix<IT, NT, OT>(ReadMatrixSourceOptions(result));
 }
 
 //! Algorithm-owned CSR and dense-vector storage, excluding opaque backend workspaces.

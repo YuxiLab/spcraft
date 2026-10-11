@@ -14,6 +14,27 @@ Run `python3 scripts/setup_macos_clangd.py` to prepare local clangd parsing for
 C++ and CUDA without installing a GPU driver or building the library. See
 [the setup guide](scripts/clangd/README.md) for verification and editor details.
 
+## Benchmark command-line options
+
+Common measurement settings live in `benchmarks/common/BenchmarkOptions.h`:
+`--iterations`, `--max-time`, `--output`, and `--text-report`. Backend input
+settings live with the driver; the MKL benchmark uses `benchmarks/mkl/MKLOptions.h`
+for matrix/generator selection, type choices, seed, and thread counts.
+
+The MKL options implementation registers both groups with one parser, so
+`bench_mkl_spmv --help` shows the complete command line. Existing flag names and
+defaults are retained, including MKL's matching index/offset widths. Parsing
+returns plain C++ settings; `cxxopts` is compiled in the option modules rather
+than included by the MKL execution code. Shared input definitions remain
+available to the other benchmark drivers.
+
+```bash
+build/bin/bench_mkl_spmv --matrix A.mtx --iterations 100 --max-time 2 --threads 1,4,8
+```
+
+The `benchmark_options` CTest checks the shared groups. With MKL enabled,
+`mkl_options` also checks combined parsing, help, and backend constraints.
+
 ## Private lecture notes
 
 The optional `latex/` submodule contains private lecture notes and is not needed
