@@ -1,0 +1,200 @@
+{
+  "version": 2,
+  "name": "SpMV remote development",
+  "profiles": [
+    {
+      "kind": "ssh",
+      "project_dir": "/data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source",
+      "slurm_batch": {
+        "qos": "normal"
+      },
+      "slurm": {
+        "time": "00:10:00",
+        "account": "yuxilab",
+        "partition": "general",
+        "qos": "interactive",
+        "memory": "8G",
+        "nodes": 1,
+        "ntasks": 1,
+        "cpus_per_task": 4,
+        "constraint": "cpujobs"
+      },
+      "environment": {
+        "CPM_SOURCE_CACHE": "/u/yuxihong/.cache/CPM"
+      },
+      "host": "lair",
+      "id": "lair-cpu",
+      "parents": [
+        "lair-cpu",
+        "lair"
+      ],
+      "extends": "lair",
+      "data_dir": "/u/yuxihong/workspace/omo-spcraft",
+      "agent_root": "/u/yuxihong/workspace/omo-spcraft",
+      "revision": "42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "dataset",
+      "label": "Datasets"
+    },
+    {
+      "id": "threads",
+      "label": "Threads"
+    },
+    {
+      "id": "method",
+      "label": "Methods / variants"
+    }
+  ],
+  "allocations": [
+    {
+      "server": "lair-cpu",
+      "profile": {
+        "kind": "ssh",
+        "project_dir": "/data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source",
+        "slurm_batch": {
+          "qos": "normal"
+        },
+        "slurm": {
+          "time": "00:10:00",
+          "account": "yuxilab",
+          "partition": "general",
+          "qos": "interactive",
+          "memory": "8G",
+          "nodes": 1,
+          "ntasks": 1,
+          "cpus_per_task": 4,
+          "constraint": "cpujobs"
+        },
+        "environment": {
+          "CPM_SOURCE_CACHE": "/u/yuxihong/.cache/CPM"
+        },
+        "host": "lair",
+        "id": "lair-cpu",
+        "parents": [
+          "lair-cpu",
+          "lair"
+        ],
+        "extends": "lair",
+        "data_dir": "/u/yuxihong/workspace/omo-spcraft",
+        "agent_root": "/u/yuxihong/workspace/omo-spcraft",
+        "revision": "42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51"
+      },
+      "slurm": {
+        "time": "00:10:00",
+        "account": "yuxilab",
+        "partition": "general",
+        "qos": "interactive",
+        "memory": "8G",
+        "nodes": 1,
+        "ntasks": 1,
+        "cpus_per_task": 4,
+        "constraint": "cpujobs"
+      },
+      "batch_resources": {
+        "time": "00:10:00",
+        "account": "yuxilab",
+        "partition": "general",
+        "qos": "normal",
+        "memory": "8G",
+        "nodes": 1,
+        "ntasks": 1,
+        "cpus_per_task": 4,
+        "constraint": "cpujobs"
+      },
+      "run_ids": [
+        1,
+        2
+      ],
+      "id": "lair-cpu"
+    }
+  ],
+  "runs": [
+    {
+      "id": 1,
+      "server": "lair-cpu",
+      "parameters": {
+        "dataset": "/u/yuxihong/workspace/omo-spcraft/dataset/output/gupta3/gupta3.mtx",
+        "threads": 4,
+        "method": "openmp-double"
+      },
+      "choices": {
+        "dataset": "gupta3",
+        "threads": "4",
+        "method": "openmp-double"
+      },
+      "argv": [
+        "/data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source/build/overseer-options/bin/bench_ompspmv",
+        "--matrix",
+        "/u/yuxihong/workspace/omo-spcraft/dataset/output/gupta3/gupta3.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/u/yuxihong/workspace/omo-spcraft/results/overseer/20261013-025105-48803990260451/0001/result.json",
+        "--precision",
+        "double"
+      ],
+      "launcher": [],
+      "cwd": "/data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source",
+      "environment": {
+        "OMP_NUM_THREADS": "4",
+        "CPM_SOURCE_CACHE": "/u/yuxihong/.cache/CPM"
+      },
+      "folder": "/u/yuxihong/workspace/omo-spcraft/results/overseer/20261013-025105-48803990260451/0001",
+      "required_cpus": 4
+    },
+    {
+      "id": 2,
+      "server": "lair-cpu",
+      "parameters": {
+        "dataset": "/u/yuxihong/workspace/omo-spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "threads": 4,
+        "method": "openmp-double"
+      },
+      "choices": {
+        "dataset": "pdb1HYS",
+        "threads": "4",
+        "method": "openmp-double"
+      },
+      "argv": [
+        "/data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source/build/overseer-options/bin/bench_ompspmv",
+        "--matrix",
+        "/u/yuxihong/workspace/omo-spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/u/yuxihong/workspace/omo-spcraft/results/overseer/20261013-025105-48803990260451/0002/result.json",
+        "--precision",
+        "double"
+      ],
+      "launcher": [],
+      "cwd": "/data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source",
+      "environment": {
+        "OMP_NUM_THREADS": "4",
+        "CPM_SOURCE_CACHE": "/u/yuxihong/.cache/CPM"
+      },
+      "folder": "/u/yuxihong/workspace/omo-spcraft/results/overseer/20261013-025105-48803990260451/0002",
+      "required_cpus": 4
+    }
+  ],
+  "total": 2,
+  "stop_on_failure": false
+}

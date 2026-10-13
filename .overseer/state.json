@@ -1,0 +1,9 @@
+{
+  "active_experiment": ".overseer/experiments/spmv-remote-development.json",
+  "experiments": {
+    ".overseer/experiments/spmv-remote-development.json": {
+      "folder": "results/overseer/20261013-025215-48873717376310",
+      "mode": "run"
+    }
+  }
+}

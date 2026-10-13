@@ -1,0 +1,38 @@
+{
+  "total": 2,
+  "completed": 2,
+  "runs": [
+    {
+      "event": "finish",
+      "id": 1,
+      "server": "lair-cpu",
+      "parameters": {
+        "dataset": "/u/yuxihong/workspace/omo-spcraft/dataset/output/gupta3/gupta3.mtx",
+        "threads": 4,
+        "method": "openmp-double"
+      },
+      "choices": {
+        "dataset": "gupta3",
+        "threads": "4",
+        "method": "openmp-double"
+      },
+      "exit_code": 0
+    },
+    {
+      "event": "finish",
+      "id": 2,
+      "server": "lair-cpu",
+      "parameters": {
+        "dataset": "/u/yuxihong/workspace/omo-spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "threads": 4,
+        "method": "openmp-double"
+      },
+      "choices": {
+        "dataset": "pdb1HYS",
+        "threads": "4",
+        "method": "openmp-double"
+      },
+      "exit_code": 0
+    }
+  ]
+}

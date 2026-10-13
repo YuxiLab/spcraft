@@ -1,0 +1,106 @@
+{
+  "mode": "build",
+  "total": 2,
+  "stop_on_failure": false,
+  "entries": [
+    {
+      "job": "cedcbe34426249d5b4e00b8d5a09fe4f",
+      "profile": {
+        "kind": "ssh",
+        "project_dir": "/data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source",
+        "slurm_batch": {
+          "qos": "normal"
+        },
+        "slurm": {
+          "time": "00:10:00",
+          "account": "yuxilab",
+          "partition": "general",
+          "qos": "interactive",
+          "memory": "8G",
+          "nodes": 1,
+          "ntasks": 1,
+          "cpus_per_task": 4,
+          "constraint": "cpujobs"
+        },
+        "environment": {
+          "CPM_SOURCE_CACHE": "/u/yuxihong/.cache/CPM"
+        },
+        "host": "lair",
+        "id": "lair-cpu",
+        "parents": [
+          "lair-cpu",
+          "lair"
+        ],
+        "extends": "lair",
+        "data_dir": "/u/yuxihong/workspace/omo-spcraft",
+        "agent_root": "/u/yuxihong/workspace/omo-spcraft",
+        "revision": "42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51"
+      },
+      "allocation": "lair-cpu",
+      "server": "lair-cpu",
+      "client_folder": "/home/yuxihong/workspace/code/sparse_computation/spcraft/results/overseer/20261013-025105-48803990260451",
+      "request": {
+        "job": "cedcbe34426249d5b4e00b8d5a09fe4f",
+        "revision": "42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51",
+        "script": "#!/usr/bin/env bash\nset -uo pipefail\ncd /data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source || exit 1\nexport CPM_SOURCE_CACHE=/u/yuxihong/.cache/CPM\nmkdir -p build/overseer-options/.cmake/api/v1/query || exit 1\n: > build/overseer-options/.cmake/api/v1/query/codemodel-v2\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build\", \"server\": \"lair-cpu\", \"argv\": [\"cmake\", \"--preset\", \"openmp-examples\", \"-B\", \"build/overseer-options\", \"-DSPCRAFT_BUILD_BENCHMARKS=ON\"]}'\nif cmake --preset openmp-examples -B build/overseer-options -DSPCRAFT_BUILD_BENCHMARKS=ON; then :; else\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build_failed\", \"server\": \"lair-cpu\"}'\nexit 1\nfi\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build\", \"server\": \"lair-cpu\", \"argv\": [\"cmake\", \"--build\", \"build/overseer-options\", \"--target\", \"bench_ompspmv\", \"--parallel\", \"4\"]}'\nif cmake --build build/overseer-options --target bench_ompspmv --parallel 4; then :; else\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build_failed\", \"server\": \"lair-cpu\"}'\nexit 1\nfi\nprintf '%s\\n' '@@OVERSEER {\"event\": \"built\", \"server\": \"lair-cpu\"}'\n",
+        "scheduler": "process",
+        "launcher": [
+          "salloc",
+          "--time=00:10:00",
+          "--account=yuxilab",
+          "--partition=general",
+          "--qos=interactive",
+          "--mem=8G",
+          "--nodes=1",
+          "--ntasks=1",
+          "--cpus-per-task=4",
+          "--constraint=cpujobs"
+        ],
+        "setup": [
+          "export CPM_SOURCE_CACHE=/u/yuxihong/.cache/CPM"
+        ],
+        "resources": {
+          "time": "00:10:00",
+          "account": "yuxilab",
+          "partition": "general",
+          "qos": "interactive",
+          "memory": "8G",
+          "nodes": 1,
+          "ntasks": 1,
+          "cpus_per_task": 4,
+          "constraint": "cpujobs"
+        },
+        "server": "lair-cpu",
+        "allocation": "lair-cpu",
+        "client_folder": "/home/yuxihong/workspace/code/sparse_computation/spcraft/results/overseer/20261013-025105-48803990260451",
+        "expected_runs": [],
+        "expected_build": "lair-cpu",
+        "trial_logs": {
+          "1": "/u/yuxihong/workspace/omo-spcraft/results/overseer/20261013-025105-48803990260451/0001/output.log",
+          "2": "/u/yuxihong/workspace/omo-spcraft/results/overseer/20261013-025105-48803990260451/0002/output.log"
+        }
+      },
+      "attempted": true,
+      "state": {
+        "child": {
+          "birth": "1195948759",
+          "pid": 622159
+        },
+        "created_at": 1791874267.000319,
+        "exit_code": 0,
+        "fingerprint": "9af4bb953d39f54fb1ec2465d8651049f7f506b9628e204baf116e66e75d4229",
+        "finished_at": 1791874268.5491931,
+        "job": "cedcbe34426249d5b4e00b8d5a09fe4f",
+        "job_id": null,
+        "revision": "42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51",
+        "scheduler": "process",
+        "status": "SUCCESS",
+        "terminal": true,
+        "worker": {
+          "birth": "1195948755",
+          "pid": 622158
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "mode": "submit",
+  "total": 2,
+  "stop_on_failure": false,
+  "entries": [
+    {
+      "job": "271c93b0afa3426395f1388cae7bc875",
+      "profile": {
+        "id": "lair-cpu",
+        "kind": "ssh",
+        "host": "lair",
+        "project_dir": "/data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source",
+        "environment": {
+          "CPM_SOURCE_CACHE": "/u/yuxihong/.cache/CPM"
+        },
+        "slurm": {
+          "account": "yuxilab",
+          "partition": "general",
+          "qos": "interactive",
+          "cpus_per_task": 4,
+          "memory": "8G",
+          "nodes": 1,
+          "ntasks": 1,
+          "time": "00:10:00",
+          "constraint": "cpujobs"
+        },
+        "slurm_batch": {
+          "qos": "normal"
+        },
+        "parents": [
+          "lair-cpu",
+          "lair"
+        ],
+        "extends": "lair",
+        "data_dir": "/u/yuxihong/workspace/omo-spcraft",
+        "agent_root": "/u/yuxihong/workspace/omo-spcraft",
+        "revision": "42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51"
+      },
+      "allocation": "lair-cpu",
+      "server": "lair-cpu",
+      "client_folder": "/home/yuxihong/workspace/code/sparse_computation/spcraft/results/overseer/remote-batch-check",
+      "request": {
+        "job": "271c93b0afa3426395f1388cae7bc875",
+        "revision": "42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51",
+        "script": "#!/usr/bin/env bash\n#SBATCH --account=yuxilab\n#SBATCH --partition=general\n#SBATCH --qos=normal\n#SBATCH --cpus-per-task=4\n#SBATCH --mem=8G\n#SBATCH --nodes=1\n#SBATCH --ntasks=1\n#SBATCH --time=00:10:00\n#SBATCH --constraint=cpujobs\n#SBATCH --job-name=SpMV_remote_development-lair-cpu\nset -uo pipefail\ncd /data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source || exit 1\nexport CPM_SOURCE_CACHE=/u/yuxihong/.cache/CPM\nmkdir -p build/overseer-options/.cmake/api/v1/query || exit 1\n: > build/overseer-options/.cmake/api/v1/query/codemodel-v2\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build\", \"server\": \"lair-cpu\", \"argv\": [\"cmake\", \"--preset\", \"openmp-examples\", \"-B\", \"build/overseer-options\", \"-DSPCRAFT_BUILD_BENCHMARKS=ON\"]}'\nif cmake --preset openmp-examples -B build/overseer-options -DSPCRAFT_BUILD_BENCHMARKS=ON; then :; else\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build_failed\", \"server\": \"lair-cpu\"}'\nexit 1\nfi\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build\", \"server\": \"lair-cpu\", \"argv\": [\"cmake\", \"--build\", \"build/overseer-options\", \"--target\", \"bench_ompspmv\", \"--parallel\", \"4\"]}'\nif cmake --build build/overseer-options --target bench_ompspmv --parallel 4; then :; else\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build_failed\", \"server\": \"lair-cpu\"}'\nexit 1\nfi\nfailures=0\nmkdir -p /u/yuxihong/workspace/omo-spcraft/results/overseer/remote-batch-check/0001 || exit 1\nprintf '%s\\n' '@@OVERSEER {\"event\": \"start\", \"total\": 2, \"id\": 1, \"server\": \"lair-cpu\", \"parameters\": {\"dataset\": \"/u/yuxihong/workspace/omo-spcraft/dataset/output/gupta3/gupta3.mtx\", \"threads\": 4, \"method\": \"openmp-double\"}, \"choices\": {\"dataset\": \"gupta3\", \"threads\": \"4\", \"method\": \"openmp-double\"}}'\nenv OMP_NUM_THREADS=4 CPM_SOURCE_CACHE=/u/yuxihong/.cache/CPM srun --nodes=1 --ntasks=1 --cpus-per-task=4 /data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source/build/overseer-options/bin/bench_ompspmv --matrix /u/yuxihong/workspace/omo-spcraft/dataset/output/gupta3/gupta3.mtx --threads 4 --index int32 --offset int32 --iterations 5 --max-time 0.05 --output /u/yuxihong/workspace/omo-spcraft/results/overseer/remote-batch-check/0001/result.json --precision double 2>&1 | tee /u/yuxihong/workspace/omo-spcraft/results/overseer/remote-batch-check/0001/output.log\ncode=${PIPESTATUS[0]}\nprintf '%s%s%s\\n' '@@OVERSEER {\"event\": \"finish\", \"id\": 1, \"server\": \"lair-cpu\", \"parameters\": {\"dataset\": \"/u/yuxihong/workspace/omo-spcraft/dataset/output/gupta3/gupta3.mtx\", \"threads\": 4, \"method\": \"openmp-double\"}, \"choices\": {\"dataset\": \"gupta3\", \"threads\": \"4\", \"method\": \"openmp-double\"}, \"exit_code\": ' \"$code\" '}'\nif [ \"$code\" -ne 0 ]; then failures=$((failures+1)); fi\nmkdir -p /u/yuxihong/workspace/omo-spcraft/results/overseer/remote-batch-check/0002 || exit 1\nprintf '%s\\n' '@@OVERSEER {\"event\": \"start\", \"total\": 2, \"id\": 2, \"server\": \"lair-cpu\", \"parameters\": {\"dataset\": \"/u/yuxihong/workspace/omo-spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx\", \"threads\": 4, \"method\": \"openmp-double\"}, \"choices\": {\"dataset\": \"pdb1HYS\", \"threads\": \"4\", \"method\": \"openmp-double\"}}'\nenv OMP_NUM_THREADS=4 CPM_SOURCE_CACHE=/u/yuxihong/.cache/CPM srun --nodes=1 --ntasks=1 --cpus-per-task=4 /data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51/source/build/overseer-options/bin/bench_ompspmv --matrix /u/yuxihong/workspace/omo-spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx --threads 4 --index int32 --offset int32 --iterations 5 --max-time 0.05 --output /u/yuxihong/workspace/omo-spcraft/results/overseer/remote-batch-check/0002/result.json --precision double 2>&1 | tee /u/yuxihong/workspace/omo-spcraft/results/overseer/remote-batch-check/0002/output.log\ncode=${PIPESTATUS[0]}\nprintf '%s%s%s\\n' '@@OVERSEER {\"event\": \"finish\", \"id\": 2, \"server\": \"lair-cpu\", \"parameters\": {\"dataset\": \"/u/yuxihong/workspace/omo-spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx\", \"threads\": 4, \"method\": \"openmp-double\"}, \"choices\": {\"dataset\": \"pdb1HYS\", \"threads\": \"4\", \"method\": \"openmp-double\"}, \"exit_code\": ' \"$code\" '}'\nif [ \"$code\" -ne 0 ]; then failures=$((failures+1)); fi\n[ \"$failures\" -eq 0 ]\n",
+        "scheduler": "slurm",
+        "launcher": [],
+        "setup": [
+          "export CPM_SOURCE_CACHE=/u/yuxihong/.cache/CPM"
+        ],
+        "resources": {
+          "account": "yuxilab",
+          "partition": "general",
+          "qos": "normal",
+          "cpus_per_task": 4,
+          "memory": "8G",
+          "nodes": 1,
+          "ntasks": 1,
+          "time": "00:10:00",
+          "constraint": "cpujobs"
+        },
+        "server": "lair-cpu",
+        "allocation": "lair-cpu",
+        "client_folder": "/home/yuxihong/workspace/code/sparse_computation/spcraft/results/overseer/remote-batch-check",
+        "expected_runs": [
+          1,
+          2
+        ],
+        "expected_build": null,
+        "trial_logs": {
+          "1": "/u/yuxihong/workspace/omo-spcraft/results/overseer/remote-batch-check/0001/output.log",
+          "2": "/u/yuxihong/workspace/omo-spcraft/results/overseer/remote-batch-check/0002/output.log"
+        }
+      },
+      "attempted": true,
+      "state": {
+        "child": null,
+        "created_at": 1791872450.0235116,
+        "exit_code": 0,
+        "fingerprint": "7bcc6eca09a8fc313aaae3bd96a1ccb328887ce3255c5eb00cd521702313c5d8",
+        "finished_at": 1791872527.4314723,
+        "job": "271c93b0afa3426395f1388cae7bc875",
+        "job_id": "119727",
+        "last_poll": 1791872527.4284973,
+        "observation_error": null,
+        "revision": "42034e531783f9b79c5071443ee9af879e328987c7b4984468b76405ece34b51",
+        "scheduler": "slurm",
+        "status": "SUCCESS",
+        "terminal": true,
+        "worker": {
+          "birth": "1195767057",
+          "pid": 572926
+        }
+      }
+    }
+  ]
+}
