@@ -11,6 +11,7 @@
 #include "graph/PageRank.h"
 #include "kernel/mtSpMV.h"
 #include "semiring/SemiRing.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -43,8 +44,8 @@ namespace spcraft
  * @throws std::invalid_argument on a non-square operator, a size mismatch, or
  *         options outside their valid ranges.
  */
-template <class IT, class NT, class OT>
-PageRankResult<NT> pagerank_openmp(const CsrMatrix<IT, NT, OT>& op, DenseVector<IT, NT>& rank,
+SP_MAT_TEMP
+PageRankResult<NT> pagerank_openmp(const SPCSR& op, SPDVEC& rank,
                                    const PageRankOptions<NT>& options = PageRankOptions<NT>{})
 {
   static_assert(std::is_floating_point_v<NT>, "PageRank requires a floating-point value type");
@@ -74,7 +75,7 @@ PageRankResult<NT> pagerank_openmp(const CsrMatrix<IT, NT, OT>& op, DenseVector<
     rank.val[vertex] = uniform;
   }
 
-  DenseVector<IT, NT> y(n);
+  SPDVEC y(n);
 
   for (int iteration = 1; iteration <= options.max_iterations; ++iteration) {
     OmpSpMV<PlusTimesRing<NT>>(op, rank, y);

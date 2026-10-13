@@ -1,4 +1,7 @@
+#include <gtest/gtest.h>
+
 #include "SpCraft.h"
+#include "TestRun.h"
 
 #include <algorithm>
 #include <bit>
@@ -15,17 +18,11 @@
 #include <mpi.h>
 #endif
 
+namespace spcraft::tests
+{
 namespace
 {
-int failures = 0;
-template <class A, class B>
-void Equal(const A& a, const B& b, const char* label)
-{
-  if (a != b) {
-    ++failures;
-    std::cerr << label << ": got " << a << ", expected " << b << '\n';
-  }
-}
+
 using Matrix = spcraft::DcscMatrix<int, double>;
 using Ring = spcraft::PlusTimesRing<double>;
 
@@ -70,9 +67,9 @@ void WidthChecks()
   b.val[0] = 5;
   b.val[1] = 7;
   const auto c = spcraft::OmpHashSpGEMM<spcraft::PlusTimesRing<NT>>(a, b);
-  Equal(c.nnz, OT{2}, "width variant nnz");
-  Equal(c.entries[0].val, NT{10}, "width variant first value");
-  Equal(c.entries[1].val, NT{21}, "width variant second value");
+  EXPECT_EQ((c.nnz), (OT{2})) << "width variant nnz";
+  EXPECT_EQ((c.entries[0].val), (NT{10})) << "width variant first value";
+  EXPECT_EQ((c.entries[1].val), (NT{21})) << "width variant second value";
 }
 
 void LocalChecks()
@@ -80,38 +77,39 @@ void LocalChecks()
   auto a = Make(2, 3, {{0, 0, 1}, {1, 1, 3}, {0, 2, 2}});
   auto b = Make(3, 2, {{0, 0, 4}, {2, 0, 6}, {1, 1, 5}, {2, 1, 7}});
   const auto c = spcraft::OmpHashSpGEMM<Ring>(a, b);
-  Equal(c.nnz, 3, "hand product nnz");
+  EXPECT_EQ((c.nnz), (3)) << "hand product nnz";
   const std::tuple<int, int, double> expected[] = {{0, 0, 16}, {0, 1, 14}, {1, 1, 15}};
   for (int i = 0; i < std::min(c.nnz, 3); ++i)
-    Equal(std::tie(c.entries[i].row, c.entries[i].col, c.entries[i].val) == expected[i], true,
-          "hand product tuple");
+    EXPECT_EQ((std::tie(c.entries[i].row, c.entries[i].col, c.entries[i].val) == expected[i]),
+              (true))
+        << "hand product tuple";
   static_assert(std::is_same_v<std::remove_cv_t<decltype(c)>, spcraft::CooMatrix<int, double>>);
   const auto csr = c.ToCsr();
   const int expected_offsets[] = {0, 2, 3};
   for (int i = 0; i < 3; ++i) {
-    Equal(csr.row_ptr[i], expected_offsets[i], "native COO to CSR offsets");
-    Equal(csr.col_id[i], std::get<1>(expected[i]), "native COO to CSR column");
-    Equal(csr.val[i], std::get<2>(expected[i]), "native COO to CSR value");
+    EXPECT_EQ((csr.row_ptr[i]), (expected_offsets[i])) << "native COO to CSR offsets";
+    EXPECT_EQ((csr.col_id[i]), (std::get<1>(expected[i]))) << "native COO to CSR column";
+    EXPECT_EQ((csr.val[i]), (std::get<2>(expected[i]))) << "native COO to CSR value";
   }
   Matrix empty;
   empty.Allocate(0, 3, 7, 0);
   const auto zero = spcraft::OmpHashSpGEMM<Ring>(a, empty);
-  Equal(zero.nnz, 0, "empty product count");
-  Equal(zero.m, 2, "empty product rows");
-  Equal(zero.n, 7, "empty product columns");
+  EXPECT_EQ((zero.nnz), (0)) << "empty product count";
+  EXPECT_EQ((zero.m), (2)) << "empty product rows";
+  EXPECT_EQ((zero.n), (7)) << "empty product columns";
   bool threw = false;
   try {
     const auto bad = spcraft::OmpHashSpGEMM<Ring>(b, empty);
   } catch (const std::invalid_argument&) {
     threw = true;
   }
-  Equal(threw, true, "dimension mismatch");
+  EXPECT_EQ((threw), (true)) << "dimension mismatch";
   a = Make(1, 1, {{0, 0, -0.0}});
   b = Make(1, 1, {{0, 0, 1}});
-  Equal(spcraft::OmpHashSpGEMM<Ring>(a, b).entries[0].val, 0.0, "zero product value");
+  EXPECT_EQ((spcraft::OmpHashSpGEMM<Ring>(a, b).entries[0].val), (0.0)) << "zero product value";
   a = Make(1, 2, {{0, 0, 2}, {0, 1, 5}});
   b = Make(2, 1, {{0, 0, 7}, {1, 0, 1}});
-  Equal(spcraft::OmpHashSpGEMM<MinPlus>(a, b).entries[0].val, 6.0, "min-plus");
+  EXPECT_EQ((spcraft::OmpHashSpGEMM<MinPlus>(a, b).entries[0].val), (6.0)) << "min-plus";
   spcraft::DcscMatrix<int, bool> ba, bb;
   ba.Allocate(1, 1, 1, 1);
   bb.Allocate(1, 1, 1, 1);
@@ -119,17 +117,17 @@ void LocalChecks()
   ba.val[0] = true;
   bb.val[0] = false;
   const auto bc = spcraft::OmpHashSpGEMM<spcraft::PlusTimesRing<bool>>(ba, bb);
-  Equal(bc.nnz, 1, "Boolean structural zero nnz");
-  Equal(bc.entries[0].val, false, "Boolean product");
+  EXPECT_EQ((bc.nnz), (1)) << "Boolean structural zero nnz";
+  EXPECT_EQ((bc.entries[0].val), (false)) << "Boolean product";
   const std::vector<std::uint8_t> exact{100, 100, 55}, excess{100, 100, 56};
-  Equal(+spcraft::OmpPrefixSum(exact, 4).back(), 255, "exact maximum prefix");
+  EXPECT_EQ((+spcraft::OmpPrefixSum(exact, 4).back()), (255)) << "exact maximum prefix";
   threw = false;
   try {
     const auto p = spcraft::OmpPrefixSum(excess, 4);
   } catch (const std::overflow_error&) {
     threw = true;
   }
-  Equal(threw, true, "prefix overflow");
+  EXPECT_EQ((threw), (true)) << "prefix overflow";
 }
 
 template <class Storage>
@@ -143,28 +141,28 @@ void CompressedColumnChecks()
   const auto a = Make(4, 20, {{3, 2, 2}, {0, 2, 1}, {0, 2, -1}, {1, 17, 4}});
   const auto b = Make(20, 100, {{2, 7, 3}, {5, 7, 9}, {17, 91, 2}});
   const auto c = spcraft::OmpHashSpGEMM<Ring>(a, b);
-  Equal(c.m, 4, "compressed product rows");
-  Equal(c.n, 100, "compressed product logical width");
-  Equal(c.nnz, 3, "compressed product nnz");
+  EXPECT_EQ((c.m), (4)) << "compressed product rows";
+  EXPECT_EQ((c.n), (100)) << "compressed product logical width";
+  EXPECT_EQ((c.nnz), (3)) << "compressed product nnz";
   const spcraft::TupleEntry<int, double> expected[] = {{0, 7, 0}, {3, 7, 6}, {1, 91, 8}};
   for (int i = 0; i < std::min(c.nnz, 3); ++i) {
-    Equal(c.entries[i].row, expected[i].row, "compressed product row");
-    Equal(c.entries[i].col, expected[i].col, "compressed product logical column");
-    Equal(c.entries[i].val, expected[i].val, "compressed product value");
+    EXPECT_EQ((c.entries[i].row), (expected[i].row)) << "compressed product row";
+    EXPECT_EQ((c.entries[i].col), (expected[i].col)) << "compressed product logical column";
+    EXPECT_EQ((c.entries[i].val), (expected[i].val)) << "compressed product value";
   }
   const auto disjoint = spcraft::OmpHashSpGEMM<Ring>(a, Make(20, 100, {{5, 91, 1}}));
-  Equal(disjoint.nnz, 0, "disjoint stored columns");
-  Equal(disjoint.n, 100, "disjoint product shape");
+  EXPECT_EQ((disjoint.nnz), (0)) << "disjoint stored columns";
+  EXPECT_EQ((disjoint.n), (100)) << "disjoint product shape";
 
   std::vector<std::tuple<int, int, double>> entries;
   for (int i = 15; i >= 0; --i) entries.emplace_back(16 * i, 2, i + 1);
   const auto collision =
       spcraft::OmpHashSpGEMM<Ring>(Make(256, 20, entries), Make(20, 100, {{2, 91, 5}}));
-  Equal(collision.nnz, 16, "DCSC collision count");
+  EXPECT_EQ((collision.nnz), (16)) << "DCSC collision count";
   for (int i = 0; i < std::min(collision.nnz, 16); ++i) {
-    Equal(collision.entries[i].row, 16 * i, "DCSC collision sorted row");
-    Equal(collision.entries[i].col, 91, "DCSC collision logical column");
-    Equal(collision.entries[i].val, 5.0 * (i + 1), "DCSC collision value");
+    EXPECT_EQ((collision.entries[i].row), (16 * i)) << "DCSC collision sorted row";
+    EXPECT_EQ((collision.entries[i].col), (91)) << "DCSC collision logical column";
+    EXPECT_EQ((collision.entries[i].val), (5.0 * (i + 1))) << "DCSC collision value";
   }
 }
 
@@ -210,19 +208,19 @@ void SparseLookupChecks()
       }
     }
     const auto c = spcraft::OmpHashSpGEMM<Ring>(a, b);
-    Equal(c.m, IT{3}, "wide product rows");
-    Equal(c.n, width, "wide product columns");
+    EXPECT_EQ((c.m), (IT{3})) << "wide product rows";
+    EXPECT_EQ((c.n), (width)) << "wide product columns";
     OT pos = 0;
     for (IT row = 0; row < 3; ++row) {
       if (!present[row]) continue;
       if (pos < c.nnz) {
-        Equal(c.entries[pos].row, row, "wide lookup output row");
-        Equal(c.entries[pos].col, width - 3, "wide lookup output column");
-        Equal(c.entries[pos].val, expected[row], "wide lookup output value");
+        EXPECT_EQ((c.entries[pos].row), (row)) << "wide lookup output row";
+        EXPECT_EQ((c.entries[pos].col), (width - 3)) << "wide lookup output column";
+        EXPECT_EQ((c.entries[pos].val), (expected[row])) << "wide lookup output value";
       }
       ++pos;
     }
-    Equal(c.nnz, pos, "wide lookup output count");
+    EXPECT_EQ((c.nnz), (pos)) << "wide lookup output count";
   }
 
   // OR accumulation needs more than a single Boolean contribution.
@@ -240,10 +238,10 @@ void SparseLookupChecks()
   bb.row_id[1] = 2;
   bb.val[1] = true;
   const auto bc = spcraft::OmpHashSpGEMM<spcraft::PlusTimesRing<bool>>(ba, bb);
-  Equal(bc.nnz, 2, "Boolean accumulated structural count");
+  EXPECT_EQ((bc.nnz), (2)) << "Boolean accumulated structural count";
   if (bc.nnz == 2) {
-    Equal(bc.entries[0].val, true, "Boolean OR across contributions");
-    Equal(bc.entries[1].val, false, "Boolean accumulated structural zero");
+    EXPECT_EQ((bc.entries[0].val), (true)) << "Boolean OR across contributions";
+    EXPECT_EQ((bc.entries[1].val), (false)) << "Boolean accumulated structural zero";
   }
 }
 
@@ -291,14 +289,14 @@ void IndependentChecks()
           }
           if (present) {
             if (p < result.nnz) {
-              Equal(result.entries[p].row, r, "dense-reference row");
-              Equal(result.entries[p].col, c, "dense-reference column");
-              Equal(result.entries[p].val, value, "dense-reference value");
+              EXPECT_EQ((result.entries[p].row), (r)) << "dense-reference row";
+              EXPECT_EQ((result.entries[p].col), (c)) << "dense-reference column";
+              EXPECT_EQ((result.entries[p].val), (value)) << "dense-reference value";
             }
             ++p;
           }
         }
-      Equal(result.nnz, p, "dense-reference structural nnz");
+      EXPECT_EQ((result.nnz), (p)) << "dense-reference structural nnz";
     }
   }
 }
@@ -328,8 +326,8 @@ void BoundaryChecks()
   forward.val[0] = 2;
   backward.val[0] = 4;
   const auto composed = spcraft::OmpHashSpGEMM<RelationRing>(forward, backward);
-  Equal(composed.nnz, 1, "noncommutative product nnz");
-  Equal(composed.entries[0].val, 1U, "noncommutative multiplication order");
+  EXPECT_EQ((composed.nnz), (1)) << "noncommutative product nnz";
+  EXPECT_EQ((composed.entries[0].val), (1U)) << "noncommutative multiplication order";
 
   using Narrow = spcraft::DcscMatrix<int, double, std::uint8_t>;
   Narrow a, b;
@@ -348,8 +346,8 @@ void BoundaryChecks()
     }
   }
   const auto exact = spcraft::OmpHashSpGEMM<Ring>(a, b);
-  Equal(+exact.nnz, 255, "maximum representable output nnz");
-  Equal(exact.entries[254].val, 2.0, "last entry at maximum output nnz");
+  EXPECT_EQ((+exact.nnz), (255)) << "maximum representable output nnz";
+  EXPECT_EQ((exact.entries[254].val), (2.0)) << "last entry at maximum output nnz";
 
   a.Allocate(32, 2, 16, 16);
   b.Allocate(128, 16, 8, 8);
@@ -365,7 +363,7 @@ void BoundaryChecks()
   }
   // Work may exceed OT even when the output fits; work prefixes use int64_t.
   const auto many_paths = spcraft::OmpHashSpGEMM<Ring>(a, b);
-  Equal(+many_paths.nnz, 16, "work exceeding offset range with representable output");
+  EXPECT_EQ((+many_paths.nnz), (16)) << "work exceeding offset range with representable output";
 
   a.Allocate(32, 32, 1, 1);
   b.Allocate(8, 1, 8, 8);
@@ -381,7 +379,7 @@ void BoundaryChecks()
   } catch (const std::overflow_error&) {
     overflow = true;
   }
-  Equal(overflow, true, "output total overflow rejected before narrowing");
+  EXPECT_EQ((overflow), (true)) << "output total overflow rejected before narrowing";
 }
 
 #ifdef SPCRAFT_TEST_COMBBLAS
@@ -404,11 +402,11 @@ void Compare(const Matrix& a, const Matrix& b)
   const auto x = spcraft::OmpHashSpGEMM<Ring>(a, b);
   const std::unique_ptr<combblas::SpTuples<int, double>> y(
       combblas::LocalSpGEMMHash<CombRing, double>(ca, cb, false, false, true));
-  Equal(x.nnz, y->getnnz(), "native tuple count");
+  EXPECT_EQ((x.nnz), (y->getnnz())) << "native tuple count";
   for (int i = 0; i < std::min(x.nnz, static_cast<int>(y->getnnz())); ++i) {
-    Equal(x.entries[i].row, y->rowindex(i), "tuple row");
-    Equal(x.entries[i].col, y->colindex(i), "tuple column");
-    Equal(x.entries[i].val, y->numvalue(i), "reference value");
+    EXPECT_EQ((x.entries[i].row), (y->rowindex(i))) << "tuple row";
+    EXPECT_EQ((x.entries[i].col), (y->colindex(i))) << "tuple column";
+    EXPECT_EQ((x.entries[i].val), (y->numvalue(i))) << "reference value";
   }
 }
 void ReferenceChecks()
@@ -449,9 +447,41 @@ void ReferenceChecks()
 }
 #endif
 }  // namespace
+
+class DcscSpgemmTest : public ::testing::Test
+{
+ protected:
+  void SetUp() override
+  {
+    OMP_SET_DYNAMIC(0);
+    OMP_SET_NUM_THREADS(4);
+  }
+};
+TEST_F(DcscSpgemmTest, LocalSemiringsAndStorage) { LocalChecks(); }
+TEST_F(DcscSpgemmTest, IndependentReference) { IndependentChecks(); }
+TEST_F(DcscSpgemmTest, BoundaryConditions) { BoundaryChecks(); }
+template <class Types>
+class DcscSpgemmTypeTest : public DcscSpgemmTest
+{
+};
+using DcscTypes = ::testing::Types<
+    std::tuple<std::int32_t, float, std::int32_t>, std::tuple<std::uint32_t, double, std::uint64_t>,
+    std::tuple<std::int64_t, double, std::int64_t>, std::tuple<std::int32_t, double, std::int64_t>>;
+TYPED_TEST_SUITE(DcscSpgemmTypeTest, DcscTypes);
+TYPED_TEST(DcscSpgemmTypeTest, IndexValueAndOffsetWidths)
+{
+  using IT = std::tuple_element_t<0, TypeParam>;
+  using NT = std::tuple_element_t<1, TypeParam>;
+  using OT = std::tuple_element_t<2, TypeParam>;
+  WidthChecks<IT, NT, OT>();
+}
+#ifdef SPCRAFT_TEST_COMBBLAS
+TEST_F(DcscSpgemmTest, CombBlasReference) { ReferenceChecks(); }
+#endif
+}  // namespace spcraft::tests
+#ifdef SPCRAFT_TEST_COMBBLAS
 int main(int argc, char** argv)
 {
-#ifdef SPCRAFT_TEST_COMBBLAS
   int provided = 0;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
   if (provided < MPI_THREAD_FUNNELED) {
@@ -459,23 +489,8 @@ int main(int argc, char** argv)
     MPI_Finalize();
     return 1;
   }
-#else
-  (void)argc;
-  (void)argv;
-#endif
-  OMP_SET_DYNAMIC(0);
-  OMP_SET_NUM_THREADS(4);
-  LocalChecks();
-  IndependentChecks();
-  BoundaryChecks();
-  WidthChecks<std::int32_t, float, std::int32_t>();
-  WidthChecks<std::uint32_t, double, std::uint64_t>();
-  WidthChecks<std::int64_t, double, std::int64_t>();
-  WidthChecks<std::int32_t, double, std::int64_t>();
-#ifdef SPCRAFT_TEST_COMBBLAS
-  ReferenceChecks();
+  const int result = spcraft::tests::TestRun(argc, argv);
   MPI_Finalize();
-#endif
-  if (!failures) std::cout << "OmpHashSpGEMM checks passed\n";
-  return failures ? 1 : 0;
+  return result;
 }
+#endif

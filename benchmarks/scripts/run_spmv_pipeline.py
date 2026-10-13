@@ -74,9 +74,9 @@ class Backend:
 
 
 BACKENDS: tuple[Backend, ...] = (
-    Backend("spcraft", "SPCraft", "benchmarks/spcraft/spmv_openmp_benchmark", "cpu", "int32"),
-    Backend("mkl", "oneMKL", "benchmarks/mkl/spmv_mkl_benchmark", "cpu", "int32"),
-    Backend("cusparse", "cuSPARSE", "benchmarks/cusparse/cusparse_spmv_benchmark", "gpu", "int32"),
+    Backend("spcraft", "SPCraft", "bin/bench_ompspmv", "cpu", "int32"),
+    Backend("mkl", "oneMKL", "bin/bench_mkl_spmv", "cpu", "int32"),
+    Backend("cusparse", "cuSPARSE", "bin/cusparse_spmv_benchmark", "gpu", "int32"),
 )
 
 #: A kernel whose result drifts further than this from Eigen is not worth timing.

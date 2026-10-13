@@ -9,6 +9,7 @@
 #include <type_traits>
 
 #include "core/CsrMatrix.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -70,7 +71,7 @@ inline sparse_status_t MklSparseMv<double>(sparse_matrix_t handle, matrix_descr 
  * for the lifetime of this handle. Handle construction and optimization are intended
  * to happen outside timed SpMV loops.
  */
-template <class IT, class NT, class OT = IT>
+SP_MAT_TEMP_DEFAULT
 class MklCsrSpmv
 {
   static_assert(std::is_same_v<IT, MKL_INT>, "MklCsrSpmv requires column indices matching MKL_INT");
@@ -79,7 +80,7 @@ class MklCsrSpmv
                 "MklCsrSpmv supports float and double values");
 
  public:
-  explicit MklCsrSpmv(const CsrMatrix<IT, NT, OT>& matrix, MKL_INT expected_calls = 1000)
+  explicit MklCsrSpmv(const SPCSR& matrix, MKL_INT expected_calls = 1000)
   {
     detail::CheckMklSparseStatus(
         detail::CreateMklCsr<NT>(&handle_, matrix.m, matrix.n, matrix.row_ptr, matrix.row_ptr + 1,

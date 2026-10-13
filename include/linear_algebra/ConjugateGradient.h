@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utils/MatrixMacros.h"
+
 namespace spcraft
 {
 
@@ -36,7 +38,7 @@ namespace detail
 
 //! Reject option sets no solve can act on.
 template <class NT>
-[[nodiscard]] constexpr bool CgOptionsAreValid(const CgOptions<NT>& options)
+SPND constexpr bool CgOptionsAreValid(const CgOptions<NT>& options)
 {
   return options.tolerance >= NT{0} && options.max_iterations >= 0;
 }

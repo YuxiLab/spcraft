@@ -1,0 +1,144 @@
+###################################################################################
+# Common settings applied to all files.
+# Compiler flags come from compile_commands.json; dependency include paths also
+# cover headers that inherit flags from a different dependency. Generate with:
+# CLANGD_COMPILATION_DATABASE=./build scripts/generate_clangd.sh
+# Dependency roots are discovered from CMake; export the corresponding ROOT
+# variable to override a dependency with your own installation.
+# For nested CMake presets, select their build directory instead.
+# On macOS, run scripts/setup_macos_clangd.py to create a parsing-only database.
+# The database supplies the compiler for each machine.
+###################################################################################
+CompileFlags:
+  CompilationDatabase: "${CLANGD_COMPILATION_DATABASE}"
+  Add:
+    # SPCraft is header-only, so compile_commands.json has no entries for its
+    # headers and clangd may need the dependency path while interpolating flags.
+    # Paths are relative to the compile command's directory. Support both
+    # build/ and the build/<preset>/ directories used by CMake presets.
+    - "-I../include"
+    - "-I.."
+    - "-I../../include"
+    - "-I../.."
+    - "-isystem"
+    - "${CUDAROOT}/include"
+    - "-isystem"
+    - "${MKLROOT}/include"
+    - "-isystem"
+    - "${CXXOPTSROOT}/include"
+    - "-isystem"
+    - "${FMMROOT}/include"
+    - "-isystem"
+    - "${GOOGLEBENCHMARKROOT}/include"
+    - "-isystem"
+    - "${GOOGLETESTROOT}/include"
+    # GoogleTest's source checkout nests headers one level deeper than its install.
+    - "-isystem"
+    - "${GOOGLETESTROOT}/googletest/include"
+    - "-isystem"
+    - "${MPIROOT}/include"
+    - "-isystem"
+    - "_deps/fmt-src/include"
+    - "-isystem"
+    - "_deps/boost_preprocessor-src/include"
+    # The headers have no compile_commands.json entry, so clangd interpolates
+    # flags from whichever translation unit it judges nearest -- for a name with
+    # no matching stem that is often a third-party dependency compiled without
+    # this define. Everything behind `#ifdef SPCRAFT_USE_CUDA` then greys out as
+    # an inactive region. The configured build has SPCRAFT_USE_CUDA=ON, so state
+    # it here rather than depending on which TU wins interpolation.
+    - "-DSPCRAFT_USE_CUDA=1"
+
+Diagnostics:
+  Suppress:
+    - "pp_including_mainfile_in_preamble"
+    - "builtin_definition"
+    - "unused-includes"
+    - "variadic_device_fn"
+    - "attributes_not_allowed"
+
+Hover:
+  ShowAKA: No
+
+InlayHints:
+  Enabled: No
+
+---
+###################################################################################
+# Host C/C++ headers and sources.
+###################################################################################
+
+If:
+  # .cuh is here rather than in the CUDA section below on purpose. SpCraft's
+  # .cuh headers hold host-side declarations only -- device code lives in
+  # src/*.cu -- so parsing them as host C++ avoids unnecessary CUDA preamble
+  # failures while retaining declarations from cuda_runtime.h.
+  PathMatch: '.*\.(c|cc|cpp|cxx|h|hh|hpp|hxx|cuh)$'
+CompileFlags:
+  Add:
+    - --std=c++20
+    # The generator locates omp.h and links it into the selected build directory.
+    # Support compile commands in both build/ and build/<preset>/.
+    - "-isystem"
+    - "clangd-openmp/include"
+    - "-isystem"
+    - "../clangd-openmp/include"
+  Remove:
+    # strip nvcc-only arguments inherited by compdb header entries
+    - "-forward-unknown-to-host-compiler"
+    - "-Xfatbin*"
+    - "-gencode*"
+    - "--generate-code*"
+    - "-arch=*"
+    - "-Xcompiler=*"
+    - "-ccbin*"
+    - "--compiler-options*"
+    - "--expt-extended-lambda"
+    - "--expt-relaxed-constexpr"
+    - "-Werror=cross-execution-space-call"
+    # strip CUDA language forcing so headers parse as host C++
+    - "-x"
+    - "-xcuda"
+
+---
+###################################################################################
+# Host headers, continued.
+###################################################################################
+# The host section above strips the CUDA `-x` flags, and clang's driver does not
+# recognise the .cuh extension on its own. It also treats .h files as C when
+# using a fallback command. Name the language explicitly after that removal
+# so all project headers parse as host C++.
+If:
+  PathMatch: '.*\.(h|hh|hpp|hxx|cuh)$'
+CompileFlags:
+  Add:
+    - "-xc++-header"
+
+---
+###################################################################################
+# CUDA sources.
+###################################################################################
+If:
+  PathMatch: '.*\.cu$'
+CompileFlags:
+  Add:
+    - "--cuda-path=${CUDAROOT}"
+    - --cuda-gpu-arch=sm_80
+    - "-xcuda"
+    - "-ferror-limit=0"
+    - "--no-cuda-version-check"
+    - --std=c++20
+    - "-Wno-invalid-constexpr"
+  Remove:
+    # strip nvcc-only flags before clang parses CUDA mode
+    - "-Xfatbin*"
+    - "-gencode*"
+    - "--generate-code*"
+    - "-arch=*"
+    - "-Xcompiler=*"
+    - "-ccbin*"
+    - "--compiler-options*"
+    - "--expt-extended-lambda"
+    - "--expt-relaxed-constexpr"
+    - "-forward-unknown-to-host-compiler"
+    - "-Werror=cross-execution-space-call"

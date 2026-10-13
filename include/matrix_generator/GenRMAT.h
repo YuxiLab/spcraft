@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "core/CsrMatrix.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -24,9 +25,8 @@ namespace spcraft
  * duplicate edges are removed before the graph is symmetrized.
  */
 template <class NT, class IT, class OT = IT>
-[[nodiscard]] CsrMatrix<IT, NT, OT> GenRMAT(IT scale, std::size_t edge_factor,
-                                            std::uint64_t seed, double a = 0.57,
-                                            double b = 0.19, double c = 0.19, double d = 0.05)
+SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double a = 0.57,
+                   double b = 0.19, double c = 0.19, double d = 0.05)
 {
   static_assert(std::is_integral_v<IT>, "R-MAT index type must be integral");
   static_assert(std::is_integral_v<OT>, "R-MAT offset type must be integral");
@@ -49,8 +49,8 @@ template <class NT, class IT, class OT = IT>
   }
 
   const double total_weight = a + b + c + d;
-  if (!std::isfinite(a) || !std::isfinite(b) || !std::isfinite(c) || !std::isfinite(d) ||
-      a < 0.0 || b < 0.0 || c < 0.0 || d < 0.0 || total_weight <= 0.0) {
+  if (!std::isfinite(a) || !std::isfinite(b) || !std::isfinite(c) || !std::isfinite(d) || a < 0.0 ||
+      b < 0.0 || c < 0.0 || d < 0.0 || total_weight <= 0.0) {
     throw std::invalid_argument("R-MAT initiator weights must be finite and nonnegative");
   }
 
@@ -78,8 +78,7 @@ template <class NT, class IT, class OT = IT>
     UnsignedIndex destination = 0;
 
     for (std::uintmax_t level = 0; level < scale_value; ++level) {
-      const auto bit =
-          static_cast<UnsignedIndex>(UnsignedIndex{1} << (scale_value - level - 1));
+      const auto bit = static_cast<UnsignedIndex>(UnsignedIndex{1} << (scale_value - level - 1));
       const double quadrant = uniform(generator);
       if (quadrant >= ab) {
         source |= bit;
@@ -114,7 +113,7 @@ template <class NT, class IT, class OT = IT>
     ++degrees[static_cast<std::size_t>(destination)];
   }
 
-  CsrMatrix<IT, NT, OT> graph;
+  SPCSR graph;
   const OT nonzeros = static_cast<OT>(edges.size() * 2);
   graph.Allocate(nonzeros, vertices, vertices);
   graph.row_ptr[0] = 0;

@@ -1,8 +1,12 @@
+#include <gtest/gtest.h>
+
 #include <algorithm>
 #include <iostream>
 
 #include "SpCraft.h"
 
+namespace spcraft::tests
+{
 namespace
 {
 
@@ -14,8 +18,7 @@ bool IsValidUndirectedGraph(const Matrix& graph)
   }
 
   for (int row = 0; row < graph.m; ++row) {
-    if (!std::is_sorted(graph.col_id + graph.row_ptr[row],
-                        graph.col_id + graph.row_ptr[row + 1])) {
+    if (!std::is_sorted(graph.col_id + graph.row_ptr[row], graph.col_id + graph.row_ptr[row + 1])) {
       return false;
     }
     for (int position = graph.row_ptr[row]; position < graph.row_ptr[row + 1]; ++position) {
@@ -32,27 +35,20 @@ bool IsValidUndirectedGraph(const Matrix& graph)
   return true;
 }
 
-bool TestRMAT()
+TEST(MatrixGenerator, ReproducibleUndirectedRmat)
 {
   auto first = spcraft::GenRMAT<double>(6, 8, 42);
   auto second = spcraft::GenRMAT<double>(6, 8, 42);
 
-  if (first.m != 64 || first.n != 64 || first.nnz == 0 || !IsValidUndirectedGraph(first)) {
-    std::cerr << "R-MAT generated an invalid CSR graph\n";
-    return false;
-  }
-  if (first.nnz != second.nnz ||
-      !std::equal(first.row_ptr, first.row_ptr + first.m + 1, second.row_ptr) ||
-      !std::equal(first.col_id, first.col_id + first.nnz, second.col_id)) {
-    std::cerr << "R-MAT is not reproducible for a fixed seed\n";
-    return false;
-  }
-  return true;
+  EXPECT_EQ(first.m, 64);
+  EXPECT_EQ(first.n, 64);
+  EXPECT_GT(first.nnz, 0);
+  EXPECT_TRUE(IsValidUndirectedGraph(first));
+  ASSERT_EQ(first.nnz, second.nnz);
+  const auto first_rows_end = first.row_ptr + first.m + 1;
+  const auto first_columns_end = first.col_id + first.nnz;
+  EXPECT_TRUE(std::equal(first.row_ptr, first_rows_end, second.row_ptr));
+  EXPECT_TRUE(std::equal(first.col_id, first_columns_end, second.col_id));
 }
-
 }  // namespace
-
-int main()
-{
-  return TestRMAT() ? 0 : 1;
-}
+}  // namespace spcraft::tests

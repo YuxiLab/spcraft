@@ -1,0 +1,90 @@
+{
+  "version": 2,
+  "name": "SpMV development",
+  "profiles": [
+    {
+      "kind": "local",
+      "id": "local",
+      "parents": [
+        "local"
+      ],
+      "project_dir": "/home/yuxihong/workspace/code/sparse_computation/spcraft"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "dataset",
+      "label": "Datasets"
+    },
+    {
+      "id": "threads",
+      "label": "Threads"
+    },
+    {
+      "id": "method",
+      "label": "Methods / variants"
+    }
+  ],
+  "allocations": [
+    {
+      "server": "local",
+      "profile": {
+        "kind": "local",
+        "id": "local",
+        "parents": [
+          "local"
+        ],
+        "project_dir": "/home/yuxihong/workspace/code/sparse_computation/spcraft"
+      },
+      "slurm": null,
+      "run_ids": [
+        1
+      ],
+      "id": "local"
+    }
+  ],
+  "runs": [
+    {
+      "id": 1,
+      "server": "local",
+      "parameters": {
+        "dataset": "/home/yuxihong/workspace/code/sparse_computation/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "threads": 4,
+        "method": "openmp-double"
+      },
+      "choices": {
+        "dataset": "pdb1HYS",
+        "threads": "4",
+        "method": "openmp-double"
+      },
+      "argv": [
+        "/home/yuxihong/workspace/code/sparse_computation/spcraft/build/overseer-options/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/sparse_computation/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/sparse_computation/spcraft/results/overseer/20261012-235842-424298/0001/result.json",
+        "--precision",
+        "double"
+      ],
+      "launcher": [],
+      "cwd": "/home/yuxihong/workspace/code/sparse_computation/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "folder": "/home/yuxihong/workspace/code/sparse_computation/spcraft/results/overseer/20261012-235842-424298/0001",
+      "required_cpus": 4
+    }
+  ],
+  "total": 1,
+  "stop_on_failure": false
+}

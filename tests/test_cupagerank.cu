@@ -61,9 +61,8 @@ int CompareBackends(const char* label, Index vertices,
 
   DeviceMatrix device_op = DeviceMatrix::FromHost(op);
   Value* device_values = nullptr;
-  if (!CheckCuda(
-          cudaMalloc(&device_values, static_cast<std::size_t>(vertices) * sizeof(Value)),
-          "cudaMalloc(rank)")) {
+  if (!CheckCuda(cudaMalloc(&device_values, static_cast<std::size_t>(vertices) * sizeof(Value)),
+                 "cudaMalloc(rank)")) {
     return 1;
   }
   Vector device_rank(device_values, vertices);
@@ -74,10 +73,10 @@ int CompareBackends(const char* label, Index vertices,
   if (!CheckCuda(status, "PageRankCuda")) ++failures;
 
   std::vector<Value> downloaded(static_cast<std::size_t>(vertices), 0.0);
-  if (!CheckCuda(cudaMemcpy(downloaded.data(), device_values,
-                            static_cast<std::size_t>(vertices) * sizeof(Value),
-                            cudaMemcpyDeviceToHost),
-                 "cudaMemcpy(rank)")) {
+  if (!CheckCuda(
+          cudaMemcpy(downloaded.data(), device_values,
+                     static_cast<std::size_t>(vertices) * sizeof(Value), cudaMemcpyDeviceToHost),
+          "cudaMemcpy(rank)")) {
     ++failures;
   }
   cudaFree(device_values);
@@ -126,8 +125,7 @@ int main()
   failures += CompareBackends("3-cycle", 3, {{0, 1}, {1, 2}, {2, 0}}, options);
   failures += CompareBackends(
       "asymmetric", 6,
-      {{0, 1}, {0, 2}, {1, 2}, {2, 0}, {3, 0}, {3, 1}, {3, 4}, {4, 5}, {5, 4}, {5, 0}},
-      options);
+      {{0, 1}, {0, 2}, {1, 2}, {2, 0}, {3, 0}, {3, 1}, {3, 4}, {4, 5}, {5, 4}, {5, 0}}, options);
   failures += CompareBackends("dangling sink", 3, {{0, 2}, {1, 2}}, options);
 
   // More vertices than one grid of blocks covers, so the grid-stride loops and

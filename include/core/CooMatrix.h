@@ -18,12 +18,12 @@
 
 #include <fast_matrix_market/fast_matrix_market.hpp>
 #include "core/CscMatrix.h"
-#include "utils/omp/omp_wrapper.h"
 #include "core/CsrMatrix.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
-template <class IT, class NT>
+SP_VEC_TEMP
 struct TupleEntry {
   IT row;
   IT col;
@@ -36,7 +36,7 @@ struct TupleEntry {
  * SpGEMM returns entries sorted by column, then row, retaining structural zeros.
  * malloc/free own the storage; explicit construction starts std::tuple lifetimes.
  */
-template <class IT, class NT, class OT = IT>
+SP_MAT_TEMP_DEFAULT
 class CooMatrix
 {
  public:
@@ -71,13 +71,13 @@ class CooMatrix
    *             member functions
    *************************************/
   void Allocate(OT count, IT rows, IT columns);
-  [[nodiscard]] CooMatrix Clone() const;
+  SPND CooMatrix Clone() const;
   void Reset() noexcept;
-  [[nodiscard]] CscMatrix<IT, NT, OT> ToCsc() const;
-  [[nodiscard]] CsrMatrix<IT, NT, OT> ToCsr() const;
+  SPND SPCSC ToCsc() const;
+  SPND SPCSR ToCsr() const;
 
  private:
-  [[nodiscard]] static Entry* SafeAllocate(OT count, IT rows, IT columns);
+  SPND static Entry* SafeAllocate(OT count, IT rows, IT columns);
   static void SafeDelete(bool owned, Entry* entries) noexcept;
 };
 }  // namespace spcraft

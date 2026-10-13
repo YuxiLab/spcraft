@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "name": "SpMV development",
+  "profiles": [
+    {
+      "kind": "local",
+      "id": "local",
+      "parents": [
+        "local"
+      ],
+      "project_dir": "/home/yuxihong/workspace/code/spcraft"
+    }
+  ],
+  "runs": [
+    {
+      "id": 1,
+      "server": "local",
+      "dataset": "gupta3",
+      "threads": 4,
+      "method": "openmp-float",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/gupta3/gupta3.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-230305-35123541315430/0001/result.json",
+        "--precision",
+        "float"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-230305-35123541315430/0001"
+    },
+    {
+      "id": 2,
+      "server": "local",
+      "dataset": "gupta3",
+      "threads": 4,
+      "method": "openmp-double",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/gupta3/gupta3.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-230305-35123541315430/0002/result.json",
+        "--precision",
+        "double"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-230305-35123541315430/0002"
+    },
+    {
+      "id": 3,
+      "server": "local",
+      "dataset": "pdb1HYS",
+      "threads": 4,
+      "method": "openmp-float",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-230305-35123541315430/0003/result.json",
+        "--precision",
+        "float"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-230305-35123541315430/0003"
+    },
+    {
+      "id": 4,
+      "server": "local",
+      "dataset": "pdb1HYS",
+      "threads": 4,
+      "method": "openmp-double",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-230305-35123541315430/0004/result.json",
+        "--precision",
+        "double"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-230305-35123541315430/0004"
+    }
+  ],
+  "total": 4,
+  "stop_on_failure": false
+}

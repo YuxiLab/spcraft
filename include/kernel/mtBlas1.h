@@ -2,6 +2,7 @@
 #include <stdexcept>
 
 #include "utils/utils.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {

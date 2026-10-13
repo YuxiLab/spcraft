@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "core/CsrMatrix.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -53,8 +54,8 @@ struct PageRankResult {
  * @param adjacency Square CSR adjacency matrix with non-negative values.
  * @return P^T in CSR, with at most adjacency.nnz entries.
  */
-template <class IT, class NT, class OT>
-[[nodiscard]] CsrMatrix<IT, NT, OT> pagerank_operator(const CsrMatrix<IT, NT, OT>& adjacency)
+SP_MAT_TEMP
+SPND SPCSR pagerank_operator(const SPCSR& adjacency)
 {
   static_assert(std::is_floating_point_v<NT>, "PageRank requires a floating-point value type");
   static_assert(std::is_integral_v<IT>, "PageRank index type must be integral");
@@ -70,7 +71,7 @@ template <class IT, class NT, class OT>
   }
 
   const IT n = adjacency.m;
-  CsrMatrix<IT, NT, OT> result;
+  SPCSR result;
   if (n == IT{0}) {
     result.Allocate(OT{0}, n, n);
     return result;
@@ -82,8 +83,7 @@ template <class IT, class NT, class OT>
   OMP_PARALLEL_FOR(schedule(static) default(none) shared(adjacency, row_sum, n))
   for (IT row = 0; row < n; ++row) {
     NT sum = NT{0};
-    for (OT position = adjacency.row_ptr[row]; position < adjacency.row_ptr[row + 1];
-         ++position) {
+    for (OT position = adjacency.row_ptr[row]; position < adjacency.row_ptr[row + 1]; ++position) {
       sum += adjacency.val[position];
     }
     row_sum[static_cast<std::size_t>(row)] = sum;
@@ -94,8 +94,7 @@ template <class IT, class NT, class OT>
   OT kept = OT{0};
   for (IT row = 0; row < n; ++row) {
     if (row_sum[static_cast<std::size_t>(row)] <= NT{0}) continue;
-    for (OT position = adjacency.row_ptr[row]; position < adjacency.row_ptr[row + 1];
-         ++position) {
+    for (OT position = adjacency.row_ptr[row]; position < adjacency.row_ptr[row + 1]; ++position) {
       const IT column = adjacency.col_id[position];
       if (column < IT{0} || column >= n) {
         throw std::invalid_argument("PageRank adjacency column index is out of range");
@@ -117,8 +116,7 @@ template <class IT, class NT, class OT>
   for (IT row = 0; row < n; ++row) {
     const NT sum = row_sum[static_cast<std::size_t>(row)];
     if (sum <= NT{0}) continue;
-    for (OT position = adjacency.row_ptr[row]; position < adjacency.row_ptr[row + 1];
-         ++position) {
+    for (OT position = adjacency.row_ptr[row]; position < adjacency.row_ptr[row + 1]; ++position) {
       const IT column = adjacency.col_id[position];
       const OT destination = offsets[static_cast<std::size_t>(column)]++;
       result.col_id[destination] = row;
@@ -134,7 +132,7 @@ namespace detail
 
 //! Reject option sets no backend can act on. Shared so both backends agree.
 template <class NT>
-[[nodiscard]] constexpr bool PageRankOptionsAreValid(const PageRankOptions<NT>& options)
+SPND constexpr bool PageRankOptionsAreValid(const PageRankOptions<NT>& options)
 {
   return options.damping >= NT{0} && options.damping < NT{1} && options.tolerance >= NT{0} &&
          options.max_iterations >= 0;

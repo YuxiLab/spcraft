@@ -12,6 +12,7 @@
 #include "linear_algebra/PowerIteration.h"
 #include "kernel/mtBlas1.h"
 #include "semiring/SemiRing.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -55,13 +56,12 @@ namespace spcraft
  * @throws std::invalid_argument on a non-square matrix, a size mismatch, or
  *         options outside their valid ranges.
  */
-template <class IT, class NT, class OT>
+SP_MAT_TEMP
 PowerIterationResult<NT> power_iteration_openmp(
-    const CsrMatrix<IT, NT, OT>& A, DenseVector<IT, NT>& x,
+    const SPCSR& A, SPDVEC& x,
     const PowerIterationOptions<NT>& options = PowerIterationOptions<NT>{})
 {
-  static_assert(std::is_floating_point_v<NT>,
-                "Power iteration requires a floating-point type");
+  static_assert(std::is_floating_point_v<NT>, "Power iteration requires a floating-point type");
 
   if (A.m != A.n) {
     throw std::invalid_argument("Power iteration requires a square matrix");
@@ -87,7 +87,7 @@ PowerIterationResult<NT> power_iteration_openmp(
     detail::Scale(NT{1} / norm, x);
   }
 
-  DenseVector<IT, NT> y(n);
+  SPDVEC y(n);
 
   for (int iteration = 1; iteration <= options.max_iterations; ++iteration) {
     OmpSpMV<PlusTimesRing<NT>>(A, x, y);

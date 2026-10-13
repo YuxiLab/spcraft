@@ -50,8 +50,28 @@ available to the other benchmark drivers.
 build/bin/bench_mkl_spmv --matrix A.mtx --iterations 100 --max-time 2 --threads 1,4,8
 ```
 
-The `benchmark_options` CTest checks the shared groups. With MKL enabled,
-`mkl_options` also checks combined parsing, help, and backend constraints.
+The `benchmark_options.*` GoogleTest cases check the shared groups. With MKL
+enabled, `mkl_options.*` also checks combined parsing, help, and backend constraints.
+
+OpenMP and MKL performance drivers use Google Benchmark for warmup and timing.
+Each configuration uses one driver thread and the requested kernel team size,
+records wall and process CPU time, and retains SpCraft's text and JSON reports.
+`--iterations` caps the measured invocations; `--max-time` sets the estimated
+wall-time budget after warmup. Each invocation is one Google Benchmark repetition,
+so JSON reports continue to contain individual timing samples.
+
+Shared-memory correctness tests use GoogleTest, with each case discovered by
+CTest. The shared entry point calls `TestRun`; GoogleTest accepts its standard
+flags when a test binary is run directly:
+
+```bash
+ctest --test-dir build --output-on-failure
+build/bin/test_csr_matrix --gtest_filter='*Clone*'
+```
+
+Google Benchmark and GoogleTest are linked only to their respective benchmark
+and test targets. Disable `SPCRAFT_BUILD_BENCHMARKS` and `BUILD_TESTING` when
+configuring library-only consumers.
 
 ## Private lecture notes
 

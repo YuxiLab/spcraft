@@ -1,0 +1,57 @@
+{
+  "schema_version": 3,
+  "title": "SPCraft OpenMP SpMV",
+  "info": {
+    "kernel": "SpMV (PlusTimesRing, CSR)",
+    "reference": "Eigen sparse product, every row verified",
+    "index": "int32",
+    "numeric": "float",
+    "offset": "int32",
+    "threads": "[4]",
+    "max iterations": "5",
+    "time budget": "0.05s",
+    "measurement framework": "Google Benchmark"
+  },
+  "runs": [
+    {
+      "kernel": "SpMV",
+      "backend": "SPCraft-OpenMP",
+      "dataset": "pdb1HYS.mtx",
+      "precision": "FP32",
+      "index_type": "int32",
+      "offset_type": "int32",
+      "threads": 4,
+      "rows": 36417,
+      "columns": 36417,
+      "nonzeros": 4344765,
+      "flops_per_iteration": 8689530,
+      "bytes_per_iteration": 52428520,
+      "verification_error": 0.00018310546875,
+      "iterations": 5,
+      "median_seconds": 0.002201502997195348,
+      "min_seconds": 0.0021218260008026846,
+      "mean_seconds": 0.0021713504000217656,
+      "stddev_seconds": 4.3479241760029336e-05,
+      "gflops": 3.9470897886899143,
+      "gbytes_per_second": 23.814875594896957,
+      "seconds": [0.0021218260008026846, 0.002202607996878214, 0.0022051080013625324, 0.0021257070038700476, 0.002201502997195348],
+      "profiles": [
+      {"scope": "run", "attributes": {}, "metrics": [
+          {"name": "wall_time", "unit": "seconds", "headline": "median", "samples": [0.0021218260008026846, 0.002202607996878214, 0.0022051080013625324, 0.0021257070038700476, 0.002201502997195348]}
+        ]},
+      {"scope": "rank:0", "attributes": {"role": "benchmark process", "memory_accounting": "CSR + input vector + output vector; backend workspace excluded"}, "metrics": [
+          {"name": "csr_matrix_storage", "unit": "bytes", "headline": "max", "samples": [34903792]},
+          {"name": "input_vector_storage", "unit": "bytes", "headline": "max", "samples": [145668]},
+          {"name": "output_vector_storage", "unit": "bytes", "headline": "max", "samples": [145668]},
+          {"name": "algorithm_storage", "unit": "bytes", "headline": "max", "samples": [35195128]}
+        ]},
+      {"scope": "rank:0/cpu", "attributes": {"runtime": "OpenMP", "requested_threads": "4"}, "metrics": [
+          {"name": "process_cpu_time", "unit": "seconds", "headline": "mean", "samples": [0.008488474999999995, 0.008814896999999988, 0.008823159999999997, 0.00850532599999998, 0.008807785000000012]},
+          {"name": "effective_cpu_cores", "unit": "cores", "headline": "mean", "samples": [4.001163791856398]},
+          {"name": "cpu_occupancy", "unit": "ratio", "headline": "mean", "samples": [1.0002909479640996]}
+        ]}
+    ],
+      "stages": []
+    }
+  ]
+}

@@ -10,7 +10,6 @@
 #include <utility>
 #include <iostream>
 
-#include <fmt/format.h>
 #include "utils/MatrixMacros.h"
 #include "core/CsrMatrix.h"
 #include "core/AllocationGuard.h"

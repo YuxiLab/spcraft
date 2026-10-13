@@ -3,6 +3,7 @@
 #include <tuple>
 
 #include "core/CscMatrix.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -15,7 +16,7 @@ namespace spcraft
  * may be unsorted or repeated. A shaped empty matrix has nzc == nnz == 0.
  * Like the other host containers, buffers store implicit-lifetime value types.
  */
-template <class IT, class NT, class OT = IT>
+SP_MAT_TEMP_DEFAULT
 class DcscMatrix
 {
  public:
@@ -26,7 +27,6 @@ class DcscMatrix
   IT* col_id = nullptr;   //!< logical column IDs, size nzc
   IT* row_id = nullptr;   //!< row IDs, size nnz
   NT* val = nullptr;      //!< values, size nnz
-
   OT nnz = 0;
   IT m = 0;
   IT n = 0;
@@ -76,16 +76,20 @@ class DcscMatrix
 
   //! Allocate zeroed replacement storage, preserving this object on failure.
   void Allocate(OT nonzeros, IT nRows, IT nCols, IT storedColumns);
-  [[nodiscard]] DcscMatrix Clone() const;
+
+  SPND DcscMatrix Clone() const;
+
   //! Release ownership without freeing. Use on moved-from objects or views.
   void Reset();
+
   //! Copy a well-formed CSC matrix, dropping empty column headers only.
-  [[nodiscard]] static DcscMatrix FromCsc(const CscMatrix<IT, NT, OT>& source);
+  SPND static DcscMatrix FromCsc(const SPCSC& source);
+
   //! Copy to CSC; this explicitly allocates n+1 offsets.
-  [[nodiscard]] CscMatrix<IT, NT, OT> ToCsc() const;
+  SPND SPCSC ToCsc() const;
 
  private:
-  [[nodiscard]] static std::tuple<OT*, IT*, IT*, NT*> SafeAllocate(IT nzc, OT nnz);
+  SPND static std::tuple<OT*, IT*, IT*, NT*> SafeAllocate(IT nzc, OT nnz);
   static void SafeDelete(bool owned, OT* pointers, IT* columns, IT* rows, NT* values);
 };
 

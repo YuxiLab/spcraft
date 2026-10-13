@@ -8,6 +8,7 @@
 #include <tuple>
 
 #include "core/CsrMatrix.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -23,7 +24,7 @@ namespace spcraft
  * Allocation and transfer failures throw (a container constructor has no error
  * code to return); the destructor swallows them.
  */
-template <class IT, class NT, class OT = IT>
+SP_MAT_TEMP_DEFAULT
 class cuCsrMatrix
 {
  public:
@@ -45,7 +46,7 @@ class cuCsrMatrix
   cuCsrMatrix() = default;
   //! Wrap externally managed device buffers as a non-owning view.
   cuCsrMatrix(OT* row_ptr_, IT* col_id_, NT* val_, OT nnz_, IT m_, IT n_);
-  cuCsrMatrix(const CsrMatrix<IT, NT, OT>& host);  //!< Upload a host CSR matrix into device memory.
+  cuCsrMatrix(const SPCSR& host);  //!< Upload a host CSR matrix into device memory.
   //! Disable copy construction.
   cuCsrMatrix(const cuCsrMatrix<IT, NT, OT>& rhs) = delete;
   //! Disable copy assignment.
@@ -68,16 +69,16 @@ class cuCsrMatrix
   void Reset();
 
   //! Download into a newly allocated host CSR matrix.
-  [[nodiscard]] CsrMatrix<IT, NT, OT> ToHost() const;
+  SPND SPCSR ToHost() const;
   //! Non-owning CsrMatrix over the same device buffers, for kernel entry points.
-  [[nodiscard]] CsrMatrix<IT, NT, OT> View() const;
+  SPND SPCSR View() const;
 
  private:
   /***************************
    * static function
    * *************************/
   //! Upload a host CSR matrix into freshly allocated device memory.
-  [[nodiscard]] static std::tuple<OT*, IT*, NT*> SafeAllocate(IT m, OT nnz);
+  SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(IT m, OT nnz);
   static void SafeDelete(bool memowned, OT* row_ptr, IT* col_id, NT* val);
 };
 

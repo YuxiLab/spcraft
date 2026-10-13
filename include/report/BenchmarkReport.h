@@ -20,6 +20,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -34,13 +35,9 @@ struct TimingStats {
   double mean = 0.0;
   double stddev = 0.0;
 
-  [[nodiscard]] double CoefficientOfVariation() const
-  {
-    return mean > 0.0 ? 100.0 * stddev / mean : 0.0;
-  }
+  SPND double CoefficientOfVariation() const { return mean > 0.0 ? 100.0 * stddev / mean : 0.0; }
 
-  [[nodiscard]] static TimingStats From(const std::vector<double>& samples,
-                                        bool allow_negative = false)
+  SPND static TimingStats From(const std::vector<double>& samples, bool allow_negative = false)
   {
     if (samples.empty()) {
       throw std::invalid_argument("TimingStats requires at least one sample");
@@ -128,12 +125,12 @@ inline constexpr std::string_view kWallTimeImbalance = "wall_time_imbalance";
 inline constexpr std::string_view kCpuTimeImbalance = "cpu_time_imbalance";
 inline constexpr std::string_view kNonzeroImbalance = "nonzero_imbalance";
 
-[[nodiscard]] inline SecondsSeries WallTime(std::vector<double> samples)
+SPND inline SecondsSeries WallTime(std::vector<double> samples)
 {
   return {std::string(kWallTime), MetricSummary::Median, std::move(samples)};
 }
 
-[[nodiscard]] inline SecondsSeries ProcessCpuTime(std::vector<double> samples)
+SPND inline SecondsSeries ProcessCpuTime(std::vector<double> samples)
 {
   // Linux may charge live worker threads to the process clock in batches.
   // The total (and therefore mean per iteration) remains correct, while a
@@ -141,8 +138,8 @@ inline constexpr std::string_view kNonzeroImbalance = "nonzero_imbalance";
   return {std::string(kProcessCpuTime), MetricSummary::Mean, std::move(samples)};
 }
 
-[[nodiscard]] inline GaugeSeries EffectiveCpuCores(const std::vector<double>& wall_seconds,
-                                                   const std::vector<double>& cpu_seconds)
+SPND inline GaugeSeries EffectiveCpuCores(const std::vector<double>& wall_seconds,
+                                          const std::vector<double>& cpu_seconds)
 {
   if (wall_seconds.size() != cpu_seconds.size()) {
     throw std::invalid_argument("wall and process CPU sample counts must match");
@@ -155,8 +152,8 @@ inline constexpr std::string_view kNonzeroImbalance = "nonzero_imbalance";
           {wall > 0.0 ? cpu / wall : 0.0}};
 }
 
-[[nodiscard]] inline GaugeSeries CpuOccupancy(const std::vector<double>& wall_seconds,
-                                              const std::vector<double>& cpu_seconds, int threads)
+SPND inline GaugeSeries CpuOccupancy(const std::vector<double>& wall_seconds,
+                                     const std::vector<double>& cpu_seconds, int threads)
 {
   if (threads < 1) throw std::invalid_argument("thread count must be positive");
   GaugeSeries cores = EffectiveCpuCores(wall_seconds, cpu_seconds);
@@ -251,7 +248,7 @@ struct VerificationResult {
 namespace detail
 {
 
-[[nodiscard]] inline const char* SummaryName(MetricSummary summary)
+SPND inline const char* SummaryName(MetricSummary summary)
 {
   switch (summary) {
     case MetricSummary::Minimum:
@@ -271,8 +268,8 @@ namespace detail
 }
 
 template <class T>
-[[nodiscard]] inline double Headline(const std::vector<T>& samples, MetricSummary summary,
-                                     bool allow_negative = false)
+SPND inline double Headline(const std::vector<T>& samples, MetricSummary summary,
+                            bool allow_negative = false)
 {
   if (samples.empty()) {
     throw std::invalid_argument("metric series requires at least one sample");
@@ -298,7 +295,7 @@ template <class T>
   throw std::logic_error("unknown metric summary");
 }
 
-[[nodiscard]] inline std::string ScopeKey(const ProfileScope& scope)
+SPND inline std::string ScopeKey(const ProfileScope& scope)
 {
   return std::visit(
       [](const auto& value) -> std::string {
@@ -376,7 +373,7 @@ inline void ValidateMetric(const MetricSeries& metric)
       metric);
 }
 
-[[nodiscard]] inline std::string EscapeJson(std::string_view text)
+SPND inline std::string EscapeJson(std::string_view text)
 {
   std::string escaped;
   escaped.reserve(text.size());
@@ -417,13 +414,13 @@ struct BenchmarkRun {
   std::vector<ResourceProfile> profiles;
   std::vector<AlgorithmStage> stages;
 
-  [[nodiscard]] std::string TypeTag() const
+  SPND std::string TypeTag() const
   {
     if (info.index_type.size() < 4 || info.offset_type.size() < 4) return "-";
     return "i" + info.index_type.substr(3) + "/o" + info.offset_type.substr(3);
   }
 
-  [[nodiscard]] const SecondsSeries& WallTime() const
+  SPND const SecondsSeries& WallTime() const
   {
     for (const ResourceProfile& profile : profiles) {
       if (!std::holds_alternative<RunScope>(profile.scope)) continue;
@@ -437,15 +434,15 @@ struct BenchmarkRun {
     throw std::invalid_argument("benchmark run requires run-scoped wall_time samples");
   }
 
-  [[nodiscard]] TimingStats Stats() const { return TimingStats::From(WallTime().samples); }
+  SPND TimingStats Stats() const { return TimingStats::From(WallTime().samples); }
 
-  [[nodiscard]] double Gflops() const
+  SPND double Gflops() const
   {
     const double median = Stats().median;
     return median > 0.0 ? workload.flops_per_iteration / median * 1.0e-9 : 0.0;
   }
 
-  [[nodiscard]] double GbytesPerSecond() const
+  SPND double GbytesPerSecond() const
   {
     const double median = Stats().median;
     return median > 0.0 ? workload.bytes_per_iteration / median * 1.0e-9 : 0.0;
@@ -523,9 +520,9 @@ class BenchmarkReport
     runs_.push_back(std::move(run));
   }
 
-  [[nodiscard]] const ReportInfo& info() const { return info_; }
+  SPND const ReportInfo& info() const { return info_; }
 
-  [[nodiscard]] const std::vector<BenchmarkRun>& runs() const { return runs_; }
+  SPND const std::vector<BenchmarkRun>& runs() const { return runs_; }
 
   void Validate() const
   {
@@ -551,7 +548,7 @@ struct RenderedMetric {
   double maximum;
 };
 
-[[nodiscard]] inline RenderedMetric RenderMetric(const MetricSeries& metric)
+SPND inline RenderedMetric RenderMetric(const MetricSeries& metric)
 {
   return std::visit(
       [](const auto& series) {
@@ -588,7 +585,7 @@ struct RenderedMetric {
       metric);
 }
 
-[[nodiscard]] inline std::string Truncate(std::string_view text, std::size_t limit)
+SPND inline std::string Truncate(std::string_view text, std::size_t limit)
 {
   return text.size() <= limit ? std::string(text) : std::string(text.substr(0, limit - 1)) + "~";
 }
@@ -598,7 +595,7 @@ struct RenderedMetric {
 class TextReportRenderer
 {
  public:
-  [[nodiscard]] std::string RenderSummary(const BenchmarkReport& report) const
+  SPND std::string RenderSummary(const BenchmarkReport& report) const
   {
     report.Validate();
     constexpr int kWidth = 145;
@@ -634,7 +631,7 @@ class TextReportRenderer
     return output;
   }
 
-  [[nodiscard]] std::string RenderDetails(const BenchmarkReport& report) const
+  SPND std::string RenderDetails(const BenchmarkReport& report) const
   {
     report.Validate();
     std::string output = "PROFILE DETAILS\n";
@@ -657,7 +654,7 @@ class TextReportRenderer
     return output;
   }
 
-  [[nodiscard]] std::string Render(const BenchmarkReport& report) const
+  SPND std::string Render(const BenchmarkReport& report) const
   {
     return RenderSummary(report) + "\n" + RenderDetails(report);
   }
@@ -691,7 +688,7 @@ class TextReportRenderer
 class JsonReportRenderer
 {
  public:
-  [[nodiscard]] std::string Render(const BenchmarkReport& report) const
+  SPND std::string Render(const BenchmarkReport& report) const
   {
     report.Validate();
     std::string output =
@@ -825,7 +822,7 @@ struct HostTimingSamples {
   std::vector<double> process_cpu_seconds;
 };
 
-[[nodiscard]] inline double ProcessCpuSeconds()
+SPND inline double ProcessCpuSeconds()
 {
   rusage usage{};
   if (getrusage(RUSAGE_SELF, &usage) != 0) {
@@ -838,7 +835,7 @@ struct HostTimingSamples {
   return user + system;
 }
 
-[[nodiscard]] inline double ThreadCpuSeconds()
+SPND inline double ThreadCpuSeconds()
 {
   timespec value{};
   if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &value) != 0) {
@@ -849,7 +846,7 @@ struct HostTimingSamples {
 
 /** @brief Collect paired wall and process CPU samples for each invocation. */
 template <class Body>
-[[nodiscard]] HostTimingSamples TimeHostIterations(Body&& body, int iterations)
+SPND HostTimingSamples TimeHostIterations(Body&& body, int iterations)
 {
   if (iterations < 1) {
     throw std::invalid_argument("TimeHostIterations requires at least one iteration");
@@ -876,7 +873,7 @@ template <class Body>
  * GPU bodies must synchronize before returning so that asynchronous work is included.
  */
 template <class Body>
-[[nodiscard]] std::vector<double> TimeIterations(Body&& body, int iterations)
+SPND std::vector<double> TimeIterations(Body&& body, int iterations)
 {
   if (iterations < 1) {
     throw std::invalid_argument("TimeIterations requires at least one iteration");

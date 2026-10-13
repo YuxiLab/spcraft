@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -9,6 +11,8 @@
 
 #include "SpCraft.h"
 
+namespace spcraft::tests
+{
 namespace
 {
 
@@ -85,186 +89,173 @@ std::vector<Value> ReferencePageRank(Index vertices,
 
 }  // namespace
 
-int main()
+TEST(Pagerank, UniformThreeCycle)
 {
-  int failures = 0;
-
   // ---------------------------------------------------------------------
   // A three-cycle: every vertex is symmetric, so every rank is exactly 1/3.
   // ---------------------------------------------------------------------
-  {
-    const Matrix adjacency = FromEdges(3, {{0, 1}, {1, 2}, {2, 0}});
-    const Matrix op = spcraft::pagerank_operator(adjacency);
 
-    Vector rank(3);
-    const auto result = spcraft::pagerank_openmp(op, rank);
-    if (!result.converged) {
-      std::cerr << "PageRank on a 3-cycle failed to converge\n";
-      ++failures;
-    }
-    for (Index vertex = 0; vertex < 3; ++vertex) {
-      if (!Close(rank.val[vertex], 1.0 / 3.0)) {
-        std::cerr << "PageRank on a 3-cycle: rank[" << vertex << "] = " << rank.val[vertex]
-                  << ", expected 1/3\n";
-        ++failures;
-      }
+  const Matrix adjacency = FromEdges(3, {{0, 1}, {1, 2}, {2, 0}});
+  const Matrix op = spcraft::pagerank_operator(adjacency);
+
+  Vector rank(3);
+  const auto result = spcraft::pagerank_openmp(op, rank);
+  if (!result.converged) {
+    ADD_FAILURE() << "PageRank on a 3-cycle failed to converge\n";
+  }
+  for (Index vertex = 0; vertex < 3; ++vertex) {
+    if (!Close(rank.val[vertex], 1.0 / 3.0)) {
+      ADD_FAILURE() << "PageRank on a 3-cycle: rank[" << vertex << "] = " << rank.val[vertex]
+                    << ", expected 1/3\n";
     }
   }
+}
 
+TEST(Pagerank, DanglingVertexClosedForm)
+{
   // ---------------------------------------------------------------------
   // Two vertices pointing at a third, which is a sink (dangling). Checked
   // against a closed form: with rank summing to one and 2 -> nothing,
   // r0 = r1 = (1-d)/3 + d/3 * r2 and r2 = (1-d)/3 + d*(r0+r1) + d/3*r2.
   // ---------------------------------------------------------------------
-  {
-    const Value damping = 0.85;
-    const Matrix adjacency = FromEdges(3, {{0, 2}, {1, 2}});
-    const Matrix op = spcraft::pagerank_operator(adjacency);
-    if (op.nnz != 2) {
-      std::cerr << "PageRank operator kept " << op.nnz << " entries, expected 2\n";
-      ++failures;
-    }
 
-    Vector rank(3);
-    spcraft::PageRankOptions<Value> options;
-    options.damping = damping;
-    options.tolerance = 1e-14;
-    options.max_iterations = 500;
-    const auto result = spcraft::pagerank_openmp(op, rank, options);
-    if (!result.converged) {
-      std::cerr << "PageRank with a dangling vertex failed to converge\n";
-      ++failures;
-    }
-
-    // Solve the fixed point directly. r0 = r1 = a, r2 = 1 - 2a, and
-    // a = (1-d)/3 + (d/3)(1 - 2a)  =>  a (1 + 2d/3) = (1-d)/3 + d/3.
-    const Value a = ((1.0 - damping) / 3.0 + damping / 3.0) / (1.0 + 2.0 * damping / 3.0);
-    const std::array<Value, 3> expected{a, a, 1.0 - 2.0 * a};
-    for (Index vertex = 0; vertex < 3; ++vertex) {
-      if (!Close(rank.val[vertex], expected[static_cast<std::size_t>(vertex)], 1e-10)) {
-        std::cerr << "PageRank with a dangling vertex: rank[" << vertex
-                  << "] = " << rank.val[vertex] << ", expected "
-                  << expected[static_cast<std::size_t>(vertex)] << "\n";
-        ++failures;
-      }
-    }
+  const Value damping = 0.85;
+  const Matrix adjacency = FromEdges(3, {{0, 2}, {1, 2}});
+  const Matrix op = spcraft::pagerank_operator(adjacency);
+  if (op.nnz != 2) {
+    ADD_FAILURE() << "PageRank operator kept " << op.nnz << " entries, expected 2\n";
   }
 
+  Vector rank(3);
+  spcraft::PageRankOptions<Value> options;
+  options.damping = damping;
+  options.tolerance = 1e-14;
+  options.max_iterations = 500;
+  const auto result = spcraft::pagerank_openmp(op, rank, options);
+  if (!result.converged) {
+    ADD_FAILURE() << "PageRank with a dangling vertex failed to converge\n";
+  }
+
+  // Solve the fixed point directly. r0 = r1 = a, r2 = 1 - 2a, and
+  // a = (1-d)/3 + (d/3)(1 - 2a)  =>  a (1 + 2d/3) = (1-d)/3 + d/3.
+  const Value a = ((1.0 - damping) / 3.0 + damping / 3.0) / (1.0 + 2.0 * damping / 3.0);
+  const std::array<Value, 3> expected{a, a, 1.0 - 2.0 * a};
+  for (Index vertex = 0; vertex < 3; ++vertex) {
+    if (!Close(rank.val[vertex], expected[static_cast<std::size_t>(vertex)], 1e-10)) {
+      ADD_FAILURE() << "PageRank with a dangling vertex: rank[" << vertex
+                    << "] = " << rank.val[vertex] << ", expected "
+                    << expected[static_cast<std::size_t>(vertex)] << "\n";
+    }
+  }
+}
+
+TEST(Pagerank, AsymmetricGraphReference)
+{
   // ---------------------------------------------------------------------
   // An asymmetric graph cross-checked against the reference iteration, and
   // the ranks must sum to one.
   // ---------------------------------------------------------------------
-  {
-    const Index vertices = 6;
-    const std::vector<std::pair<Index, Index>> edges{{0, 1}, {0, 2}, {1, 2}, {2, 0}, {3, 0},
-                                                     {3, 1}, {3, 4}, {4, 5}, {5, 4}, {5, 0}};
-    const Matrix adjacency = FromEdges(vertices, edges);
-    const Matrix op = spcraft::pagerank_operator(adjacency);
 
-    Vector rank(vertices);
-    spcraft::PageRankOptions<Value> options;
-    options.tolerance = 1e-15;
-    options.max_iterations = 200;
-    const auto result = spcraft::pagerank_openmp(op, rank, options);
+  const Index vertices = 6;
+  const std::vector<std::pair<Index, Index>> edges{{0, 1}, {0, 2}, {1, 2}, {2, 0}, {3, 0},
+                                                   {3, 1}, {3, 4}, {4, 5}, {5, 4}, {5, 0}};
+  const Matrix adjacency = FromEdges(vertices, edges);
+  const Matrix op = spcraft::pagerank_operator(adjacency);
 
-    const auto expected = ReferencePageRank(vertices, edges, options.damping, 200);
-    for (Index vertex = 0; vertex < vertices; ++vertex) {
-      if (!Close(rank.val[vertex], expected[static_cast<std::size_t>(vertex)], 1e-9)) {
-        std::cerr << "PageRank disagrees with the reference at vertex " << vertex << ": "
-                  << rank.val[vertex] << " vs " << expected[static_cast<std::size_t>(vertex)]
-                  << "\n";
-        ++failures;
-      }
-    }
+  Vector rank(vertices);
+  spcraft::PageRankOptions<Value> options;
+  options.tolerance = 1e-15;
+  options.max_iterations = 200;
+  const auto result = spcraft::pagerank_openmp(op, rank, options);
 
-    const Value mass = std::accumulate(rank.val, rank.val + vertices, 0.0);
-    if (!Close(mass, 1.0, 1e-12)) {
-      std::cerr << "PageRank ranks sum to " << mass << ", expected 1\n";
-      ++failures;
-    }
-    if (result.iterations > options.max_iterations) {
-      std::cerr << "PageRank reported more iterations than the cap\n";
-      ++failures;
+  const auto expected = ReferencePageRank(vertices, edges, options.damping, 200);
+  for (Index vertex = 0; vertex < vertices; ++vertex) {
+    if (!Close(rank.val[vertex], expected[static_cast<std::size_t>(vertex)], 1e-9)) {
+      ADD_FAILURE() << "PageRank disagrees with the reference at vertex " << vertex << ": "
+                    << rank.val[vertex] << " vs " << expected[static_cast<std::size_t>(vertex)]
+                    << "\n";
     }
   }
 
+  const Value mass = std::accumulate(rank.val, rank.val + vertices, 0.0);
+  if (!Close(mass, 1.0, 1e-12)) {
+    ADD_FAILURE() << "PageRank ranks sum to " << mass << ", expected 1\n";
+  }
+  if (result.iterations > options.max_iterations) {
+    ADD_FAILURE() << "PageRank reported more iterations than the cap\n";
+  }
+}
+
+TEST(Pagerank, GraphWithoutEdges)
+{
   // ---------------------------------------------------------------------
   // A graph with no edges at all: every vertex dangling, ranks stay uniform.
   // ---------------------------------------------------------------------
-  {
-    Matrix adjacency;
-    adjacency.Allocate(0, 4, 4);
-    const Matrix op = spcraft::pagerank_operator(adjacency);
-    if (op.nnz != 0) {
-      std::cerr << "PageRank operator on an edgeless graph kept entries\n";
-      ++failures;
-    }
 
-    Vector rank(4);
-    const auto result = spcraft::pagerank_openmp(op, rank);
-    if (!result.converged || result.iterations != 1) {
-      std::cerr << "PageRank on an edgeless graph should converge in one iteration, took "
-                << result.iterations << "\n";
-      ++failures;
-    }
-    for (Index vertex = 0; vertex < 4; ++vertex) {
-      if (!Close(rank.val[vertex], 0.25)) {
-        std::cerr << "PageRank on an edgeless graph: rank[" << vertex
-                  << "] = " << rank.val[vertex] << ", expected 0.25\n";
-        ++failures;
-      }
-    }
+  Matrix adjacency;
+  adjacency.Allocate(0, 4, 4);
+  std::fill(adjacency.row_ptr, adjacency.row_ptr + adjacency.m + 1, Offset{0});
+  const Matrix op = spcraft::pagerank_operator(adjacency);
+  if (op.nnz != 0) {
+    ADD_FAILURE() << "PageRank operator on an edgeless graph kept entries\n";
   }
 
+  Vector rank(4);
+  const auto result = spcraft::pagerank_openmp(op, rank);
+  if (!result.converged || result.iterations != 1) {
+    ADD_FAILURE() << "PageRank on an edgeless graph should converge in one iteration, took "
+                  << result.iterations << "\n";
+  }
+  for (Index vertex = 0; vertex < 4; ++vertex) {
+    if (!Close(rank.val[vertex], 0.25)) {
+      ADD_FAILURE() << "PageRank on an edgeless graph: rank[" << vertex
+                    << "] = " << rank.val[vertex] << ", expected 0.25\n";
+    }
+  }
+}
+
+TEST(Pagerank, RejectedInputs)
+{
   // ---------------------------------------------------------------------
   // Rejected inputs.
   // ---------------------------------------------------------------------
-  {
-    Matrix rectangular;
-    rectangular.Allocate(0, 2, 3);
-    bool threw = false;
-    try {
-      (void)spcraft::pagerank_operator(rectangular);
-    } catch (const std::invalid_argument&) {
-      threw = true;
-    }
-    if (!threw) {
-      std::cerr << "PageRank operator accepted a rectangular matrix\n";
-      ++failures;
-    }
 
-    const Matrix op = spcraft::pagerank_operator(FromEdges(3, {{0, 1}, {1, 2}, {2, 0}}));
-    Vector wrong_size(2);
-    threw = false;
-    try {
-      (void)spcraft::pagerank_openmp(op, wrong_size);
-    } catch (const std::invalid_argument&) {
-      threw = true;
-    }
-    if (!threw) {
-      std::cerr << "PageRank accepted a rank vector of the wrong size\n";
-      ++failures;
-    }
-
-    Vector rank(3);
-    spcraft::PageRankOptions<Value> options;
-    options.damping = 1.0;
-    threw = false;
-    try {
-      (void)spcraft::pagerank_openmp(op, rank, options);
-    } catch (const std::invalid_argument&) {
-      threw = true;
-    }
-    if (!threw) {
-      std::cerr << "PageRank accepted a damping factor of 1\n";
-      ++failures;
-    }
+  Matrix rectangular;
+  rectangular.Allocate(0, 2, 3);
+  bool threw = false;
+  try {
+    (void)spcraft::pagerank_operator(rectangular);
+  } catch (const std::invalid_argument&) {
+    threw = true;
+  }
+  if (!threw) {
+    ADD_FAILURE() << "PageRank operator accepted a rectangular matrix\n";
   }
 
-  if (failures != 0) {
-    std::cerr << failures << " PageRank check(s) failed\n";
-    return 1;
+  const Matrix op = spcraft::pagerank_operator(FromEdges(3, {{0, 1}, {1, 2}, {2, 0}}));
+  Vector wrong_size(2);
+  threw = false;
+  try {
+    (void)spcraft::pagerank_openmp(op, wrong_size);
+  } catch (const std::invalid_argument&) {
+    threw = true;
   }
-  std::cout << "PageRank OpenMP checks passed\n";
-  return 0;
+  if (!threw) {
+    ADD_FAILURE() << "PageRank accepted a rank vector of the wrong size\n";
+  }
+
+  Vector rank(3);
+  spcraft::PageRankOptions<Value> options;
+  options.damping = 1.0;
+  threw = false;
+  try {
+    (void)spcraft::pagerank_openmp(op, rank, options);
+  } catch (const std::invalid_argument&) {
+    threw = true;
+  }
+  if (!threw) {
+    ADD_FAILURE() << "PageRank accepted a damping factor of 1\n";
+  }
 }
+
+}  // namespace spcraft::tests

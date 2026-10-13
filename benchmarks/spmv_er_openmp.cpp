@@ -111,9 +111,8 @@ int main(int argc, char** argv)
       const double gflops = 2.0 * static_cast<double>(graph.nnz) / (milliseconds * 1.0e6);
       const double checksum = std::accumulate(result.val, result.val + result.n, 0.0);
       const double realized_degree = static_cast<double>(graph.nnz) / vertices;
-      std::cout << vertices << ',' << graph.nnz << ',' << realized_degree << ',' << threads
-                << ',' << milliseconds << ',' << gflops << ',' << max_error << ',' << checksum
-                << '\n';
+      std::cout << vertices << ',' << graph.nnz << ',' << realized_degree << ',' << threads << ','
+                << milliseconds << ',' << gflops << ',' << max_error << ',' << checksum << '\n';
     }
   } catch (const std::exception& error) {
     std::cerr << "error: " << error.what() << '\n';

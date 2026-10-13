@@ -196,7 +196,8 @@ bottom and learn one thing.
     itself: `openmp/`, `mpi/`, `meta_programming/`.
   - Library folders show how to use SpCraft and its dependencies: `spcraft/`,
     `fast_matrix_market/`, `linear_algebra/`, `machine_learning/`.
-- Each example is one self-contained `main` teaching a single concept. Name files
+- Each example is one self-contained source file teaching a single concept, with
+  a small `main` dispatching to `ExampleRun`. Name files
   `eNN_topic.cpp`, numbered in the order a student should read them, with the
   numbers unique inside a folder.
 - Keep them short and heavily commented. Examples are the one place in this
@@ -208,6 +209,14 @@ bottom and learn one thing.
   rot.
 
 ### Benchmarks folder layout
+
+- Shared-memory performance drivers use Google Benchmark. Keep dataset loading,
+  conversion, and correctness checks outside measured loops. For internally
+  threaded OpenMP/MKL kernels, configure the kernel's thread count separately,
+  use one Google Benchmark driver thread, and select `UseRealTime()`.
+- Keep the existing SpCraft text/JSON reports usable by the comparison pipeline;
+  adapt Google Benchmark measurements at the benchmark boundary. Link Google
+  Benchmark only to benchmark targets.
 
 - Give every library its own subfolder under `benchmarks/`, named after the library
   (`benchmarks/cusparse/`, `benchmarks/mkl/`, `benchmarks/ginkgo/`). SpCraft's own
@@ -238,16 +247,18 @@ sbatch script without submitting. Each stage runs alone via `--stage`.
 
 ### Tests folder layout
 
-Tests are plain `main()` programs returning non-zero on failure, not a
-framework. Keep them that way: no dependency beyond `SPCraft` and, where a
-reference solve is useful, Eigen.
+Shared-memory correctness tests use GoogleTest, with Eigen where an independent
+reference is useful. Link GoogleTest only to test targets. A shared small `main()`
+calls `TestRun`, which initializes GoogleTest and returns `RUN_ALL_TESTS()`.
+CUDA and distributed test drivers keep their backend-specific lifecycle handling.
 
 - **One executable per class or per kernel.** `test_csr_matrix.cpp` covers
   `CsrMatrix`, `test_cg.cpp` covers conjugate gradient. Do not append checks for
   a new class to an existing file.
-- Count failures and keep going rather than returning on the first one, so a
-  run reports everything that is broken at once. Print what failed on `stderr`
-  and one success line on `stdout`.
+- Use named `TEST`, typed, or parameterized cases to isolate behaviors. Prefer
+  nonfatal `EXPECT_*` assertions so independent checks continue; use `ASSERT_*`
+  when later checks require a valid prerequisite. Include actual and expected
+  values in failures. Exercise supported numerical/index types and thread counts.
 - A new **container** gets: default construction, `Allocate` including the empty
   case, the pointer-constructor view, move construction, move assignment,
   self-move, `Clone` including the empty case, `Reset`, and a failed allocation.
@@ -262,9 +273,9 @@ reference solve is useful, Eigen.
   iterations, and power iteration O(log(tol) / log|lambda2/lambda1|).
 - Make failure output diagnosable: print the value you got and the value you
   expected, not just that they differ.
-- Every new test needs both `add_executable` and `add_test` in
-  `tests/CMakeLists.txt`, guarded by the matching `SPCRAFT_USE_*` option when it
-  is backend-specific.
+- Every new shared-memory test needs `add_executable` and `gtest_discover_tests`
+  in `tests/CMakeLists.txt`, guarded by its backend option when applicable.
+  Keep `add_test` for standalone CUDA/distributed drivers.
 
 Prefer a deterministic failure to one that depends on the machine. Asking for an
 allocation larger than RAM does not reliably fail -- overcommit satisfies it,
@@ -307,6 +318,21 @@ device.
 
 ## Main File Input parameters
 We use `cxxopts` to pass the parameters into the binaries. 
+GoogleTest runners use `InitGoogleTest` for their standard test flags.
+
+Keep `main` small. It should define and parse command-line parameters, handle
+help and exit codes, initialize/finalize MPI when applicable, and call the run
+function. Put setup, algorithm execution, measurement, verification, and reporting
+in a separate function:
+
+- In `benchmarks/`, use `BenchmarkRun(...)` in the same source file.
+- In `tests/`, use `TestRun(...)` to perform checks and return the result.
+- In `examples/`, use `ExampleRun(...)` for the demonstrated computation.
+
+Pass parsed parameters into these functions. Do not grow `main` into the
+benchmark loop, test body, or example implementation. Exception handling at the
+entry point may translate a failure into a diagnostic and nonzero exit status;
+MPI lifecycle handling remains at the entry point.
 
 ## Python Interface
 

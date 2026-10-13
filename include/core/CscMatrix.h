@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <tuple>
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -9,7 +10,7 @@ namespace spcraft
 /**
  * @brief Compressed Sparse Column (CSC) matrix format.
  */
-template <class IT, class NT, class OT = IT>
+SP_MAT_TEMP_DEFAULT
 class CscMatrix
 {
  public:
@@ -29,22 +30,33 @@ class CscMatrix
    * *************************/
   //! Empty matrix (owns nothing yet).
   CscMatrix() = default;
-  // clang-format off
   //! Wrap externally managed buffers as a non-owning view.
-  CscMatrix(OT* col_ptr_, IT* row_id_, NT* val_, OT nnz_, IT m_, IT n_): col_ptr(col_ptr_), row_id(row_id_), val(val_), nnz(nnz_), m(m_), n(n_), memowned(false){}
+  CscMatrix(OT* col_ptr_, IT* row_id_, NT* val_, OT nnz_, IT m_, IT n_)
+      : col_ptr(col_ptr_), row_id(row_id_), val(val_), nnz(nnz_), m(m_), n(n_), memowned(false)
+  {
+  }
   //! Move constructor (transfers ownership).
-  CscMatrix(CscMatrix<IT, NT, OT>&& rhs) noexcept : col_ptr(rhs.col_ptr), row_id(rhs.row_id),val(rhs.val),nnz(rhs.nnz),m(rhs.m),n(rhs.n), memowned(rhs.memowned){rhs.Reset();}
-  // clang-format on
+  CscMatrix(SPCSC&& rhs) noexcept
+      : col_ptr(rhs.col_ptr),
+        row_id(rhs.row_id),
+        val(rhs.val),
+        nnz(rhs.nnz),
+        m(rhs.m),
+        n(rhs.n),
+        memowned(rhs.memowned)
+  {
+    rhs.Reset();
+  }
   //! Move assignment (frees the old storage, takes the new).
-  CscMatrix<IT, NT, OT>& operator=(CscMatrix<IT, NT, OT>&& rhs) noexcept;
+  SPCSC& operator=(SPCSC&& rhs) noexcept;
   //! Disable copy construction.
-  CscMatrix(const CscMatrix<IT, NT, OT>& rhs) = delete;
+  CscMatrix(const SPCSC& rhs) = delete;
   //! Disable copy assignment.
-  CscMatrix& operator=(const CscMatrix<IT, NT, OT>& rhs) = delete;
+  CscMatrix& operator=(const SPCSC& rhs) = delete;
   //! Frees owned storage.
   ~CscMatrix();
   //! clone a new instance
-  CscMatrix<IT, NT, OT> Clone() const;
+  SPCSC Clone() const;
   //! explicitly allocate the memory
   void Allocate(OT require_nnz, IT nRows, IT nCols);
   //! Null every member without freeing; releases ownership.
@@ -54,7 +66,7 @@ class CscMatrix
   /***************************
    * static function
    * *************************/
-  [[nodiscard]] static std::tuple<OT*, IT*, NT*> SafeAllocate(IT n, OT nnz);
+  SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(IT n, OT nnz);
   static void SafeDelete(bool memowned, OT* col_ptr, IT* row_id, NT* val);
 };
 

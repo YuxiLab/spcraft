@@ -79,8 +79,7 @@ int main()
   {
     Device matrix;
     matrix.Allocate(4, 3, 5);
-    Check(matrix.nnz == 4 && matrix.m == 3 && matrix.n == 5,
-          "Allocate should record the shape");
+    Check(matrix.nnz == 4 && matrix.m == 3 && matrix.n == 5, "Allocate should record the shape");
     Check(matrix.memowned, "Allocate should take ownership");
 
     // calloc semantics: the freshly allocated device buffers read back as zero.
@@ -103,8 +102,7 @@ int main()
   {
     const Host original = SampleHost();
     Device device = Device::FromHost(original);
-    Check(device.m == 2 && device.n == 3 && device.nnz == 3,
-          "FromHost should preserve the shape");
+    Check(device.m == 2 && device.n == 3 && device.nnz == 3, "FromHost should preserve the shape");
     Check(device.memowned, "FromHost should own its device storage");
     const Host back = device.ToHost();
     Check(SameAsSample(back), "a host round trip must preserve every entry");
@@ -153,8 +151,7 @@ int main()
     Device target;
     target.Allocate(9, 4, 4);
     target = std::move(moved);
-    Check(target.val == buffer && target.nnz == 3,
-          "move assignment should take the new storage");
+    Check(target.val == buffer && target.nnz == 3, "move assignment should take the new storage");
     Check(moved.val == nullptr && !moved.memowned, "move assignment should empty the source");
     Check(SameAsSample(target.ToHost()), "the moved matrix should still hold its data");
   }

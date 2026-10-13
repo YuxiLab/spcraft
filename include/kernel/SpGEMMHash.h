@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/AllocationGuard.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -14,7 +15,7 @@ namespace detail
 {
 
 template <class Entry>
-[[nodiscard]] inline std::size_t SpGEMMHashCapacity(std::uintmax_t count)
+SPND inline std::size_t SpGEMMHashCapacity(std::uintmax_t count)
 {
   if (count == 0) {
     return 0;
@@ -35,7 +36,7 @@ template <class Entry>
 }
 
 template <class IT>
-[[nodiscard]] inline std::size_t SpGEMMHashSlot(IT column, std::size_t mask)
+SPND inline std::size_t SpGEMMHashSlot(IT column, std::size_t mask)
 {
   // Match CombBLAS's multiplicative hash, with unsigned arithmetic so large
   // column indices cannot trigger signed multiplication overflow.

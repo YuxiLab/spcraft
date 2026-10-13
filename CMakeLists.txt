@@ -127,11 +127,7 @@ target_link_libraries(SPCraftInput PUBLIC SPCraft PRIVATE cxxopts::cxxopts)
 
 include(CTest)
 if(BUILD_TESTING)
-	if(OpenMP_CXX_FOUND)
-		add_subdirectory(tests)
-	else()
-		message(STATUS "OpenMP was not found; skipping the OpenMP SpMV test")
-	endif()
+	add_subdirectory(tests)
 endif()
 
 if(SPCRAFT_BUILD_EXAMPLES)

@@ -1,5 +1,5 @@
 function(find_eigen3)
-    find_package(Eigen3 5.0.1 QUIET NO_MODULE)
+    find_package(Eigen3 5.0 QUIET NO_MODULE)
     if(NOT Eigen3_FOUND)
         message(STATUS "Eigen3 not found, adding it via CPM")
         CPMAddPackage(

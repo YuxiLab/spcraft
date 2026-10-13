@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -11,7 +12,7 @@ namespace spcraft
  * Memory allocated by this class is host memory. Use the pointer constructor
  * to wrap externally managed memory, including CUDA device memory.
  */
-template <class IT, class NT>
+SP_VEC_TEMP
 class DenseVector
 {
  public:
@@ -33,7 +34,7 @@ class DenseVector
   DenseVector& operator=(DenseVector&& rhs) noexcept;
   ~DenseVector();
 
-  [[nodiscard]] IT size() const noexcept { return n; }
+  SPND IT size() const noexcept { return n; }
 
   //! Unchecked element access; storage must be host-accessible.
   NT& operator[](IT index) noexcept { return val[index]; }
@@ -42,7 +43,7 @@ class DenseVector
   //! Replace the current storage with an uninitialized owned buffer.
   void Allocate(IT size);
   //! Return an owning copy.
-  [[nodiscard]] DenseVector Clone() const;
+  SPND DenseVector Clone() const;
   //! Null every member without freeing; releases ownership.
   void Reset() noexcept;
 
@@ -51,7 +52,7 @@ class DenseVector
   void Random(int seed);
 
  private:
-  [[nodiscard]] static NT* SafeAllocate(IT size);
+  SPND static NT* SafeAllocate(IT size);
   static void SafeDelete(bool owned, NT* ptr) noexcept;
 };
 

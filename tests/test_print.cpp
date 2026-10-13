@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <cstdint>
 #include <iostream>
 #include <sstream>
@@ -9,10 +11,11 @@
 #include <Eigen/Core>
 #include "SpCraft.h"
 
+namespace spcraft::tests
+{
 namespace
 {
 
-int failures = 0;
 using Dense = spcraft::DenseVector<std::int32_t, double>;
 static_assert(std::is_same_v<decltype(std::declval<Dense&>()[0]), double&>);
 static_assert(std::is_same_v<decltype(std::declval<const Dense&>()[0]), const double&>);
@@ -24,15 +27,14 @@ void CheckPrint(const Vector& vec, std::size_t count, std::string_view name,
   std::ostringstream out;
   spcraft::PrintVector(vec, count, name, out);
   if (out.str() != expected) {
-    std::cerr << "PrintVector " << name << ": expected \"" << expected << "\", got \"" << out.str()
-              << "\"\n";
-    ++failures;
+    ADD_FAILURE() << "PrintVector " << name << ": expected \"" << expected << "\", got \""
+                  << out.str() << "\"\n";
   }
 }
 
 }  // namespace
 
-int main()
+TEST(Print, Correctness)
 {
   const std::vector<int> standard{1, 2, 3};
   CheckPrint(standard, 2, "std prefix", "std prefix: [1, 2]\n");
@@ -57,8 +59,7 @@ int main()
   view[1] = 7;
   CheckPrint(view, 5, "dense view", "dense view: [4, 7, 6]\n");
   if (buffer[1] != 7) {
-    std::cerr << "DenseVector view: expected buffer[1] = 7, got " << buffer[1] << '\n';
-    ++failures;
+    ADD_FAILURE() << "DenseVector view: expected buffer[1] = 7, got " << buffer[1] << '\n';
   }
   Dense moved(std::move(owned));
   CheckPrint(owned, 5, "moved from", "moved from: []\n");
@@ -78,11 +79,6 @@ int main()
   CheckPrint(matrix.row(1), 5, "strided row", "strided row: [2, 5]\n");
   CheckPrint(eigen.head(2) + eigen.tail(2), 5, "expression", "expression: [3.75, -1.25]\n");
   CheckPrint(Eigen::Map<const Eigen::Vector3d>(buffer), 5, "map", "map: [4, 7, 6]\n");
-
-  if (failures != 0) {
-    std::cerr << failures << " printing check(s) failed\n";
-    return 1;
-  }
-  std::cout << "PrintVector checks passed\n";
-  return 0;
 }
+
+}  // namespace spcraft::tests

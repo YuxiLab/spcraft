@@ -19,6 +19,7 @@
 #include <fast_matrix_market/fast_matrix_market.hpp>
 #include "utils/omp/omp_wrapper.h"
 #include "utils/MatrixInput.h"
+#include "utils/MatrixMacros.h"
 
 #include "core/AllocationGuard.h"
 #include "core/CooMatrix.h"
@@ -27,6 +28,7 @@
 
 namespace spcraft
 {
+
 /*************************************
  *             constructor
  *************************************/
@@ -55,9 +57,8 @@ SPCOO::CooMatrix(const std::string& filename)
   }
   fast_matrix_market::matrix_market_header header;
   fast_matrix_market::read_header(ifs, header);
-  // clang-format off
-    if (!std::in_range<IT>(header.nrows) || !std::in_range<IT>(header.ncols)) throw std::overflow_error("Matrix Market dimensions exceed COO index range");
-  // clang-format on
+  if (!std::in_range<IT>(header.nrows) || !std::in_range<IT>(header.ncols))
+    throw std::overflow_error("Matrix Market dimensions exceed COO index range");
   std::vector<IT> r_vec;
   std::vector<IT> c_vec;
   std::vector<NT> v_vec;
@@ -66,9 +67,8 @@ SPCOO::CooMatrix(const std::string& filename)
       ifs, header, r_vec, c_vec, v_vec,
       fast_matrix_market::pattern_default_value(static_cast<const NT*>(nullptr)),
       fast_matrix_market::read_options{});
-  // clang-format off
-    if (!std::in_range<OT>(r_vec.size())) throw std::overflow_error("Matrix Market nonzeros exceed COO offset range");
-  // clang-format on
+  if (!std::in_range<OT>(r_vec.size()))
+    throw std::overflow_error("Matrix Market nonzeros exceed COO offset range");
   SPCOO coo;
   coo.Allocate(r_vec.size(), header.nrows, header.ncols);
   OMP_PARALLEL_FOR()
@@ -116,9 +116,9 @@ void SPCOO::Reset() noexcept
 }
 
 SP_MAT_TEMP
-CscMatrix<IT, NT, OT> SPCOO::ToCsc() const
+SPCSC SPCOO::ToCsc() const
 {
-  CscMatrix<IT, NT, OT> csc;
+  SPCSC csc;
   csc.Allocate(nnz, m, n);
   if (nnz == 0 || m == 0 || n == 0) return csc;
 
@@ -156,9 +156,9 @@ CscMatrix<IT, NT, OT> SPCOO::ToCsc() const
 }
 
 SP_MAT_TEMP
-CsrMatrix<IT, NT, OT> SPCOO::ToCsr() const
+SPCSR SPCOO::ToCsr() const
 {
-  CsrMatrix<IT, NT, OT> csr(nnz, m, n);
+  SPCSR csr(nnz, m, n);
   std::fill(csr.row_ptr, csr.row_ptr + m + 1, OT{0});
   if (nnz == 0 || m == 0 || n == 0) return csr;
   // loop nnz, check each nnz quality

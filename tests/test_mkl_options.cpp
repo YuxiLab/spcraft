@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -12,15 +14,6 @@ namespace spcraft::benchmarks
 {
 namespace
 {
-int failures = 0;
-
-void Check(bool condition, const char* message)
-{
-  if (!condition) {
-    std::cerr << "FAIL: " << message << '\n';
-    ++failures;
-  }
-}
 
 std::optional<MKLSpMVOptions> Parse(std::vector<std::string> arguments)
 {
@@ -35,36 +28,39 @@ void Reject(std::vector<std::string> arguments, const char* message)
 {
   try {
     Parse(std::move(arguments));
-    Check(false, message);
+    EXPECT_TRUE((false)) << message;
   } catch (const std::exception&) {
   }
 }
 }  // namespace
 }  // namespace spcraft::benchmarks
 
-int main()
+namespace spcraft::tests
+{
+TEST(MklOptions, Correctness)
 {
   using namespace spcraft::benchmarks;
   const auto defaults = Parse({});
-  Check(defaults && defaults->input.types.index == defaults->input.types.offset &&
-            !defaults->input.thread_counts.empty() && defaults->input.matrix.seed == 42,
-        "MKL defaults select its interface width and initialize the thread sweep");
+  EXPECT_TRUE((defaults && defaults->input.types.index == defaults->input.types.offset &&
+               !defaults->input.thread_counts.empty() && defaults->input.matrix.seed == 42))
+      << "MKL defaults select its interface width and initialize the thread sweep";
   const auto file =
       Parse({"--matrix",   "A.mtx",    "--generator",   "unused",     "--iterations", "12",
              "--max-time", "0.5",      "--threads",     "1,3",        "--precision",  "both",
              "--index",    "both",     "--offset",      "both",       "--seed",       "9",
              "--output",   "raw.json", "--text-report", "summary.txt"});
-  Check(file && file->benchmark.max_iterations == 12 && file->benchmark.max_time_seconds == 0.5 &&
-            file->benchmark.output_path == "raw.json" &&
-            file->benchmark.text_report_path == "summary.txt" &&
-            file->input.matrix.matrix_path == "A.mtx" && file->input.matrix.seed == 9 &&
-            file->input.types.precision == "both" &&
-            file->input.thread_counts == std::vector<int>({1, 3}),
-        "one parse composes both groups and file input overrides generator selection");
+  EXPECT_TRUE((file && file->benchmark.max_iterations == 12 &&
+               file->benchmark.max_time_seconds == 0.5 &&
+               file->benchmark.output_path == "raw.json" &&
+               file->benchmark.text_report_path == "summary.txt" &&
+               file->input.matrix.matrix_path == "A.mtx" && file->input.matrix.seed == 9 &&
+               file->input.types.precision == "both" &&
+               file->input.thread_counts == std::vector<int>({1, 3})))
+      << "one parse composes both groups and file input overrides generator selection";
   const auto graph = Parse({"--generator", "rmat", "--scale", "8", "--edge-factor", "4"});
-  Check(graph && !graph->input.matrix.matrix_path && graph->input.matrix.scale == 8 &&
-            graph->input.matrix.edge_factor == 4,
-        "R-MAT input settings retained");
+  EXPECT_TRUE((graph && !graph->input.matrix.matrix_path && graph->input.matrix.scale == 8 &&
+               graph->input.matrix.edge_factor == 4))
+      << "R-MAT input settings retained";
   const std::string unsupported = defaults->input.types.index == "int32" ? "int64" : "int32";
   Reject({"--index", unsupported}, "unsupported MKL column width rejected");
   Reject({"--offset", unsupported}, "unsupported MKL row-offset width rejected");
@@ -78,10 +74,10 @@ int main()
   auto* previous = std::cout.rdbuf(output.rdbuf());
   const auto help = Parse({"--help", "--iterations", "0", "--index", unsupported});
   std::cout.rdbuf(previous);
-  Check(!help && output.str().find("--iterations") != std::string::npos &&
-            output.str().find("--matrix") != std::string::npos &&
-            output.str().find("--threads") != std::string::npos,
-        "combined help includes both groups and exits before runtime validation");
-  if (failures == 0) std::cout << "MKL option tests passed\n";
-  return failures != 0;
+  EXPECT_TRUE((!help && output.str().find("--iterations") != std::string::npos &&
+               output.str().find("--matrix") != std::string::npos &&
+               output.str().find("--threads") != std::string::npos))
+      << "combined help includes both groups and exits before runtime validation";
 }
+
+}  // namespace spcraft::tests

@@ -60,8 +60,8 @@ std::vector<int> parse_threads(const std::string& thread_str)
 
 template <class NT>
 void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
-                         const std::vector<int>& thread_counts, double min_time,
-                         int repetitions, std::uint64_t seed)
+                         const std::vector<int>& thread_counts, double min_time, int repetitions,
+                         std::uint64_t seed)
 {
   // These buffers must outlive benchmark registration: Google Benchmark runs
   // the callbacks after this function returns.
@@ -88,12 +88,11 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
 #endif
 
   for (int threads : thread_counts) {
-    const std::string spcraft_name = "SpMV/SPCraft/" + matrix_name + "/" + type_name +
-                                     "/threads:" + std::to_string(threads);
+    const std::string spcraft_name =
+        "SpMV/SPCraft/" + matrix_name + "/" + type_name + "/threads:" + std::to_string(threads);
 
     auto* spcraft_benchmark = benchmark::RegisterBenchmark(
-        spcraft_name.c_str(),
-        [&A, x, spcraft_y, threads, useful_bytes](benchmark::State& state) {
+        spcraft_name.c_str(), [&A, x, spcraft_y, threads, useful_bytes](benchmark::State& state) {
           omp_set_num_threads(threads);
           for (auto _ : state) {
             spcraft::spmv_openmp<spcraft::PlusTimesRing<NT>>(A, *x, *spcraft_y);
@@ -104,8 +103,7 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
           const double total_flops = 2.0 * static_cast<double>(A.nnz) * state.iterations();
           state.SetItemsProcessed(state.iterations() * A.nnz);
           state.SetBytesProcessed(state.iterations() * useful_bytes);
-          state.counters["GFLOPS"] =
-              benchmark::Counter(total_flops, benchmark::Counter::kIsRate);
+          state.counters["GFLOPS"] = benchmark::Counter(total_flops, benchmark::Counter::kIsRate);
           state.counters["NNZ"] = static_cast<double>(A.nnz);
           state.counters["Rows"] = static_cast<double>(A.m);
           state.counters["Cols"] = static_cast<double>(A.n);
@@ -132,10 +130,9 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
     double max_reference = 0.0;
     double max_error = 0.0;
     for (Index row = 0; row < A.m; ++row) {
-      max_reference =
-          std::max(max_reference, std::abs(static_cast<double>(spcraft_y->val[row])));
-      max_error = std::max(max_error,
-                           std::abs(static_cast<double>(spcraft_y->val[row] - mkl_y->val[row])));
+      max_reference = std::max(max_reference, std::abs(static_cast<double>(spcraft_y->val[row])));
+      max_error =
+          std::max(max_error, std::abs(static_cast<double>(spcraft_y->val[row] - mkl_y->val[row])));
     }
     const double tolerance =
         (std::is_same_v<NT, float> ? 1.0e-4 : 1.0e-11) * std::max(1.0, max_reference);
@@ -162,8 +159,7 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
           const double total_flops = 2.0 * static_cast<double>(A.nnz) * state.iterations();
           state.SetItemsProcessed(state.iterations() * A.nnz);
           state.SetBytesProcessed(state.iterations() * useful_bytes);
-          state.counters["GFLOPS"] =
-              benchmark::Counter(total_flops, benchmark::Counter::kIsRate);
+          state.counters["GFLOPS"] = benchmark::Counter(total_flops, benchmark::Counter::kIsRate);
           state.counters["NNZ"] = static_cast<double>(A.nnz);
           state.counters["Rows"] = static_cast<double>(A.m);
           state.counters["Cols"] = static_cast<double>(A.n);
@@ -229,8 +225,7 @@ int main(int argc, char** argv)
 
   omp_set_dynamic(0);
 
-  const std::string matrix_path =
-      result.count("matrix") ? result["matrix"].as<std::string>() : "";
+  const std::string matrix_path = result.count("matrix") ? result["matrix"].as<std::string>() : "";
   const Index vertices = result["vertices"].as<Index>();
   const double degree = result["degree"].as<double>();
   const std::string precision = result["precision"].as<std::string>();
@@ -255,9 +250,8 @@ int main(int argc, char** argv)
 #ifdef SPCRAFT_USE_MKL
   MKLVersion mkl_version;
   mkl_get_version(&mkl_version);
-  std::cout << "oneMKL          : " << mkl_version.MajorVersion << '.'
-            << mkl_version.MinorVersion << '.' << mkl_version.UpdateVersion
-            << " (GNU OpenMP, LP64)\n";
+  std::cout << "oneMKL          : " << mkl_version.MajorVersion << '.' << mkl_version.MinorVersion
+            << '.' << mkl_version.UpdateVersion << " (GNU OpenMP, LP64)\n";
 #else
   std::cout << "oneMKL          : disabled\n";
 #endif
@@ -287,8 +281,8 @@ int main(int argc, char** argv)
     std::ostringstream ss;
     ss << "ER_graph_V" << vertices << "_D" << static_cast<long>(degree);
     matrix_name = ss.str();
-    std::cout << "Generating Erdős-Rényi Graph (V=" << vertices
-              << ", Expected Degree=" << degree << ", Seed=" << seed << ")\n";
+    std::cout << "Generating Erdős-Rényi Graph (V=" << vertices << ", Expected Degree=" << degree
+              << ", Seed=" << seed << ")\n";
 
     if (precision == "float" || precision == "both") {
       f32_matrix =
@@ -297,8 +291,8 @@ int main(int argc, char** argv)
                 << ", NNZ: " << f32_matrix->nnz << "\n";
     }
     if (precision == "double" || precision == "both") {
-      f64_matrix = std::make_unique<Matrix<double>>(
-          spcraft::GenERGraph<double>(vertices, degree, seed));
+      f64_matrix =
+          std::make_unique<Matrix<double>>(spcraft::GenERGraph<double>(vertices, degree, seed));
       std::cout << "  [FP64] Rows: " << f64_matrix->m << ", Cols: " << f64_matrix->n
                 << ", NNZ: " << f64_matrix->nnz << "\n";
     }

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <tuple>
 #include <string>
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -10,7 +11,7 @@ namespace spcraft
 /**
  * @brief Compressed Sparse Row (CSR) matrix format.
  */
-template <class IT, class NT, class OT = IT>
+SP_MAT_TEMP_DEFAULT
 class CsrMatrix
 {
  public:
@@ -24,33 +25,45 @@ class CsrMatrix
   IT m = 0;               //!< number of rows
   IT n = 0;               //!< number of columns
   bool memowned = true;   //!< owns the storage (views opt out)
+
   /*************************************
    *             constructor
    *************************************/
   //! Empty matrix (owns nothing yet).
   CsrMatrix() = default;
+
   //! Wrap externally managed buffers as a non-owning view.
-  // clang-format off
-  CsrMatrix(OT* row_ptr_, IT* col_id_, NT* val_, OT nnz_, IT m_, IT n_):row_ptr(row_ptr_), col_id(col_id_), val(val_), nnz(nnz_), m(m_), n(n_), memowned(false){}
-  // clang-format on
+  CsrMatrix(OT* row_ptr_, IT* col_id_, NT* val_, OT nnz_, IT m_, IT n_)
+      : row_ptr(row_ptr_), col_id(col_id_), val(val_), nnz(nnz_), m(m_), n(n_), memowned(false)
+  {
+  }
+
   CsrMatrix(OT nnz_, IT m_, IT n_);
+
   //! Move constructor (transfers ownership).
-  CsrMatrix(CsrMatrix<IT, NT, OT>&& rhs) noexcept;
+  CsrMatrix(SPCSR&& rhs) noexcept;
+
   //! Move assignment (frees the old storage, takes the new).
-  CsrMatrix<IT, NT, OT>& operator=(CsrMatrix<IT, NT, OT>&& rhs) noexcept;
+  SPCSR& operator=(SPCSR&& rhs) noexcept;
+
   //! Frees owned storage.
   ~CsrMatrix();
+
   //! Disable copy construction.
-  CsrMatrix(const CsrMatrix<IT, NT, OT>& rhs) = delete;
+  CsrMatrix(const SPCSR& rhs) = delete;
+
   //! Disable copy assignment.
-  CsrMatrix& operator=(const CsrMatrix<IT, NT, OT>& rhs) = delete;
+  CsrMatrix& operator=(const SPCSR& rhs) = delete;
+
   /*************************************
    *             Data Members
    *************************************/
   //! clone a new CsrMatrix explicitly.
-  CsrMatrix<IT, NT, OT> Clone() const;
+  SPCSR Clone() const;
+
   //! explicitly allocate the memory
   void Allocate(OT require_nnz, IT nRows, IT nCols);
+
   // Null the pointer and set Zero, not responsible for freeing memory.
   void Reset() noexcept;
 
@@ -59,7 +72,8 @@ class CsrMatrix
    *             Static Members
    *************************************/
   // tedious function with all boundary check.
-  [[nodiscard]] static std::tuple<OT*, IT*, NT*> SafeAllocate(OT required_nnz, IT rows, IT columns);
+  SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(OT required_nnz, IT rows, IT columns);
+
   // delete the memory if owned.
   static void SafeDelete(bool owned, OT* row_ptr, IT* col_id, NT* val) noexcept;
 };

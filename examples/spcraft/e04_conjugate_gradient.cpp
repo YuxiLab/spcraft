@@ -117,9 +117,9 @@ int main(int argc, char** argv)
     for (Index column = 0; column < grid; ++column) {
       const Value vertical = spacing * static_cast<Value>(row + 1);
       const Value horizontal = spacing * static_cast<Value>(column + 1);
-      exact.val[row * grid + column] =
-          horizontal * (Value{1} - horizontal) * vertical * (Value{1} - vertical) *
-          std::exp(Value{0.5} * horizontal + Value{0.25} * vertical);
+      exact.val[row * grid + column] = horizontal * (Value{1} - horizontal) * vertical *
+                                       (Value{1} - vertical) *
+                                       std::exp(Value{0.5} * horizontal + Value{0.25} * vertical);
     }
   }
   spcraft::OmpSpMV<spcraft::PlusTimesRing<Value>>(matrix, exact, rhs);
@@ -143,8 +143,7 @@ int main(int argc, char** argv)
   fmt::print("matrix: {} x {}, {} nonzeros\n", matrix.m, matrix.n, matrix.nnz);
   fmt::print("status: {}{}\n", result.converged ? "converged" : "not converged",
              result.breakdown ? " (SPD breakdown)" : "");
-  fmt::print("iterations: {}, relative residual: {:.3e}\n", result.iterations,
-             result.residual);
+  fmt::print("iterations: {}, relative residual: {:.3e}\n", result.iterations, result.residual);
   fmt::print("relative solution error: {:.3e}, largest entry error: {:.3e}\n",
              std::sqrt(squared_error / squared_exact), largest_error);
 

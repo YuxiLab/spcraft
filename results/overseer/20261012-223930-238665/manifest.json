@@ -1,0 +1,390 @@
+{
+  "version": 1,
+  "name": "SpMV development",
+  "profiles": [
+    {
+      "id": "local",
+      "kind": "local",
+      "parents": [
+        "local"
+      ],
+      "project_dir": "/home/yuxihong/workspace/code/spcraft"
+    }
+  ],
+  "runs": [
+    {
+      "id": 1,
+      "server": "local",
+      "dataset": "gupta3",
+      "threads": 1,
+      "method": "openmp-float",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/gupta3/gupta3.mtx",
+        "--threads",
+        "1",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0001/result.json",
+        "--precision",
+        "float"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "1"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0001"
+    },
+    {
+      "id": 2,
+      "server": "local",
+      "dataset": "gupta3",
+      "threads": 1,
+      "method": "openmp-double",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/gupta3/gupta3.mtx",
+        "--threads",
+        "1",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0002/result.json",
+        "--precision",
+        "double"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "1"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0002"
+    },
+    {
+      "id": 3,
+      "server": "local",
+      "dataset": "gupta3",
+      "threads": 2,
+      "method": "openmp-float",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/gupta3/gupta3.mtx",
+        "--threads",
+        "2",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0003/result.json",
+        "--precision",
+        "float"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "2"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0003"
+    },
+    {
+      "id": 4,
+      "server": "local",
+      "dataset": "gupta3",
+      "threads": 2,
+      "method": "openmp-double",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/gupta3/gupta3.mtx",
+        "--threads",
+        "2",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0004/result.json",
+        "--precision",
+        "double"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "2"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0004"
+    },
+    {
+      "id": 5,
+      "server": "local",
+      "dataset": "gupta3",
+      "threads": 4,
+      "method": "openmp-float",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/gupta3/gupta3.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0005/result.json",
+        "--precision",
+        "float"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0005"
+    },
+    {
+      "id": 6,
+      "server": "local",
+      "dataset": "gupta3",
+      "threads": 4,
+      "method": "openmp-double",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/gupta3/gupta3.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0006/result.json",
+        "--precision",
+        "double"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0006"
+    },
+    {
+      "id": 7,
+      "server": "local",
+      "dataset": "pdb1HYS",
+      "threads": 1,
+      "method": "openmp-float",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "1",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0007/result.json",
+        "--precision",
+        "float"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "1"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0007"
+    },
+    {
+      "id": 8,
+      "server": "local",
+      "dataset": "pdb1HYS",
+      "threads": 1,
+      "method": "openmp-double",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "1",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0008/result.json",
+        "--precision",
+        "double"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "1"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0008"
+    },
+    {
+      "id": 9,
+      "server": "local",
+      "dataset": "pdb1HYS",
+      "threads": 2,
+      "method": "openmp-float",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "2",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0009/result.json",
+        "--precision",
+        "float"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "2"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0009"
+    },
+    {
+      "id": 10,
+      "server": "local",
+      "dataset": "pdb1HYS",
+      "threads": 2,
+      "method": "openmp-double",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "2",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0010/result.json",
+        "--precision",
+        "double"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "2"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0010"
+    },
+    {
+      "id": 11,
+      "server": "local",
+      "dataset": "pdb1HYS",
+      "threads": 4,
+      "method": "openmp-float",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0011/result.json",
+        "--precision",
+        "float"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0011"
+    },
+    {
+      "id": 12,
+      "server": "local",
+      "dataset": "pdb1HYS",
+      "threads": 4,
+      "method": "openmp-double",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0012/result.json",
+        "--precision",
+        "double"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-223930-238665/0012"
+    }
+  ],
+  "total": 12,
+  "stop_on_failure": false
+}

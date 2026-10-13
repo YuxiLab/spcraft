@@ -1,20 +1,42 @@
 ###################################################################################
 # Common settings applied to all files.
-# Includes/system paths are pulled from compile_commands.json, so they are
-# intentionally not duplicated here. Symlink `build` -> `build_<arch>` locally.
+# Compiler flags come from compile_commands.json; dependency include paths also
+# cover headers that inherit flags from a different dependency. Generate with:
+# CLANGD_COMPILATION_DATABASE=./build scripts/generate_clangd.sh
+# Dependency roots are discovered from CMake; export the corresponding ROOT
+# variable to override a dependency with your own installation.
+# For nested CMake presets, select their build directory instead.
 # On macOS, run scripts/setup_macos_clangd.py to create a parsing-only database.
-# The database supplies the compiler and CUDA toolkit path for each machine.
+# The database supplies the compiler for each machine.
 ###################################################################################
 CompileFlags:
-  CompilationDatabase: ./build
+  CompilationDatabase: "./build"
   Add:
     # SPCraft is header-only, so compile_commands.json has no entries for its
     # headers and clangd may need the dependency path while interpolating flags.
-    # Paths are relative to the compile command's directory (build/).
+    # Paths are relative to the compile command's directory. Support both
+    # build/ and the build/<preset>/ directories used by CMake presets.
     - "-I../include"
     - "-I.."
+    - "-I../../include"
+    - "-I../.."
+    - "-isystem"
+    - "../../../../spack/opt/spack/linux-skylake/cuda-13.1.1-7eh4oy34imytzlffcpoaztgllkdba7u7/include"
+    - "-isystem"
+    - "../../../../spack/opt/spack/linux-skylake/intel-oneapi-mkl-2025.3.1-vav2impmvqpeky33rjpgxeis72feb3dy/mkl/2025.3/include"
+    - "-isystem"
+    - "../../../software/cxxopts/include"
     - "-isystem"
     - "_deps/fast_matrix_market-src/include"
+    - "-isystem"
+    - "../../../software/benchmark/include"
+    - "-isystem"
+    - "../../../software/googletest/include"
+    # GoogleTest's source checkout nests headers one level deeper than its install.
+    - "-isystem"
+    - "../../../software/googletest/googletest/include"
+    - "-isystem"
+    - "../../../../spack/opt/spack/linux-skylake/openmpi-5.0.10-fljfzeskifjgcv65bzzvbmqmd6jmiygy/include"
     - "-isystem"
     - "_deps/fmt-src/include"
     - "-isystem"
@@ -55,6 +77,12 @@ If:
 CompileFlags:
   Add:
     - --std=c++20
+    # The generator locates omp.h and links it into the selected build directory.
+    # Support compile commands in both build/ and build/<preset>/.
+    - "-isystem"
+    - "clangd-openmp/include"
+    - "-isystem"
+    - "../clangd-openmp/include"
   Remove:
     # strip nvcc-only arguments inherited by compdb header entries
     - "-forward-unknown-to-host-compiler"
@@ -74,14 +102,14 @@ CompileFlags:
 
 ---
 ###################################################################################
-# Device headers, continued.
+# Host headers, continued.
 ###################################################################################
 # The host section above strips the CUDA `-x` flags, and clang's driver does not
-# recognise the .cuh extension on its own -- without a language it treats the
-# file as a linker input and emits no compiler job at all. Name the language
-# explicitly here, after that removal, so the header still parses as host C++.
+# recognise the .cuh extension on its own. It also treats .h files as C when
+# using a fallback command. Name the language explicitly after that removal
+# so all project headers parse as host C++.
 If:
-  PathMatch: '.*\.cuh$'
+  PathMatch: '.*\.(h|hh|hpp|hxx|cuh)$'
 CompileFlags:
   Add:
     - "-xc++-header"
@@ -94,6 +122,7 @@ If:
   PathMatch: '.*\.cu$'
 CompileFlags:
   Add:
+    - "--cuda-path=../../../../spack/opt/spack/linux-skylake/cuda-13.1.1-7eh4oy34imytzlffcpoaztgllkdba7u7"
     - --cuda-gpu-arch=sm_80
     - "-xcuda"
     - "-ferror-limit=0"

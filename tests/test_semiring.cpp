@@ -1,9 +1,13 @@
+#include <gtest/gtest.h>
+
 #include <algorithm>
 #include <array>
 #include <iostream>
 
 #include "SpCraft.h"
 
+namespace spcraft::tests
+{
 namespace
 {
 
@@ -20,7 +24,7 @@ static_assert(OrAndRing::Add(false, true));
 static_assert(!OrAndRing::Multiply(true, false));
 static_assert(OrAndRing::Multiply(true, true));
 
-bool TestBfsFrontierExpansion()
+TEST(Semiring, BfsFrontierExpansion)
 {
   // A(destination, source): vertex 0 has outgoing edges to vertices 1 and 2.
   spcraft::CsrMatrix<int, bool> adjacency;
@@ -38,16 +42,9 @@ bool TestBfsFrontierExpansion()
 
   spcraft::OmpSpMV<OrAndRing>(adjacency, frontier, next);
 
-  if (!std::equal(expected.begin(), expected.end(), next.val)) {
-    std::cerr << "BFS semiring produced an incorrect next frontier\n";
-    return false;
+  for (std::size_t row = 0; row < expected.size(); ++row) {
+    EXPECT_EQ(next.val[row], expected[row]) << "vertex " << row;
   }
-  return true;
 }
-
 }  // namespace
-
-int main()
-{
-  return TestBfsFrontierExpansion() ? 0 : 1;
-}
+}  // namespace spcraft::tests

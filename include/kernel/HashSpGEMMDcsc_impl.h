@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 #include "kernel/mtSpGEMM.h"
+#include "utils/MatrixMacros.h"
+#include "utils/StdAliases.h"
 
 namespace spcraft
 {

@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include "SpCraft.h"
 
 #include <cstdint>
@@ -5,18 +7,10 @@
 #include <limits>
 #include <vector>
 
+namespace spcraft::tests
+{
 namespace
 {
-int failures = 0;
-
-template <class Actual, class Expected>
-void Equal(const Actual& actual, const Expected& expected, const char* label)
-{
-  if (actual != expected) {
-    ++failures;
-    std::cerr << label << ": got " << actual << ", expected " << expected << '\n';
-  }
-}
 
 template <class NT, class OT = int64_t, class IT = int32_t>
 auto Make(IT rows, IT cols, const std::vector<spcraft::TupleEntry<IT, NT>>& entries)
@@ -42,46 +36,46 @@ void SmallChecks()
   const auto a = Make<double>(2, 3, {{0, 0, 1}, {1, 1, 3}, {0, 2, 2}});
   const auto b = Make<double>(3, 3, {{0, 0, 4}, {2, 0, 6}, {1, 2, 5}, {2, 2, 7}});
   const auto c = spcraft::OmpHashSpGEMM<Ring>(a, b);
-  Equal(c.m, 2, "hand product rows");
-  Equal(c.n, 3, "hand product columns");
-  Equal(c.nnz, 3, "hand product nnz");
+  EXPECT_EQ((c.m), (2)) << "hand product rows";
+  EXPECT_EQ((c.n), (3)) << "hand product columns";
+  EXPECT_EQ((c.nnz), (3)) << "hand product nnz";
   const spcraft::TupleEntry<int32_t, double> expected[] = {{0, 0, 16}, {0, 2, 14}, {1, 2, 15}};
   for (int i = 0; i < std::min<int64_t>(c.nnz, 3); ++i) {
-    Equal(c.entries[i].row, expected[i].row, "hand product row");
-    Equal(c.entries[i].col, expected[i].col, "hand product column");
-    Equal(c.entries[i].val, expected[i].val, "hand product value");
+    EXPECT_EQ((c.entries[i].row), (expected[i].row)) << "hand product row";
+    EXPECT_EQ((c.entries[i].col), (expected[i].col)) << "hand product column";
+    EXPECT_EQ((c.entries[i].val), (expected[i].val)) << "hand product value";
   }
   const auto empty = spcraft::OmpHashSpGEMM<Ring>(a, Make<double>(3, 4, {}));
-  Equal(empty.nnz, 0, "empty product nnz");
-  Equal(empty.m, 2, "empty product rows");
-  Equal(empty.n, 4, "empty product columns");
+  EXPECT_EQ((empty.nnz), (0)) << "empty product nnz";
+  EXPECT_EQ((empty.m), (2)) << "empty product rows";
+  EXPECT_EQ((empty.n), (4)) << "empty product columns";
   // Nonempty inputs can also have no structural paths through the inner dimension.
   const auto disjoint = spcraft::OmpHashSpGEMM<Ring>(Make<double>(1, 2, {{0, 0, 2}}),
                                                      Make<double>(2, 1, {{1, 0, 3}}));
-  Equal(disjoint.nnz, 0, "disjoint product nnz");
+  EXPECT_EQ((disjoint.nnz), (0)) << "disjoint product nnz";
   bool threw = false;
   try {
     const auto bad = spcraft::OmpHashSpGEMM<Ring>(a, Make<double>(4, 1, {}));
   } catch (const std::invalid_argument&) {
     threw = true;
   }
-  Equal(threw, true, "dimension mismatch throws");
+  EXPECT_EQ((threw), (true)) << "dimension mismatch throws";
 
   const auto duplicate = spcraft::OmpHashSpGEMM<Ring>(Make<double>(1, 1, {{0, 0, 2}, {0, 0, -2}}),
                                                       Make<double>(1, 1, {{0, 0, 3}}));
-  Equal(duplicate.nnz, 1, "cancellation retains structural entry");
-  if (duplicate.nnz == 1) Equal(duplicate.entries[0].val, 0.0, "duplicate accumulation");
+  EXPECT_EQ((duplicate.nnz), (1)) << "cancellation retains structural entry";
+  if (duplicate.nnz == 1) EXPECT_EQ((duplicate.entries[0].val), (0.0)) << "duplicate accumulation";
   const auto minplus = spcraft::OmpHashSpGEMM<MinPlus>(Make<double>(1, 2, {{0, 0, 2}, {0, 1, 5}}),
                                                        Make<double>(2, 1, {{0, 0, 7}, {1, 0, 1}}));
-  Equal(minplus.nnz, 1, "min-plus nnz");
-  if (minplus.nnz == 1) Equal(minplus.entries[0].val, 6.0, "min-plus value");
+  EXPECT_EQ((minplus.nnz), (1)) << "min-plus nnz";
+  if (minplus.nnz == 1) EXPECT_EQ((minplus.entries[0].val), (6.0)) << "min-plus value";
   const auto boolean = spcraft::OmpHashSpGEMM<spcraft::PlusTimesRing<bool>>(
       Make<bool>(1, 2, {{0, 0, true}, {0, 1, true}}),
       Make<bool>(2, 2, {{0, 0, false}, {1, 0, true}, {0, 1, false}}));
-  Equal(boolean.nnz, 2, "Boolean structural nnz");
+  EXPECT_EQ((boolean.nnz), (2)) << "Boolean structural nnz";
   if (boolean.nnz == 2) {
-    Equal(boolean.entries[0].val, true, "Boolean OR accumulation");
-    Equal(boolean.entries[1].val, false, "Boolean structural zero");
+    EXPECT_EQ((boolean.entries[0].val), (true)) << "Boolean OR accumulation";
+    EXPECT_EQ((boolean.entries[1].val), (false)) << "Boolean structural zero";
   }
 }
 
@@ -94,10 +88,10 @@ void CollisionChecks()
   const auto c =
       spcraft::OmpHashSpGEMM<Ring>(Make<double, int64_t, IT>(256, 1, entries),
                                    Make<double, int64_t, IT>(1, 1, {{0, 0, 2}, {0, 0, 3}}));
-  Equal(c.nnz, 16, "collision product nnz");
+  EXPECT_EQ((c.nnz), (16)) << "collision product nnz";
   for (IT i = 0; i < std::min<int64_t>(c.nnz, 16); ++i) {
-    Equal(c.entries[i].row, i * 16, "collision product sorted row");
-    Equal(c.entries[i].val, double(5 * (i + 1)), "collision product value");
+    EXPECT_EQ((c.entries[i].row), (i * 16)) << "collision product sorted row";
+    EXPECT_EQ((c.entries[i].val), (double(5 * (i + 1)))) << "collision product value";
   }
 }
 
@@ -136,13 +130,13 @@ void ReferenceChecks()
         }
         if (!present) continue;
         if (pos < c.nnz) {
-          Equal(c.entries[pos].row, row, "reference row");
-          Equal(c.entries[pos].col, col, "reference column");
-          Equal(c.entries[pos].val, value, "reference value");
+          EXPECT_EQ((c.entries[pos].row), (row)) << "reference row";
+          EXPECT_EQ((c.entries[pos].col), (col)) << "reference column";
+          EXPECT_EQ((c.entries[pos].val), (value)) << "reference value";
         }
         ++pos;
       }
-    Equal(c.nnz, pos, "reference structural nnz");
+    EXPECT_EQ((c.nnz), (pos)) << "reference structural nnz";
   }
 }
 
@@ -160,21 +154,22 @@ void OverflowCheck()
   } catch (const std::overflow_error&) {
     threw = true;
   }
-  Equal(threw, true, "output nnz overflow throws before narrowing");
+  EXPECT_EQ((threw), (true)) << "output nnz overflow throws before narrowing";
 }
 }  // namespace
 
-int main()
+class CscSpgemmTest : public ::testing::TestWithParam<int>
 {
-  for (int threads : {1, 2, 4}) {
-    if (!SPCRAFT_OPENMP_ENABLED && threads != 1) continue;
-    OMP_SET_NUM_THREADS(threads);
-    SmallChecks();
-    CollisionChecks<int32_t>();
-    CollisionChecks<int64_t>();
-    ReferenceChecks();
-    OverflowCheck();
-  }
-  if (failures) return 1;
-  std::cout << "CSC hash SpGEMM checks passed\n";
-}
+ protected:
+  void SetUp() override { OMP_SET_NUM_THREADS(GetParam()); }
+};
+TEST_P(CscSpgemmTest, SemiringsAndEmptyColumns) { SmallChecks(); }
+TEST_P(CscSpgemmTest, CollisionsWith32BitIndices) { CollisionChecks<std::int32_t>(); }
+TEST_P(CscSpgemmTest, CollisionsWith64BitIndices) { CollisionChecks<std::int64_t>(); }
+TEST_P(CscSpgemmTest, IndependentReference) { ReferenceChecks(); }
+TEST_P(CscSpgemmTest, OutputOffsetOverflow) { OverflowCheck(); }
+const std::vector<int> kThreadCounts =
+    SPCRAFT_OPENMP_ENABLED ? std::vector<int>{1, 2, 4} : std::vector<int>{1};
+INSTANTIATE_TEST_SUITE_P(OpenMPTeams, CscSpgemmTest, ::testing::ValuesIn(kThreadCounts));
+
+}  // namespace spcraft::tests

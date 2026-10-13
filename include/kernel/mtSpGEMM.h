@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "utils/utils.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {

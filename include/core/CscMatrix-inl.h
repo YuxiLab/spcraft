@@ -11,14 +11,15 @@
 
 #include "core/AllocationGuard.h"
 #include "core/CscMatrix.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
 /*************************************
  *             constructor
  *************************************/
-template <class IT, class NT, class OT>
-CscMatrix<IT, NT, OT>& CscMatrix<IT, NT, OT>::operator=(CscMatrix<IT, NT, OT>&& rhs) noexcept
+SP_MAT_TEMP
+SPCSC& SPCSC::operator=(SPCSC&& rhs) noexcept
 {
   if (this != &rhs) {
     SafeDelete(memowned, col_ptr, row_id, val);
@@ -34,14 +35,11 @@ CscMatrix<IT, NT, OT>& CscMatrix<IT, NT, OT>::operator=(CscMatrix<IT, NT, OT>&& 
   return *this;
 }
 
-template <class IT, class NT, class OT>
-CscMatrix<IT, NT, OT>::~CscMatrix()
-{
-  SafeDelete(memowned, col_ptr, row_id, val);
-}
+SP_MAT_TEMP
+SPCSC::~CscMatrix() { SafeDelete(memowned, col_ptr, row_id, val); }
 
-template <class IT, class NT, class OT>
-void CscMatrix<IT, NT, OT>::Allocate(OT require_nnz, IT nRows, IT nCols)
+SP_MAT_TEMP
+void SPCSC::Allocate(OT require_nnz, IT nRows, IT nCols)
 {
   if constexpr (std::is_signed_v<IT>) {
     if (nRows < 0 || nCols < 0) {
@@ -67,10 +65,10 @@ void CscMatrix<IT, NT, OT>::Allocate(OT require_nnz, IT nRows, IT nCols)
 /*************************************
  *             member functions
  *************************************/
-template <class IT, class NT, class OT>
-CscMatrix<IT, NT, OT> CscMatrix<IT, NT, OT>::Clone() const
+SP_MAT_TEMP
+SPCSC SPCSC::Clone() const
 {
-  CscMatrix<IT, NT, OT> res;
+  SPCSC res;
   res.Allocate(nnz, m, n);
   if (col_ptr) {
     std::copy(col_ptr, col_ptr + n + 1, res.col_ptr);
@@ -84,8 +82,8 @@ CscMatrix<IT, NT, OT> CscMatrix<IT, NT, OT>::Clone() const
   return res;
 }
 
-template <class IT, class NT, class OT>
-void CscMatrix<IT, NT, OT>::Reset()
+SP_MAT_TEMP
+void SPCSC::Reset()
 {
   col_ptr = nullptr;
   row_id = nullptr;
@@ -100,8 +98,8 @@ void CscMatrix<IT, NT, OT>::Reset()
  *             Static Members
  *************************************/
 
-template <class IT, class NT, class OT>
-std::tuple<OT*, IT*, NT*> CscMatrix<IT, NT, OT>::SafeAllocate(IT n, OT nnz)
+SP_MAT_TEMP
+std::tuple<OT*, IT*, NT*> SPCSC::SafeAllocate(IT n, OT nnz)
 {
   if constexpr (std::is_signed_v<IT>) {
     if (n < 0) throw std::invalid_argument("CscMatrix column count must be non-negative");
@@ -136,8 +134,8 @@ std::tuple<OT*, IT*, NT*> CscMatrix<IT, NT, OT>::SafeAllocate(IT n, OT nnz)
   return std::make_tuple(c, r, v);
 }
 
-template <class IT, class NT, class OT>
-void CscMatrix<IT, NT, OT>::SafeDelete(bool memowned, OT* col_ptr, IT* row_id, NT* val)
+SP_MAT_TEMP
+void SPCSC::SafeDelete(bool memowned, OT* col_ptr, IT* row_id, NT* val)
 {
   // The pointers are by value, so nulling them here would be a dead store.
   // Callers are responsible for clearing or overwriting their own members.

@@ -7,6 +7,7 @@
 #include <type_traits>
 
 #include "core/CsrMatrix.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -18,9 +19,8 @@ namespace spcraft
  * product of left[row, :] and right[column, :] and stores it in samples.val.
  * left and right are row-major matrices with feature_count columns.
  */
-template <class SemiRing, class IT, class NT, class OT>
-void sddmm_openmp(CsrMatrix<IT, NT, OT>& samples, const NT* left, const NT* right,
-                  std::size_t feature_count)
+SP_SR_MAT_TEMP
+void sddmm_openmp(SPCSR& samples, const NT* left, const NT* right, std::size_t feature_count)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "SDDMM semiring value type must match the matrix value type");

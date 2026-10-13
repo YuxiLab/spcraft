@@ -10,6 +10,7 @@
 #include "core/CsrMatrix.h"
 #include "core/DenseVector.h"
 #include "semiring/SemiRing.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -18,8 +19,7 @@ namespace detail
 
 template <class SemiRing, typename IT, typename NT, typename OT, int kBlockSize>
 struct SpmvCudaBlockPerRowImpl {
-  static cudaError_t Run(const CsrMatrix<IT, NT, OT>& matrix, const DenseVector<IT, NT>& x,
-                         DenseVector<IT, NT>& y, cudaStream_t stream);
+  static cudaError_t Run(const SPCSR& matrix, const SPDVEC& x, SPDVEC& y, cudaStream_t stream);
 };
 
 }  // namespace detail
@@ -39,8 +39,7 @@ struct SpmvCudaBlockPerRowImpl {
  * @param stream CUDA stream used for the kernel launch.
  */
 template <class SemiRing, typename IT, typename NT, typename OT = IT, int kBlockSize = 256>
-cudaError_t SpmvCudaBlockPerRow(const CsrMatrix<IT, NT, OT>& matrix,
-                                const DenseVector<IT, NT>& x, DenseVector<IT, NT>& y,
+cudaError_t SpmvCudaBlockPerRow(const SPCSR& matrix, const SPDVEC& x, SPDVEC& y,
                                 cudaStream_t stream = nullptr)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,

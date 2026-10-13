@@ -22,16 +22,14 @@ spcraft::CsrMatrix<IT, NT> FromEigen(const Eigen::SparseMatrix<NT, Eigen::RowMaj
   spcraft::CsrMatrix<IT, NT> result;
   result.Allocate(static_cast<IT>(matrix.nonZeros()), static_cast<IT>(matrix.rows()),
                   static_cast<IT>(matrix.cols()));
-  std::copy(matrix.outerIndexPtr(), matrix.outerIndexPtr() + matrix.rows() + 1,
-            result.row_ptr);
+  std::copy(matrix.outerIndexPtr(), matrix.outerIndexPtr() + matrix.rows() + 1, result.row_ptr);
   std::copy(matrix.innerIndexPtr(), matrix.innerIndexPtr() + matrix.nonZeros(), result.col_id);
   std::copy(matrix.valuePtr(), matrix.valuePtr() + matrix.nonZeros(), result.val);
   return result;
 }
 
 template <class NT, int Order, class Actual>
-double Verify(const Eigen::SparseMatrix<NT, Order>& expected, Actual actual,
-              const char* backend)
+double Verify(const Eigen::SparseMatrix<NT, Order>& expected, Actual actual, const char* backend)
 {
   double error = 0.0;
   double scale = 0.0;
@@ -40,20 +38,17 @@ double Verify(const Eigen::SparseMatrix<NT, Order>& expected, Actual actual,
     if (!std::isfinite(value)) {
       throw std::runtime_error(std::string(backend) + " produced a nonfinite value");
     }
-    error =
-        std::max(error, std::abs(value - static_cast<double>(expected.valuePtr()[position])));
+    error = std::max(error, std::abs(value - static_cast<double>(expected.valuePtr()[position])));
     scale = std::max(scale, std::abs(static_cast<double>(expected.valuePtr()[position])));
   }
   if (error > Tolerance<NT>() * std::max(1.0, scale)) {
-    throw std::runtime_error(
-        fmt::format("{} disagrees with Eigen: max error {}", backend, error));
+    throw std::runtime_error(fmt::format("{} disagrees with Eigen: max error {}", backend, error));
   }
   return error;
 }
 
 template <class IT, class NT>
-std::uintmax_t ProductWork(const spcraft::CsrMatrix<IT, NT>& A,
-                           const spcraft::CsrMatrix<IT, NT>& B)
+std::uintmax_t ProductWork(const spcraft::CsrMatrix<IT, NT>& A, const spcraft::CsrMatrix<IT, NT>& B)
 {
   std::uintmax_t work = 0;
   const auto limit = static_cast<std::uintmax_t>(std::numeric_limits<IT>::max());

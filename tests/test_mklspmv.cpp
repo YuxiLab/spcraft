@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -7,8 +9,10 @@
 
 #include "SpCraft.h"
 
+namespace spcraft::tests
+{
 template <class NT>
-bool test_mkl_spmv()
+void CheckMklSpmv()
 {
   using Index = std::int32_t;
   spcraft::CsrMatrix<Index, NT, Index> matrix;
@@ -29,16 +33,16 @@ bool test_mkl_spmv()
   mkl_matrix.Multiply(x.data(), actual.data());
 
   for (std::size_t i = 0; i < actual.size(); ++i) {
-    if (std::abs(actual[i] - expected[i]) > static_cast<NT>(1.0e-6)) {
-      std::cerr << "oneMKL SpMV mismatch at row " << i << ": got " << actual[i]
-                << ", expected " << expected[i] << '\n';
-      return false;
-    }
+    EXPECT_NEAR(actual[i], expected[i], static_cast<NT>(1.0e-6)) << "row " << i;
   }
-  return true;
 }
 
-int main()
+template <class NT>
+class MklSpmvTest : public ::testing::Test
 {
-  return test_mkl_spmv<float>() && test_mkl_spmv<double>() ? 0 : 1;
-}
+};
+using MklTypes = ::testing::Types<float, double>;
+TYPED_TEST_SUITE(MklSpmvTest, MklTypes);
+TYPED_TEST(MklSpmvTest, KnownSparseProduct) { CheckMklSpmv<TypeParam>(); }
+
+}  // namespace spcraft::tests

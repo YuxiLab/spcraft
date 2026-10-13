@@ -36,7 +36,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ninja-build libomp-dev
 
-      # CPM downloads Boost.Preprocessor, Eigen, fast_matrix_market, cxxopts and
+      # CPM downloads Boost.Preprocessor, Eigen, fast_matrix_market, GoogleTest, cxxopts and
       # fmt on every configure; caching them keeps a run near a minute.
       - name: Cache CPM dependencies
         uses: actions/cache@v4
@@ -81,14 +81,17 @@ jobs:
       - name: Configure without OpenMP
         env:
           CPM_SOURCE_CACHE: ~/.cache/CPM
-        # The top-level CMakeLists skips tests/ when OpenMP is missing, so build
-        # the library and examples and rely on those to catch a broken pragma.
+        # GoogleTest cases also exercise kernels through their serial fallback.
         run: >
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DSPCRAFT_BUILD_EXAMPLES=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=ON
       - run: cmake --build build --parallel
+
+      - name: Test serial kernels
+        working-directory: build
+        run: ctest --output-on-failure
 
   # CUDA has no runner with a GPU, so this compiles only. That is still worth
   # doing: the .cu sources reach their kernels through explicit instantiation,

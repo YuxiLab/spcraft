@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "core/CsrMatrix.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -20,8 +21,7 @@ namespace spcraft
  * without examining all O(n²) possible edges.
  */
 template <class NT, class IT, class OT = IT>
-[[nodiscard]] CsrMatrix<IT, NT, OT> GenERGraph(IT vertices, double expected_degree,
-                                               std::uint64_t seed)
+SPND SPCSR GenERGraph(IT vertices, double expected_degree, std::uint64_t seed)
 {
   if (vertices < 2 || expected_degree <= 0.0 || expected_degree >= vertices - 1.0) {
     throw std::invalid_argument("expected degree must be in (0, vertices - 1)");
@@ -39,8 +39,7 @@ template <class NT, class IT, class OT = IT>
   OT destination = -1;
   while (source < vertices) {
     const double random_value = uniform(generator);
-    destination +=
-        1 + static_cast<OT>(std::floor(std::log1p(-random_value) / log_one_minus_p));
+    destination += 1 + static_cast<OT>(std::floor(std::log1p(-random_value) / log_one_minus_p));
     while (destination >= source && source < vertices) {
       destination -= source;
       ++source;
@@ -56,7 +55,7 @@ template <class NT, class IT, class OT = IT>
     ++degrees[column];
   }
 
-  CsrMatrix<IT, NT, OT> graph;
+  SPCSR graph;
   const OT nonzeros = static_cast<OT>(edges.size()) * 2;
   graph.Allocate(nonzeros, vertices, vertices);
   graph.row_ptr[0] = 0;

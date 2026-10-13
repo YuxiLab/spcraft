@@ -12,6 +12,7 @@
 #include "linear_algebra/ConjugateGradient.h"
 #include "kernel/mtBlas1.h"
 #include "semiring/SemiRing.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -54,9 +55,9 @@ namespace spcraft
  * @throws std::invalid_argument on a non-square matrix, a size mismatch, or
  *         options outside their valid ranges.
  */
-template <class IT, class NT, class OT>
-CgResult<NT> cg_openmp(const CsrMatrix<IT, NT, OT>& A, const DenseVector<IT, NT>& b,
-                       DenseVector<IT, NT>& x, const CgOptions<NT>& options = CgOptions<NT>{})
+SP_MAT_TEMP
+CgResult<NT> cg_openmp(const SPCSR& A, const SPDVEC& b, SPDVEC& x,
+                       const CgOptions<NT>& options = CgOptions<NT>{})
 {
   static_assert(std::is_floating_point_v<NT>, "CG requires a floating-point value type");
 
@@ -86,9 +87,9 @@ CgResult<NT> cg_openmp(const CsrMatrix<IT, NT, OT>& A, const DenseVector<IT, NT>
     return result;
   }
 
-  DenseVector<IT, NT> r(n);
-  DenseVector<IT, NT> p(n);
-  DenseVector<IT, NT> q(n);
+  SPDVEC r(n);
+  SPDVEC p(n);
+  SPDVEC q(n);
 
   // r = b - A x, honouring whatever initial guess the caller left in x.
   OmpSpMV<PlusTimesRing<NT>>(A, x, q);

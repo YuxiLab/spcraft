@@ -85,8 +85,7 @@ std::vector<ThreadProfile> profile_spmv(const Matrix& matrix, const Vector& x, V
 
 int main(int argc, char** argv)
 {
-  cxxopts::Options options(argv[0],
-                           "Report per-thread work and load balance for SPCraft SpMV");
+  cxxopts::Options options(argv[0], "Report per-thread work and load balance for SPCraft SpMV");
   options.add_options()("m,matrix", "Matrix Market file", cxxopts::value<std::string>())(
       "t,threads", "OpenMP thread count", cxxopts::value<int>()->default_value("16"))(
       "i,iterations", "Profiled iterations", cxxopts::value<int>()->default_value("20"))(
@@ -138,16 +137,15 @@ int main(int argc, char** argv)
     std::cout << "matrix,thread,cpu_start,cpu_end,rows,nnz,avg_work_ms,estimated_wait_ms\n";
     std::cout << std::setprecision(10);
     for (const auto& profile : profiles) {
-      std::cout << path.stem().string() << ',' << profile.thread << ',' << profile.cpu_start
-                << ',' << profile.cpu_end << ',' << profile.rows << ',' << profile.nonzeros
-                << ',' << profile.average_work_ms << ',' << max_time - profile.average_work_ms
-                << '\n';
+      std::cout << path.stem().string() << ',' << profile.thread << ',' << profile.cpu_start << ','
+                << profile.cpu_end << ',' << profile.rows << ',' << profile.nonzeros << ','
+                << profile.average_work_ms << ',' << max_time - profile.average_work_ms << '\n';
     }
 
-    std::cerr << std::setprecision(5) << "matrix=" << path.stem().string()
-              << " rows=" << matrix.m << " nnz=" << matrix.nnz
-              << " threads=" << profiles.size() << " mean_work_ms=" << mean_time
-              << " max_work_ms=" << max_time << " time_imbalance=" << max_time / mean_time
+    std::cerr << std::setprecision(5) << "matrix=" << path.stem().string() << " rows=" << matrix.m
+              << " nnz=" << matrix.nnz << " threads=" << profiles.size()
+              << " mean_work_ms=" << mean_time << " max_work_ms=" << max_time
+              << " time_imbalance=" << max_time / mean_time
               << " nnz_imbalance=" << static_cast<double>(max_nnz) / mean_nnz << '\n';
   } catch (const std::exception& error) {
     std::cerr << "error: " << error.what() << '\n';

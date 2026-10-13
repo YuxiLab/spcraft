@@ -6,6 +6,7 @@
 
 #include "core/CsrMatrix.h"
 #include "utils/omp/omp_wrapper.h"
+#include "utils/MatrixMacros.h"
 namespace spcraft
 {
 
@@ -13,8 +14,8 @@ namespace spcraft
  * @brief Reference OpenMP SpMM.
  *
  */
-template <class SemiRing, class IT, class NT, class OT>
-void spmm_openmp(const CsrMatrix<IT, NT, OT>& A, const NT* B, NT* C, std::size_t dense_columns)
+SP_SR_MAT_TEMP
+void spmm_openmp(const SPCSR& A, const NT* B, NT* C, std::size_t dense_columns)
 {
   OMP_PARALLEL_FOR(schedule(static))
   for (IT row = 0; row < A.m; ++row) {

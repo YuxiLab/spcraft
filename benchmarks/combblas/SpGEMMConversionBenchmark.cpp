@@ -46,8 +46,7 @@ void Run(const cxxopts::ParseResult& options)
           combblas::LocalSpGEMMHash<Ring, double>(a, a, false, false, true));
       const Comb serial(*t, false),
           parallel(csc.m, csc.n, static_cast<int>(t->getnnz()), t->tuples, false);
-      if (serial.getnnz() != parallel.getnnz())
-        throw std::runtime_error("conversion nnz mismatch");
+      if (serial.getnnz() != parallel.getnnz()) throw std::runtime_error("conversion nnz mismatch");
       if (serial.getnnz()) {
         const auto* s = serial.GetDCSC();
         const auto* p = parallel.GetDCSC();

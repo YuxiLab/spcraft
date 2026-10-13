@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "name": "SpMV development",
+  "profiles": [
+    {
+      "id": "local",
+      "kind": "local",
+      "parents": [
+        "local"
+      ],
+      "project_dir": "/home/yuxihong/workspace/code/spcraft"
+    }
+  ],
+  "runs": [
+    {
+      "id": 1,
+      "server": "local",
+      "dataset": "pdb1HYS",
+      "threads": 4,
+      "method": "openmp-double",
+      "argv": [
+        "/home/yuxihong/workspace/code/spcraft/build/overseer-dev/bin/bench_ompspmv",
+        "--matrix",
+        "/home/yuxihong/workspace/code/spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx",
+        "--threads",
+        "4",
+        "--index",
+        "int32",
+        "--offset",
+        "int32",
+        "--iterations",
+        "5",
+        "--max-time",
+        "0.05",
+        "--output",
+        "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-231335-35753867887946/0001/result.json",
+        "--precision",
+        "double"
+      ],
+      "cwd": "/home/yuxihong/workspace/code/spcraft",
+      "environment": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "folder": "/home/yuxihong/workspace/code/spcraft/results/overseer/20261012-231335-35753867887946/0001"
+    }
+  ],
+  "total": 1,
+  "stop_on_failure": false
+}

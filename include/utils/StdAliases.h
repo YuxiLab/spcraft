@@ -6,14 +6,14 @@
 namespace spcraft
 {
 
-using VI = std::vector<std::int32_t>;
-using VVI = std::vector<std::vector<std::int32_t>>;
-using VL = std::vector<std::int64_t>;
-using VVL = std::vector<std::vector<std::int64_t>>;
-using VF = std::vector<float>;
-using VVF = std::vector<std::vector<float>>;
-using VD = std::vector<double>;
-using VVD = std::vector<std::vector<double>>;
+#define VI std::vector<std::int32_t>
+#define VVI std::vector<std::vector<std::int32_t>>
+#define VL std::vector<std::int64_t>
+#define VVL std::vector<std::vector<std::int64_t>>
+#define VF std::vector<float>
+#define VVF std::vector<std::vector<float>>
+#define VD std::vector<double>
+#define VVD std::vector<std::vector<double>>
 
 #define VIT std::vector<IT>
 #define VVIT std::vector<std::vector<IT>>

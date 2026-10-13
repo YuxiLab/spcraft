@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utils/MatrixMacros.h"
+
 namespace spcraft
 {
 
@@ -23,14 +25,12 @@ struct PlusTimesRing {
   inline static constexpr NT kAdditiveIdentity = NT{0};
   inline static constexpr NT kMultiplicativeIdentity = NT{1};
 
-  [[nodiscard]] SPCRAFT_SEMIRING_HOST_DEVICE static constexpr NT Add(const NT& left,
-                                                                     const NT& right)
+  SPND SPCRAFT_SEMIRING_HOST_DEVICE static constexpr NT Add(const NT& left, const NT& right)
   {
     return left + right;
   }
 
-  [[nodiscard]] SPCRAFT_SEMIRING_HOST_DEVICE static constexpr NT Multiply(const NT& left,
-                                                                          const NT& right)
+  SPND SPCRAFT_SEMIRING_HOST_DEVICE static constexpr NT Multiply(const NT& left, const NT& right)
   {
     return left * right;
   }

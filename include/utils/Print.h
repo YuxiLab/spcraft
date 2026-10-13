@@ -138,10 +138,9 @@ class SparseMatrixPreview
 /// Print a zero-based sparse subblock; counts are clipped at the matrix edges.
 /// Missing entries appear as '.', stored zeros as '0', and duplicates as '{a, b}'.
 /// The matrix must be valid and its storage host-accessible.
-template <class IT, class NT, class OT>
-void PrintMatrix(const CsrMatrix<IT, NT, OT>& matrix, std::int64_t row, std::int64_t col,
-                 std::int64_t rows, std::int64_t cols, std::string_view name,
-                 std::ostream& out = std::cout)
+SP_MAT_TEMP
+void PrintMatrix(const SPCSR& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
+                 std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
   const auto block = detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
   detail::SparseMatrixPreview preview(block, out);
@@ -154,10 +153,9 @@ void PrintMatrix(const CsrMatrix<IT, NT, OT>& matrix, std::int64_t row, std::int
 }
 
 /// CSC overload of the sparse subblock printer, with the same bounds and storage requirements.
-template <class IT, class NT, class OT>
-void PrintMatrix(const CscMatrix<IT, NT, OT>& matrix, std::int64_t row, std::int64_t col,
-                 std::int64_t rows, std::int64_t cols, std::string_view name,
-                 std::ostream& out = std::cout)
+SP_MAT_TEMP
+void PrintMatrix(const SPCSC& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
+                 std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
   const auto block = detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
   detail::SparseMatrixPreview preview(block, out);
@@ -170,10 +168,9 @@ void PrintMatrix(const CscMatrix<IT, NT, OT>& matrix, std::int64_t row, std::int
 }
 
 /// COO overload; entries need not be sorted and duplicate coordinates are preserved.
-template <class IT, class NT, class OT>
-void PrintMatrix(const CooMatrix<IT, NT, OT>& matrix, std::int64_t row, std::int64_t col,
-                 std::int64_t rows, std::int64_t cols, std::string_view name,
-                 std::ostream& out = std::cout)
+SP_MAT_TEMP
+void PrintMatrix(const SPCOO& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
+                 std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
   const auto block = detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
   detail::SparseMatrixPreview preview(block, out);

@@ -96,7 +96,7 @@ void SPDCSC::Reset()
 }
 
 SP_MAT_TEMP
-SPDCSC SPDCSC::FromCsc(const CscMatrix<IT, NT, OT>& source)
+SPDCSC SPDCSC::FromCsc(const SPCSC& source)
 {
   IT columns = 0;
   for (IT col = 0; col < source.n; ++col) {
@@ -120,9 +120,9 @@ SPDCSC SPDCSC::FromCsc(const CscMatrix<IT, NT, OT>& source)
 }
 
 SP_MAT_TEMP
-CscMatrix<IT, NT, OT> SPDCSC::ToCsc() const
+SPCSC SPDCSC::ToCsc() const
 {
-  CscMatrix<IT, NT, OT> result;
+  SPCSC result;
   result.Allocate(nnz, m, n);
   IT slot = 0;
   OT offset = 0;

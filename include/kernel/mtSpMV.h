@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "utils/utils.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -13,7 +14,7 @@ namespace spcraft
  * @brief Reference omp spmv.
  */
 SP_SR_MAT_TEMP
-void OmpSpMV(const SPCSC& A, const SPDVEC& x, SPDVEC& y)
+void OmpSpMV(const SPCSR& A, const SPDVEC& x, SPDVEC& y)
 {
   if (x.n != A.n || y.n != A.m) {
     throw std::invalid_argument("SpMV vector dimensions do not match the matrix");

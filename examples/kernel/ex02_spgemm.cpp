@@ -1,70 +1,89 @@
-/*******************************************************
- * OpenMP SpGEMM using CSC storage.
- * Author: Yuxi Hong
- * Date: 2026-09-01
- * *****************************************************/
-// Standard library headers.
 #include <chrono>
 #include <cstdint>
 #include <numeric>
+#include <string>
 #include <type_traits>
 
-// Third-party dependencies.
 #include <fmt/format.h>
 
-// SpCraft and the Eigen conversion helper used for verification.
 #include "SpCraft.h"
 #include "eigeninterface.h"
 
-using namespace spcraft;
+namespace spcraft
+{
+namespace
+{
+int ExampleRun(const std::string& matrix_path)
+{
+  // Match the compiled Eigen reference's 64-bit indices and double-precision values.
+  using IT = std::int64_t;
+  using NT = double;
+  using OT = IT;
+  using COO = spcraft::CooMatrix<IT, NT, OT>;
+  using CSC = spcraft::CscMatrix<IT, NT, OT>;
+  using Ring = spcraft::PlusTimesRing<NT>;
+  using Clock = std::chrono::steady_clock;
+  using Seconds = std::chrono::duration<double>;
 
-// The compiled Eigen reference helper uses 64-bit indices and double-precision values.
-using IT = std::int64_t;
-using NT = double;
+  // Read both operands in COO form, then convert to CSC for column-oriented multiplication.
+  const COO lhs_coo = spcraft::ReadMatrixInput(matrix_path);
+  const CSC lhs = lhs_coo.ToCsc();
+  const COO rhs_coo = spcraft::ReadMatrixInput(matrix_path);
+  const CSC rhs = rhs_coo.ToCsc();
 
-using CSC = CscMatrix<IT, NT>;
-using COO = CooMatrix<IT, NT>;
-using Ring = PlusTimesRing<NT>;
+  // Time only SpCraft's multiplication; conversion and verification happen afterward.
+  const auto start = Clock::now();
+  const auto result = spcraft::OmpHashSpGEMM<Ring, IT, NT, OT>(lhs, rhs);
+  const auto stop = Clock::now();
+  const Seconds elapsed = stop - start;
+  const double seconds = elapsed.count();
+
+  // Count one multiply and one add per scalar product for comparable throughput figures.
+  constexpr double kFlopsPerProduct = 2.0;
+  const auto products = spcraft::HashSpGEMMCscEstimateFlops(lhs, rhs);
+  const IT scalar_products = std::accumulate(products.begin(), products.end(), IT{0});
+  const double flops = kFlopsPerProduct * static_cast<double>(scalar_products);
+
+  // Verify the output shape before comparing values against the independent Eigen result.
+  const auto result_csc = result.ToCsc();
+  constexpr NT kTolerance = std::is_same_v<NT, float> ? 1e-6f : 1e-13;
+  if (result_csc.m != lhs.m || result_csc.n != rhs.n) {
+    constexpr auto kShapeError =
+        "SpGEMM verification failed: output shape is {} x {}, expected {} x {}\n";
+    fmt::print(stderr, kShapeError, result_csc.m, result_csc.n, lhs.m, rhs.n);
+    return 1;
+  }
+  const auto comparison = spcraft::CompareSpGEMMWithEigen(lhs, rhs, result_csc, kTolerance);
+
+  // Report verification and both multiplication rates using the same FLOP count.
+  if (comparison.matches) {
+    constexpr auto kSuccess =
+        "SpGEMM verification passed: output matches Eigen reference (tol = {})\n";
+    fmt::print(kSuccess, kTolerance);
+    constexpr double kFlopsPerGflop = 1e9;
+    const double spcraft_gflops = flops / seconds / kFlopsPerGflop;
+    const double eigen_seconds = comparison.multiply_seconds;
+    const double eigen_gflops = flops / eigen_seconds / kFlopsPerGflop;
+    fmt::print("FLOPs: {:.0f}\n", flops);
+    fmt::print("SpCraft: {:.6f} s, {:.3f} GFLOPS\n", seconds, spcraft_gflops);
+    fmt::print("Eigen:   {:.6f} s, {:.3f} GFLOPS\n", eigen_seconds, eigen_gflops);
+  } else {
+    constexpr auto kValueError =
+        "SpGEMM verification failed: output differs from Eigen reference (error = {}, tol = {})\n";
+    fmt::print(stderr, kValueError, comparison.error, kTolerance);
+  }
+  return comparison.matches ? 0 : 1;
+}
+}  // namespace
+}  // namespace spcraft
 
 int main(int argc, char** argv)
 {
-  const auto input = ParseMatrixInput(argc, argv, "Verify SpCraft OpenMP SpGEMM against Eigen");
+  // Parse the matrix path, leaving help and input errors to the shared input utility.
+  constexpr auto kDescription = "Verify SpCraft OpenMP SpGEMM against Eigen";
+  const auto input = spcraft::ParseMatrixInput(argc, argv, kDescription);
   if (!input.path) return input.exit_code;
 
-  COO acoo = ReadMatrixInput(*input.path);
-  CSC acsc = acoo.ToCsc();
-  COO bcoo = ReadMatrixInput(*input.path);
-  CSC bcsc = bcoo.ToCsc();
-
-  const auto start = std::chrono::steady_clock::now();
-  const auto result = OmpHashSpGEMM<Ring, IT, NT, IT>(acsc, bcsc);
-  const double seconds =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
-  // Count one multiply and one add per scalar product for both implementations.
-  const auto column_products = EstimateFLOP(acsc, bcsc);
-  const double flops = 2.0 * static_cast<double>(std::accumulate(column_products.begin(),
-                                                                 column_products.end(), IT{0}));
-  // Conversion and verification are outside both multiplication timings.
-  const auto result_csc = result.ToCsc();
-  constexpr NT tol = std::is_same_v<NT, float> ? 1e-6f : 1e-13;
-  if (result_csc.m != acsc.m || result_csc.n != bcsc.n) {
-    fmt::print(stderr, "SpGEMM verification failed: output shape is {} x {}, expected {} x {}\n",
-               result_csc.m, result_csc.n, acsc.m, bcsc.n);
-    return 1;
-  }
-  const auto comparison = CompareSpGEMMWithEigen(acsc, bcsc, result_csc, tol);
-  if (comparison.matches) {
-    fmt::print("SpGEMM verification passed: output matches Eigen reference (tol = {})\n", tol);
-    constexpr double kFlopsPerGflop = 1e9;
-    fmt::print("FLOPs: {:.0f}\n", flops);
-    fmt::print("SpCraft: {:.6f} s, {:.3f} GFLOPS\n", seconds, flops / seconds / kFlopsPerGflop);
-    fmt::print("Eigen:   {:.6f} s, {:.3f} GFLOPS\n", comparison.multiply_seconds,
-               flops / comparison.multiply_seconds / kFlopsPerGflop);
-  } else {
-    fmt::print(stderr,
-               "SpGEMM verification failed: output differs from Eigen reference "
-               "(error = {}, tol = {})\n",
-               comparison.error, tol);
-  }
-  return comparison.matches ? 0 : 1;
+  // Run the complete example and return its verification status.
+  return spcraft::ExampleRun(*input.path);
 }

@@ -10,6 +10,7 @@
 #include "core/CsrMatrix.h"
 #include "core/DenseVector.h"
 #include "graph/PageRank.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
@@ -18,9 +19,8 @@ namespace detail
 
 template <typename IT, typename NT, typename OT, int kBlockSize>
 struct PageRankCudaImpl {
-  static cudaError_t Run(const CsrMatrix<IT, NT, OT>& op, DenseVector<IT, NT>& rank,
-                         const PageRankOptions<NT>& options, PageRankResult<NT>* result,
-                         cudaStream_t stream);
+  static cudaError_t Run(const SPCSR& op, SPDVEC& rank, const PageRankOptions<NT>& options,
+                         PageRankResult<NT>* result, cudaStream_t stream);
 };
 
 }  // namespace detail
@@ -51,13 +51,12 @@ struct PageRankCudaImpl {
  *         failure encountered.
  */
 template <typename IT, typename NT, typename OT = IT, int kBlockSize = 256>
-cudaError_t PageRankCuda(const CsrMatrix<IT, NT, OT>& op, DenseVector<IT, NT>& rank,
+cudaError_t PageRankCuda(const SPCSR& op, SPDVEC& rank,
                          const PageRankOptions<NT>& options = PageRankOptions<NT>{},
                          PageRankResult<NT>* result = nullptr, cudaStream_t stream = nullptr)
 {
   static_assert(std::is_floating_point_v<NT>, "PageRank requires a floating-point value type");
-  return detail::PageRankCudaImpl<IT, NT, OT, kBlockSize>::Run(op, rank, options, result,
-                                                               stream);
+  return detail::PageRankCudaImpl<IT, NT, OT, kBlockSize>::Run(op, rank, options, result, stream);
 }
 
 }  // namespace spcraft

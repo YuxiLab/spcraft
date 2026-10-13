@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -6,7 +8,9 @@
 
 #include "SpCraft.h"
 
-int main()
+namespace spcraft::tests
+{
+TEST(Mtspmv, Correctness)
 {
   using Matrix = spcraft::CsrMatrix<std::int32_t, double, std::int64_t>;
   using Ring = spcraft::PlusTimesRing<double>;
@@ -37,18 +41,12 @@ int main()
   std::copy(x_values.begin(), x_values.end(), x.val);
 
   spcraft::OmpSpMV<Ring>(A, x, y);
-  if (!std::equal(expected.begin(), expected.end(), y.val)) {
-    std::cerr << "OpenMP SpMV returned an incorrect result\n";
-    return 1;
+  for (std::size_t row = 0; row < expected.size(); ++row) {
+    EXPECT_DOUBLE_EQ(y.val[row], expected[row]) << "SpMV row " << row;
   }
 
-  try {
-    Vector wrong_size(A.n - 1);
-    spcraft::OmpSpMV<Ring>(A, wrong_size, y);
-    std::cerr << "OpenMP SpMV accepted an input vector with the wrong size\n";
-    return 1;
-  } catch (const std::invalid_argument&) {
-  }
+  Vector wrong_size(A.n - 1);
+  EXPECT_THROW(spcraft::OmpSpMV<Ring>(A, wrong_size, y), std::invalid_argument);
 
   // sparse_left = [ 1 0 2 ]
   //               [ 0 3 0 ]
@@ -68,20 +66,16 @@ int main()
   std::array<double, 4> dense_result{};
   const std::array<double, 4> expected_dense{16.0, 14.0, 0.0, 15.0};
   spcraft::spmm_openmp<Ring>(sparse_left, dense_right.data(), dense_result.data(), 2);
-  if (dense_result != expected_dense) {
-    std::cerr << "OpenMP SpMM returned an incorrect result\n";
-    return 1;
-  }
+  EXPECT_EQ(dense_result, expected_dense) << "SpMM product";
 
   // Sample left_dense * transpose(right_dense) at sparse_left's pattern.
   const std::array<double, 4> left_dense{1.0, 2.0, 3.0, 4.0};
   const std::array<double, 6> right_dense{5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
   const std::array<double, 3> expected_samples{17.0, 29.0, 53.0};
   spcraft::sddmm_openmp<Ring>(sparse_left, left_dense.data(), right_dense.data(), 2);
-  if (!std::equal(expected_samples.begin(), expected_samples.end(), sparse_left.val)) {
-    std::cerr << "OpenMP SDDMM returned an incorrect result\n";
-    return 1;
+  for (std::size_t entry = 0; entry < expected_samples.size(); ++entry) {
+    EXPECT_DOUBLE_EQ(sparse_left.val[entry], expected_samples[entry]) << "SDDMM entry " << entry;
   }
-
-  return 0;
 }
+
+}  // namespace spcraft::tests

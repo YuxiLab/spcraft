@@ -1,6 +1,7 @@
 #pragma once
 
 #include "kernel/mtSpGEMM.h"
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
