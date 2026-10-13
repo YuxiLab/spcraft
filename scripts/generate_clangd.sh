@@ -6,14 +6,14 @@ usage() {
     cat <<'EOF'
 Usage: scripts/generate_clangd.sh [TEMPLATE [OUTPUT]]
 
-Defaults: TEMPLATE=.clangd.in, OUTPUT=.clangd
+Defaults: TEMPLATE=.clangd.in, OUTPUT=.clangd, CLANGD_COMPILATION_DATABASE=./build
 Requires GNU envsubst (Ubuntu/Debian: sudo apt install gettext-base).
 Automatic dependency discovery also uses GNU realpath (coreutils).
 
 Example:
   CLANGD_COMPILATION_DATABASE=./build scripts/generate_clangd.sh
 
-Optional overrides: export CUDAROOT, MKLROOT, CXXOPTSROOT, FMMROOT,
+Optional overrides: export CUDAROOT, MKLROOT, CXXOPTSROOT, FMMROOT, FMTROOT,
 GOOGLEBENCHMARKROOT, GOOGLETESTROOT, or MPIROOT to use your own installations.
 Unset roots are discovered from the selected build's CMakeCache.txt and _deps/.
 Explicitly exported empty values are errors, and overrides take priority.
@@ -50,6 +50,7 @@ find_dependency_root() {
     case "$variable" in
         CXXOPTSROOT) package=cxxopts; headers=(include/cxxopts.hpp) ;;
         FMMROOT) package=fast_matrix_market; headers=(include/fast_matrix_market/fast_matrix_market.hpp) ;;
+        FMTROOT) package=fmt; headers=(include/fmt/format.h) ;;
         GOOGLEBENCHMARKROOT) package=benchmark; headers=(include/benchmark/benchmark.h) ;;
         GOOGLETESTROOT)
             package=googletest
@@ -158,9 +159,9 @@ database_entries=$(grep -c '^[[:space:]]*CompilationDatabase:' "$template" || tr
 [[ "$database_entries" == 1 ]] || fail 'Template must contain exactly one CompilationDatabase entry.'
 grep -Eq '^[[:space:]]*CompilationDatabase: "\$\{CLANGD_COMPILATION_DATABASE\}"[[:space:]]*$' "$template" ||
     fail 'Use CompilationDatabase: "${CLANGD_COMPILATION_DATABASE}" in the template.'
-database_dir=$(printenv CLANGD_COMPILATION_DATABASE) ||
-    fail 'Export a non-empty value for CLANGD_COMPILATION_DATABASE.'
+database_dir=${CLANGD_COMPILATION_DATABASE-./build}
 [[ -n "$database_dir" ]] || fail 'Export a non-empty value for CLANGD_COMPILATION_DATABASE.'
+export CLANGD_COMPILATION_DATABASE="$database_dir"
 case "$database_dir" in
     *'"'*|*'\'*|*$'\n'*|*$'\r'*) fail 'Database directory contains characters requiring YAML escaping.' ;;
 esac

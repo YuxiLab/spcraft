@@ -38,7 +38,7 @@ CompileFlags:
     - "-isystem"
     - "${MPIROOT}/include"
     - "-isystem"
-    - "_deps/fmt-src/include"
+    - "${FMTROOT}/include"
     - "-isystem"
     - "_deps/boost_preprocessor-src/include"
     # The headers have no compile_commands.json entry, so clangd interpolates

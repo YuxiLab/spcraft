@@ -38,7 +38,7 @@ CompileFlags:
     - "-isystem"
     - "../../../../spack/opt/spack/linux-skylake/openmpi-5.0.10-fljfzeskifjgcv65bzzvbmqmd6jmiygy/include"
     - "-isystem"
-    - "_deps/fmt-src/include"
+    - "../../../../../miniconda3/include"
     - "-isystem"
     - "_deps/boost_preprocessor-src/include"
     # The headers have no compile_commands.json entry, so clangd interpolates

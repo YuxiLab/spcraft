@@ -89,3 +89,4 @@ vscode-cmake-workbench/*.vsix
 
 # results
 benchmarks/results
+.clangd
