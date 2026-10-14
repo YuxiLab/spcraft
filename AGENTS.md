@@ -301,9 +301,9 @@ reference is useful. Link GoogleTest only to test targets. A shared small `main(
 calls `TestRun`, which initializes GoogleTest and returns `RUN_ALL_TESTS()`.
 CUDA and distributed test drivers keep their backend-specific lifecycle handling.
 
-- **One executable per class or per kernel.** `test_csr_matrix.cpp` covers
-  `CsrMatrix`, `test_cg.cpp` covers conjugate gradient. Do not append checks for
-  a new class to an existing file.
+- **One executable per class or per kernel.** `tests/core/test_CsrMatrix.cpp` covers
+  `CsrMatrix`; `tests/linear_algebra/test_mtConjugateGradient.cpp` covers
+  conjugate gradient. Do not append checks for a new class to an existing file.
 - Use named `TEST`, typed, or parameterized cases to isolate behaviors. Prefer
   nonfatal `EXPECT_*` assertions so independent checks continue; use `ASSERT_*`
   when later checks require a valid prerequisite. Include actual and expected
@@ -311,7 +311,7 @@ CUDA and distributed test drivers keep their backend-specific lifecycle handling
 - A new **container** gets: default construction, `Allocate` including the empty
   case, the pointer-constructor view, move construction, move assignment,
   self-move, `Clone` including the empty case, `Reset`, and a failed allocation.
-  `test_csr_matrix.cpp` is the template.
+  `tests/core/test_CsrMatrix.cpp` is the template.
 - A new **kernel or algorithm** gets: a hand-checked small case with a known
   result, an edge case (empty row, dangling vertex, zero right-hand side), a
   dimension-mismatch case asserting the throw, and a cross-check against Eigen
@@ -323,7 +323,8 @@ CUDA and distributed test drivers keep their backend-specific lifecycle handling
 - Make failure output diagnosable: print the value you got and the value you
   expected, not just that they differ.
 - Every new shared-memory test needs `add_executable` and `gtest_discover_tests`
-  in `tests/CMakeLists.txt`, guarded by its backend option when applicable.
+  in its module's `tests/<module>/CMakeLists.txt`, with the module added by
+  `tests/CMakeLists.txt` and guarded by its backend option when applicable.
   Keep `add_test` for standalone CUDA/distributed drivers.
 
 Prefer a deterministic failure to one that depends on the machine. Asking for an

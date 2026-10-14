@@ -15,7 +15,7 @@ SPND NT Dot(const SPDVEC& left, const SPDVEC& right)
 {
   const IT n = left.n;
   NT total = NT{0};
-  OMP_PARALLEL_FOR(schedule(static) default(none) shared(left, right, n) reduction(+ : total))
+  OMP_PARALLEL_FOR(schedule(static) reduction(+ : total))
   for (IT index = 0; index < n; ++index) {
     total += left.val[index] * right.val[index];
   }
@@ -27,7 +27,7 @@ SP_VEC_TEMP
 void Scale(NT alpha, SPDVEC& x)
 {
   const IT n = x.n;
-  OMP_PARALLEL_FOR(schedule(static) default(none) shared(x, n, alpha))
+  OMP_PARALLEL_FOR(schedule(static))
   for (IT index = 0; index < n; ++index) {
     x.val[index] = alpha * x.val[index];
   }
@@ -38,7 +38,7 @@ SP_VEC_TEMP
 void Axpy(NT alpha, const SPDVEC& x, SPDVEC& y)
 {
   const IT n = y.n;
-  OMP_PARALLEL_FOR(schedule(static) default(none) shared(x, y, n, alpha))
+  OMP_PARALLEL_FOR(schedule(static))
   for (IT index = 0; index < n; ++index) {
     y.val[index] += alpha * x.val[index];
   }
@@ -49,7 +49,7 @@ SP_VEC_TEMP
 void Aypx(NT beta, const SPDVEC& x, SPDVEC& y)
 {
   const IT n = y.n;
-  OMP_PARALLEL_FOR(schedule(static) default(none) shared(x, y, n, beta))
+  OMP_PARALLEL_FOR(schedule(static))
   for (IT index = 0; index < n; ++index) {
     y.val[index] = x.val[index] + beta * y.val[index];
   }
@@ -60,7 +60,7 @@ SP_VEC_TEMP
 void Fill(NT value, SPDVEC& x)
 {
   const IT n = x.n;
-  OMP_PARALLEL_FOR(schedule(static) default(none) shared(x, n, value))
+  OMP_PARALLEL_FOR(schedule(static))
   for (IT index = 0; index < n; ++index) {
     x.val[index] = value;
   }
@@ -72,7 +72,7 @@ void Copy(const SPDVEC& x, SPDVEC& y)
 {
   if (x.n != y.n) throw std::runtime_error("vector dimension not matched!");
   const IT n = x.n;
-  OMP_PARALLEL_FOR(schedule(static) default(none) shared(x, y, n))
+  OMP_PARALLEL_FOR(schedule(static))
   for (IT index = 0; index < n; ++index) {
     y.val[index] = x.val[index];
   }

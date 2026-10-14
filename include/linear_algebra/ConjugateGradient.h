@@ -10,6 +10,9 @@ namespace spcraft
  */
 template <class NT>
 struct CgOptions {
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
   NT tolerance = NT{1e-10};   //!< Relative residual target, ||r|| / ||b||.
   int max_iterations = 1000;  //!< Upper bound on iterations.
 };
@@ -19,6 +22,9 @@ struct CgOptions {
  */
 template <class NT>
 struct CgResult {
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
   int iterations = 0;      //!< Iterations actually performed.
   NT residual = NT{0};     //!< Final relative residual, ||r|| / ||b||.
   bool converged = false;  //!< Whether the residual reached the tolerance.

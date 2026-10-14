@@ -1,0 +1,7 @@
+add_executable(test_cg test_mtConjugateGradient.cpp)
+target_link_libraries(test_cg PRIVATE SPCraftTestMain ${EIGEN3_TARGET} SPCraft)
+gtest_discover_tests(test_cg TEST_PREFIX cg_openmp. DISCOVERY_MODE PRE_TEST)
+
+add_executable(test_power_iteration test_mtPowerIteration.cpp)
+target_link_libraries(test_power_iteration PRIVATE SPCraftTestMain ${EIGEN3_TARGET} SPCraft)
+gtest_discover_tests(test_power_iteration TEST_PREFIX power_iteration_openmp. DISCOVERY_MODE PRE_TEST)

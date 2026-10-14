@@ -133,7 +133,7 @@ are explicit caller responsibilities; no alternate implementation is selected.
 
 ## Verification without timing
 
-[test_mtspgemm.cpp](../../tests/test_mtspgemm.cpp) is a plain
+[test_mtspgemm.cpp](../../tests/kernel/test_mtSpGEMM.cpp) is a plain
 correctness executable. With SPCRAFT_USE_COMBBLAS=ON it calls the actual pinned
 CombBLAS helpers and kernel and checks:
 

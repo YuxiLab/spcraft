@@ -19,3 +19,10 @@ if(SPCRAFT_USE_MPI)
 else()
 	message(STATUS "MPI support is disabled; skipping the MPI example")
 endif()
+
+# BEGIN scaffold: target ex_mpi_2dspgemm
+if(SPCRAFT_USE_MPI)
+	add_executable(ex_mpi_2dspgemm ex_2dspgemm.cpp)
+	target_link_libraries(ex_mpi_2dspgemm PRIVATE SPCraft cxxopts::cxxopts)
+endif()
+# END scaffold: target ex_mpi_2dspgemm

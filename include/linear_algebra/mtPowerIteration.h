@@ -46,6 +46,9 @@ namespace spcraft
  * is what stops them. Symmetry is not required, though for a nonsymmetric A the
  * Rayleigh quotient is only an eigenvalue estimate until the iterate settles.
  *
+ * This algorithm divides and subtracts, so it requires floating-point NT and
+ * uses PlusTimesRing for multiplication rather than a generic semiring.
+ *
  * @param A Square matrix in CSR.
  * @param x On entry the starting vector, on exit the unit eigenvector; size n.
  *          Need not be normalized. If it is exactly zero, a uniform vector is
@@ -94,8 +97,7 @@ PowerIterationResult<NT> power_iteration_openmp(
 
     NT rayleigh = NT{0};
     NT y_squared = NT{0};
-    OMP_PARALLEL_FOR(schedule(static) default(none) shared(x, y, n)
-                         reduction(+ : rayleigh, y_squared))
+    OMP_PARALLEL_FOR(schedule(static) reduction(+ : rayleigh, y_squared))
     for (IT index = 0; index < n; ++index) {
       rayleigh += x.val[index] * y.val[index];
       y_squared += y.val[index] * y.val[index];
@@ -118,8 +120,7 @@ PowerIterationResult<NT> power_iteration_openmp(
     // new one; the old x is read before it is overwritten at the same index.
     const NT scale = NT{1} / norm;
     NT residual_squared = NT{0};
-    OMP_PARALLEL_FOR(schedule(static) default(none) shared(x, y, n, rayleigh, scale)
-                         reduction(+ : residual_squared))
+    OMP_PARALLEL_FOR(schedule(static) reduction(+ : residual_squared))
     for (IT index = 0; index < n; ++index) {
       const NT difference = y.val[index] - rayleigh * x.val[index];
       residual_squared += difference * difference;

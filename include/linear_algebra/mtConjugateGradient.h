@@ -93,7 +93,7 @@ CgResult<NT> cg_openmp(const SPCSR& A, const SPDVEC& b, SPDVEC& x,
 
   // r = b - A x, honouring whatever initial guess the caller left in x.
   OmpSpMV<PlusTimesRing<NT>>(A, x, q);
-  OMP_PARALLEL_FOR(schedule(static) default(none) shared(r, b, q, p, n))
+  OMP_PARALLEL_FOR(schedule(static))
   for (IT index = 0; index < n; ++index) {
     const NT residual = b.val[index] - q.val[index];
     r.val[index] = residual;

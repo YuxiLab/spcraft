@@ -14,7 +14,7 @@ class CooMatrix;
 
 struct MatrixInput {
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
   std::optional<MatrixInputOptions> options;
   int exit_code = 0;

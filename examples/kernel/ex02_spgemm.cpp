@@ -6,8 +6,6 @@
 #include <fmt/format.h>
 
 #include "SpCraft.h"
-#include "core/CooMatrix.h"
-#include "eigeninterface.h"
 
 using namespace spcraft;
 

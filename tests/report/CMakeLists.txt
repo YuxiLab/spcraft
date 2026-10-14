@@ -1,0 +1,3 @@
+add_executable(test_benchmark_report test_BenchmarkReport.cpp)
+target_link_libraries(test_benchmark_report PRIVATE SPCraftTestMain SPCraft)
+gtest_discover_tests(test_benchmark_report TEST_PREFIX benchmark_report. DISCOVERY_MODE PRE_TEST)

@@ -1,0 +1,3 @@
+add_executable(test_mkl_options test_MKLOptions.cpp)
+target_link_libraries(test_mkl_options PRIVATE SPCraftMKLOptions SPCraftTestMain)
+gtest_discover_tests(test_mkl_options TEST_PREFIX mkl_options. DISCOVERY_MODE PRE_TEST)

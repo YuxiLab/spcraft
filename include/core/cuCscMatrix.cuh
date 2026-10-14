@@ -33,7 +33,7 @@ class cuCscMatrix
 {
  public:
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
   OT* col_ptr = nullptr;  //!< column pointers, size n+1, device memory
   IT* row_id = nullptr;   //!< row indices, size nnz, device memory
@@ -44,7 +44,7 @@ class cuCscMatrix
   bool memowned = true;   //!< owns the storage (views opt out)
 
   /*****************************************************************************
-   *                                Constructors                               *
+   *                               Constructors                                *
    ****************************************************************************/
   //! Empty matrix (owns nothing yet).
   cuCscMatrix() noexcept;
@@ -71,7 +71,7 @@ class cuCscMatrix
   ~cuCscMatrix();
 
   /*****************************************************************************
-   *                              Member Functions                             *
+   *                             Member Functions                              *
    ****************************************************************************/
   //! Replace storage after allocation succeeds; zero nonzeros retain the shape.
   void Allocate(OT require_nnz, IT nRows, IT nCols);
@@ -90,7 +90,7 @@ class cuCscMatrix
 
  private:
   /*****************************************************************************
-   *                               Static Members                              *
+   *                              Static Members                               *
    ****************************************************************************/
   //! Allocate zeroed device buffers; free partial allocations before throwing.
   SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(IT n, OT nnz);

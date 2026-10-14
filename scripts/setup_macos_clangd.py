@@ -103,8 +103,8 @@ def database():
             command = flags + ['-x', 'cuda' if cuda else 'c++']
             source_path = source.relative_to(ROOT).as_posix()
             if (source_path in ('include/SpCraft.h', 'include/utils/StablePch.h',
-                                'include/kernel/mklSpMV.h', 'tests/test_mklspmv.cpp',
-                                'tests/test_mkl_options.cpp') or
+                                'include/kernel/mklSpMV.h', 'tests/kernel/test_mklSpMV.cpp',
+                                'tests/benchmarks/mkl/test_MKLOptions.cpp') or
                     source_path.startswith('benchmarks/mkl/')):
                 command += ['-DSPCRAFT_USE_MKL=1']
             if cuda:
@@ -127,11 +127,11 @@ def database():
 
 def check(clangd):
     sources = ('src/cuda/cuSpMV.cu', 'src/cuda/cuPageRank.cu', 'src/cuda/cuda_error.cu',
-               'tests/test_cucsr_matrix.cu', 'tests/test_cuspmv.cu', 'tests/test_cupagerank.cu',
+               'tests/core/test_cuCsrMatrix.cu', 'tests/kernel/test_cuSpMV.cu', 'tests/graph/test_cuPageRank.cu',
                'benchmarks/cusparse/SpMVBenchmark.cu', 'include/core/cuCsrMatrix.cuh',
-               'include/kernel/cuSpMV.cuh', 'include/SpCraft.h', 'tests/test_mtspmv.cpp',
+               'include/kernel/cuSpMV.cuh', 'include/SpCraft.h', 'tests/kernel/test_mtSpMV.cpp',
                'src/utils/MatrixInput.cpp', 'include/kernel/mklSpMV.h',
-               'tests/test_mklspmv.cpp', 'benchmarks/mkl/MKLSpMVBench.cpp')
+               'tests/kernel/test_mklSpMV.cpp', 'benchmarks/mkl/MKLSpMVBench.cpp')
     failed = []
     for source in sources:
         log = BASE / (Path(source).stem + '.check.log')

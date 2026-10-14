@@ -15,6 +15,8 @@ __global__ __launch_bounds__(kBlockSize) void SpmvBlockPerRowKernel(IT num_rows,
                                                                     const NT* values, const NT* x,
                                                                     NT* y)
 {
+  static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
+                "SpMV semiring value type must match matrix value type");
   constexpr int block_size = kBlockSize;
   const IT row = static_cast<IT>(blockIdx.x);
   if (row >= num_rows) return;
@@ -48,16 +50,6 @@ cudaError_t SpmvCudaBlockPerRowImpl<SemiRing, IT, NT, OT, kBlockSize>::Run(
   constexpr int block_size = kBlockSize;
   static_assert(block_size >= 1 && block_size <= 1024, "BLOCK_SIZE must be in the range [1, 1024]");
   static_assert((block_size & (block_size - 1)) == 0, "BLOCK_SIZE must be a power of two");
-
-  if (matrix.m < IT{0} || matrix.n < IT{0} || matrix.nnz < OT{0}) {
-    return cudaErrorInvalidValue;
-  }
-  if (x.n != matrix.n || y.n != matrix.m) return cudaErrorInvalidValue;
-  if (matrix.m == 0) return cudaSuccess;
-  if (matrix.row_ptr == nullptr || matrix.col_id == nullptr || matrix.val == nullptr ||
-      x.val == nullptr || y.val == nullptr) {
-    return cudaErrorInvalidDevicePointer;
-  }
 
   SpmvBlockPerRowKernel<SemiRing, IT, NT, OT, kBlockSize><<<matrix.m, block_size, 0, stream>>>(
       matrix.m, matrix.row_ptr, matrix.col_id, matrix.val, x.val, y.val);

@@ -10,6 +10,9 @@ namespace spcraft
  */
 template <class NT>
 struct PowerIterationOptions {
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
   NT tolerance = NT{1e-10};   //!< Target for ||A x - lambda x|| / |lambda|.
   int max_iterations = 1000;  //!< Upper bound on iterations.
 };
@@ -19,6 +22,9 @@ struct PowerIterationOptions {
  */
 template <class NT>
 struct PowerIterationResult {
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
   int iterations = 0;      //!< Iterations actually performed.
   NT eigenvalue = NT{0};   //!< Rayleigh quotient of the final iterate.
   NT residual = NT{0};     //!< Final ||A x - lambda x||, relative to |lambda|.

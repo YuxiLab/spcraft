@@ -32,8 +32,12 @@ SPND SPCSR GenERGraph(IT vertices, double expected_degree, std::uint64_t seed)
   std::mt19937_64 generator(seed);
   std::uniform_real_distribution<double> uniform(0.0, 1.0);
 
+  // An undirected edge accounts for two degrees; reserve 5% above its expectation.
+  constexpr double kReservationScale = 0.525;
+  const std::size_t reserve_count =
+      static_cast<std::size_t>(vertices * expected_degree * kReservationScale);
   std::vector<std::pair<IT, IT>> edges;
-  edges.reserve(static_cast<std::size_t>(vertices * expected_degree * 0.525));
+  edges.reserve(reserve_count);
 
   OT source = 1;
   OT destination = -1;
@@ -50,7 +54,9 @@ SPND SPCSR GenERGraph(IT vertices, double expected_degree, std::uint64_t seed)
   }
 
   std::vector<OT> degrees(static_cast<std::size_t>(vertices), 0);
-  for (const auto& [row, column] : edges) {
+  for (const std::pair<IT, IT>& edge : edges) {
+    const IT row = edge.first;
+    const IT column = edge.second;
     ++degrees[row];
     ++degrees[column];
   }
@@ -64,7 +70,9 @@ SPND SPCSR GenERGraph(IT vertices, double expected_degree, std::uint64_t seed)
   }
 
   std::vector<OT> next(graph.row_ptr, graph.row_ptr + vertices);
-  for (const auto& [row, column] : edges) {
+  for (const std::pair<IT, IT>& edge : edges) {
+    const IT row = edge.first;
+    const IT column = edge.second;
     const OT forward = next[row]++;
     const OT reverse = next[column]++;
     graph.col_id[forward] = column;

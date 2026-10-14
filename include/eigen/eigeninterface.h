@@ -16,7 +16,7 @@ class DenseVector;
 
 struct EigenComparison {
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
   bool matches = false;
   double error = 0.0;

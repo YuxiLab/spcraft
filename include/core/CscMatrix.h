@@ -17,7 +17,7 @@ class CscMatrix
 {
  public:
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
   OT* col_ptr = nullptr;  //!< column pointers, size n+1
   IT* row_id = nullptr;   //!< row indices, size nnz
@@ -28,7 +28,7 @@ class CscMatrix
   bool memowned = true;   //!< owns the storage (views opt out)
 
   /*****************************************************************************
-   *                                Constructors                               *
+   *                               Constructors                                *
    ****************************************************************************/
   //! Empty matrix (owns nothing yet).
   CscMatrix() noexcept;
@@ -52,7 +52,7 @@ class CscMatrix
   ~CscMatrix();
 
   /*****************************************************************************
-   *                              Member Functions                             *
+   *                             Member Functions                              *
    ****************************************************************************/
   //! clone a new instance
   SPCSC Clone() const;
@@ -65,7 +65,7 @@ class CscMatrix
 
  private:
   /*****************************************************************************
-   *                               Static Members                              *
+   *                              Static Members                               *
    ****************************************************************************/
   SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(IT n, OT nnz);
 

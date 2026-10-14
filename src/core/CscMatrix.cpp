@@ -16,9 +16,9 @@
 
 namespace spcraft
 {
-/*************************************
- *             constructor
- *************************************/
+/*******************************************************************************
+ *                                Constructors                                 *
+ ******************************************************************************/
 
 SP_MAT_TEMP
 SPCSC::CscMatrix() noexcept = default;
@@ -77,7 +77,7 @@ void SPCSC::Allocate(OT require_nnz, IT nRows, IT nCols)
   }
   // Build the replacement first: a throwing allocation must leave the matrix
   // exactly as it was, still owning storage it can free.
-  auto replacement = SafeAllocate(nCols, require_nnz);
+  const std::tuple<OT*, IT*, NT*> replacement = SafeAllocate(nCols, require_nnz);
   SafeDelete(memowned, col_ptr, row_id, val);
   m = nRows;
   n = nCols;
@@ -86,9 +86,9 @@ void SPCSC::Allocate(OT require_nnz, IT nRows, IT nCols)
   std::tie(col_ptr, row_id, val) = replacement;
 }
 
-/*************************************
- *             member functions
- *************************************/
+/*******************************************************************************
+ *                              Member Functions                               *
+ ******************************************************************************/
 SP_MAT_TEMP
 SPCSC SPCSC::Clone() const
 {
@@ -118,9 +118,9 @@ void SPCSC::Reset()
   memowned = false;
 }
 
-/*************************************
- *             Static Members
- *************************************/
+/*******************************************************************************
+ *                               Static Members                                *
+ ******************************************************************************/
 
 SP_MAT_TEMP
 std::tuple<OT*, IT*, NT*> SPCSC::SafeAllocate(IT n, OT nnz)

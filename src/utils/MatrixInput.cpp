@@ -22,7 +22,7 @@ MatrixInput ParseMatrixInput(int argc, const char* const* argv, const char* desc
     parser.show_positional_help();
     parser.parse_positional({"matrix"});
 
-    const auto arguments = parser.parse(argc, argv);
+    const cxxopts::ParseResult arguments = parser.parse(argc, argv);
     if (arguments.count("help") != 0 || arguments.count("matrix") == 0) {
       fmt::print("{}\n", parser.help());
       return {std::nullopt, arguments.count("help") != 0 ? 0 : 1};

@@ -100,27 +100,7 @@ cudaError_t PageRankCudaImpl<IT, NT, OT, kBlockSize>::Run(const CsrMatrix<IT, NT
                 "BLOCK_SIZE must be in the range [32, 1024]");
   static_assert((block_size & (block_size - 1)) == 0, "BLOCK_SIZE must be a power of two");
 
-  if (result != nullptr) *result = PageRankResult<NT>{};
-
-  if constexpr (std::is_signed_v<IT>) {
-    if (op.m < IT{0} || op.n < IT{0}) return cudaErrorInvalidValue;
-  }
-  if constexpr (std::is_signed_v<OT>) {
-    if (op.nnz < OT{0}) return cudaErrorInvalidValue;
-  }
-  if (op.m != op.n || rank.n != op.m) return cudaErrorInvalidValue;
-  if (!PageRankOptionsAreValid(options)) return cudaErrorInvalidValue;
-
   const IT n = op.m;
-  if (n == IT{0}) {
-    if (result != nullptr) result->converged = true;
-    return cudaSuccess;
-  }
-
-  if (rank.val == nullptr || op.row_ptr == nullptr) return cudaErrorInvalidDevicePointer;
-  if (op.nnz != OT{0} && (op.col_id == nullptr || op.val == nullptr)) {
-    return cudaErrorInvalidDevicePointer;
-  }
 
   // Cap the grid so the per-block partials always fit in one block, and the
   // second reduction stage is a single launch rather than a loop.
@@ -131,7 +111,8 @@ cudaError_t PageRankCudaImpl<IT, NT, OT, kBlockSize>::Run(const CsrMatrix<IT, NT
 
   // One allocation for the SpMV output, the block partials, and the two scalars.
   NT* workspace = nullptr;
-  const std::size_t workspace_count = static_cast<std::size_t>(n) + grid + 2;
+  constexpr std::size_t kScalarCount = 2;  // Total mass and convergence residual.
+  const std::size_t workspace_count = static_cast<std::size_t>(n) + grid + kScalarCount;
   cudaError_t status =
       cudaMalloc(reinterpret_cast<void**>(&workspace), workspace_count * sizeof(NT));
   if (status != cudaSuccess) return status;

@@ -29,14 +29,27 @@ using ReportMetadata = std::vector<std::pair<std::string, std::string>>;
 
 /** @brief Summary statistics over a nonempty set of samples. */
 struct TimingStats {
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
   double minimum = 0.0;
   double maximum = 0.0;
   double median = 0.0;
   double mean = 0.0;
   double stddev = 0.0;
 
-  SPND double CoefficientOfVariation() const { return mean > 0.0 ? 100.0 * stddev / mean : 0.0; }
+  /*****************************************************************************
+   *                             Member Functions                              *
+   ****************************************************************************/
+  SPND double CoefficientOfVariation() const
+  {
+    constexpr double kPercentScale = 100.0;
+    return mean > 0.0 ? kPercentScale * stddev / mean : 0.0;
+  }
 
+  /*****************************************************************************
+   *                              Static Members                               *
+   ****************************************************************************/
   SPND static TimingStats From(const std::vector<double>& samples, bool allow_negative = false)
   {
     if (samples.empty()) {
@@ -74,36 +87,51 @@ struct TimingStats {
 enum class MetricSummary { Minimum, Median, Mean, Maximum, Sum, Last };
 
 struct SecondsSeries {
-  std::string name;
-  MetricSummary headline;
-  std::vector<double> samples;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::string name{};
+  MetricSummary headline{};
+  std::vector<double> samples{};
 };
 
 struct BytesSeries {
-  std::string name;
-  MetricSummary headline;
-  std::vector<std::uint64_t> samples;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::string name{};
+  MetricSummary headline{};
+  std::vector<std::uint64_t> samples{};
 };
 
 struct CountSeries {
-  std::string name;
-  MetricSummary headline;
-  std::vector<std::uint64_t> samples;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::string name{};
+  MetricSummary headline{};
+  std::vector<std::uint64_t> samples{};
 };
 
 //! Ratios are stored in [0, 1] and rendered as percentages.
 struct RatioSeries {
-  std::string name;
-  MetricSummary headline;
-  std::vector<double> samples;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::string name{};
+  MetricSummary headline{};
+  std::vector<double> samples{};
 };
 
 //! A finite scalar with an explicit unit and no artificial range restriction.
 struct GaugeSeries {
-  std::string name;
-  std::string unit;
-  MetricSummary headline;
-  std::vector<double> samples;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::string name{};
+  std::string unit{};
+  MetricSummary headline{};
+  std::vector<double> samples{};
 };
 
 using MetricSeries =
@@ -146,10 +174,11 @@ SPND inline GaugeSeries EffectiveCpuCores(const std::vector<double>& wall_second
   }
   const double wall = std::accumulate(wall_seconds.begin(), wall_seconds.end(), 0.0);
   const double cpu = std::accumulate(cpu_seconds.begin(), cpu_seconds.end(), 0.0);
-  return {std::string(kEffectiveCpuCores),
-          "cores",
-          MetricSummary::Mean,
-          {wall > 0.0 ? cpu / wall : 0.0}};
+  GaugeSeries result{std::string(kEffectiveCpuCores),
+                     "cores",
+                     MetricSummary::Mean,
+                     {wall > 0.0 ? cpu / wall : 0.0}};
+  return result;
 }
 
 SPND inline GaugeSeries CpuOccupancy(const std::vector<double>& wall_seconds,
@@ -169,38 +198,56 @@ struct RunScope {
 };
 
 struct RankScope {
-  int rank;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  int rank{};
 };
 
 struct ThreadScope {
-  int rank;
-  int thread;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  int rank{};
+  int thread{};
 };
 
 //! All CPU execution attributed to one rank; per-thread detail uses ThreadScope.
 struct CpuScope {
-  int rank;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  int rank{};
 };
 
 struct GpuScope {
-  int rank;
-  int device;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  int rank{};
+  int device{};
 };
 
 enum class RankAggregation { Maximum, Sum, MaxToMean };
 
 //! A cross-rank value produced by an MPI-aware collector outside the report model.
 struct RankAggregateScope {
-  RankAggregation aggregation;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  RankAggregation aggregation{};
 };
 
 using ProfileScope =
     std::variant<RunScope, RankScope, ThreadScope, CpuScope, GpuScope, RankAggregateScope>;
 
 struct ResourceProfile {
-  ProfileScope scope;
-  ReportMetadata attributes;
-  std::vector<MetricSeries> metrics;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  ProfileScope scope{};
+  ReportMetadata attributes{};
+  std::vector<MetricSeries> metrics{};
 };
 
 /**
@@ -209,38 +256,53 @@ struct ResourceProfile {
  * Stage samples are intentionally not summed: phases may overlap or be nested.
  */
 struct AlgorithmStage {
-  std::string name;
-  ReportMetadata attributes;
-  std::vector<ResourceProfile> profiles;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::string name{};
+  ReportMetadata attributes{};
+  std::vector<ResourceProfile> profiles{};
 };
 
 struct ReportInfo {
-  std::string title;
-  ReportMetadata metadata;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::string title{};
+  ReportMetadata metadata{};
 };
 
 struct RunInfo {
-  std::string kernel;
-  std::string backend;
-  std::string dataset;
-  std::string precision;
-  std::string index_type;
-  std::string offset_type;
-  std::optional<int> thread_count;
-  ReportMetadata parameters;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::string kernel{};
+  std::string backend{};
+  std::string dataset{};
+  std::string precision{};
+  std::string index_type{};
+  std::string offset_type{};
+  std::optional<int> thread_count{};
+  ReportMetadata parameters{};
 };
 
 struct WorkloadInfo {
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
   std::int64_t rows = 0;
   std::int64_t columns = 0;
   std::int64_t input_nonzeros = 0;
-  std::optional<std::int64_t> output_nonzeros;
+  std::optional<std::int64_t> output_nonzeros{};
   double flops_per_iteration = 0.0;
   double bytes_per_iteration = 0.0;
 };
 
 struct VerificationResult {
-  std::string reference;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::string reference{};
   double maximum_error = 0.0;
   bool passed = false;
 };
@@ -274,7 +336,7 @@ SPND inline double Headline(const std::vector<T>& samples, MetricSummary summary
   if (samples.empty()) {
     throw std::invalid_argument("metric series requires at least one sample");
   }
-  std::vector<double> values;
+  std::vector<double> values{};
   values.reserve(samples.size());
   for (T sample : samples) values.push_back(static_cast<double>(sample));
   const TimingStats stats = TimingStats::From(values, allow_negative);
@@ -297,9 +359,8 @@ SPND inline double Headline(const std::vector<T>& samples, MetricSummary summary
 
 SPND inline std::string ScopeKey(const ProfileScope& scope)
 {
-  return std::visit(
-      [](const auto& value) -> std::string {
-        using Scope = std::decay_t<decltype(value)>;
+  std::string key = std::visit(
+      []<class Scope>(const Scope& value) -> std::string {
         if constexpr (std::is_same_v<Scope, RunScope>) {
           return "run";
         } else if constexpr (std::is_same_v<Scope, RankScope>) {
@@ -323,13 +384,13 @@ SPND inline std::string ScopeKey(const ProfileScope& scope)
         }
       },
       scope);
+  return key;
 }
 
 inline void ValidateScope(const ProfileScope& scope)
 {
   std::visit(
-      [](const auto& value) {
-        using Scope = std::decay_t<decltype(value)>;
+      []<class Scope>(const Scope& value) {
         if constexpr (!std::is_same_v<Scope, RunScope> &&
                       !std::is_same_v<Scope, RankAggregateScope>) {
           if (value.rank < 0) throw std::invalid_argument("profile rank cannot be negative");
@@ -347,12 +408,11 @@ inline void ValidateScope(const ProfileScope& scope)
 inline void ValidateMetric(const MetricSeries& metric)
 {
   std::visit(
-      [](const auto& series) {
+      []<class Series>(const Series& series) {
         if (series.name.empty()) throw std::invalid_argument("metric name cannot be empty");
         if (series.samples.empty()) {
           throw std::invalid_argument("metric series requires at least one sample");
         }
-        using Series = std::decay_t<decltype(series)>;
         if constexpr (std::is_same_v<Series, SecondsSeries>) {
           (void)TimingStats::From(series.samples);
         } else if constexpr (std::is_same_v<Series, RatioSeries>) {
@@ -375,7 +435,7 @@ inline void ValidateMetric(const MetricSeries& metric)
 
 SPND inline std::string EscapeJson(std::string_view text)
 {
-  std::string escaped;
+  std::string escaped{};
   escaped.reserve(text.size());
   for (char character : text) {
     switch (character) {
@@ -408,16 +468,26 @@ SPND inline std::string EscapeJson(std::string_view text)
 }  // namespace detail
 
 struct BenchmarkRun {
-  RunInfo info;
-  WorkloadInfo workload;
-  std::optional<VerificationResult> verification;
-  std::vector<ResourceProfile> profiles;
-  std::vector<AlgorithmStage> stages;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  RunInfo info{};
+  WorkloadInfo workload{};
+  std::optional<VerificationResult> verification{};
+  std::vector<ResourceProfile> profiles{};
+  std::vector<AlgorithmStage> stages{};
 
+  /*****************************************************************************
+   *                             Member Functions                              *
+   ****************************************************************************/
   SPND std::string TypeTag() const
   {
-    if (info.index_type.size() < 4 || info.offset_type.size() < 4) return "-";
-    return "i" + info.index_type.substr(3) + "/o" + info.offset_type.substr(3);
+    constexpr std::size_t kPrefixLength = 3;  // Skip the "int" prefix in storage type names.
+    if (info.index_type.size() <= kPrefixLength || info.offset_type.size() <= kPrefixLength)
+      return "-";
+    const std::string index = info.index_type.substr(kPrefixLength);
+    const std::string offset = info.offset_type.substr(kPrefixLength);
+    return "i" + index + "/o" + offset;
   }
 
   SPND const SecondsSeries& WallTime() const
@@ -425,7 +495,7 @@ struct BenchmarkRun {
     for (const ResourceProfile& profile : profiles) {
       if (!std::holds_alternative<RunScope>(profile.scope)) continue;
       for (const MetricSeries& metric : profile.metrics) {
-        if (const auto* seconds = std::get_if<SecondsSeries>(&metric);
+        if (const SecondsSeries* seconds = std::get_if<SecondsSeries>(&metric);
             seconds != nullptr && seconds->name == metric::kWallTime) {
           return *seconds;
         }
@@ -438,20 +508,22 @@ struct BenchmarkRun {
 
   SPND double Gflops() const
   {
+    constexpr double kGigaScale = 1.0e-9;
     const double median = Stats().median;
-    return median > 0.0 ? workload.flops_per_iteration / median * 1.0e-9 : 0.0;
+    return median > 0.0 ? workload.flops_per_iteration / median * kGigaScale : 0.0;
   }
 
   SPND double GbytesPerSecond() const
   {
+    constexpr double kGigaScale = 1.0e-9;
     const double median = Stats().median;
-    return median > 0.0 ? workload.bytes_per_iteration / median * 1.0e-9 : 0.0;
+    return median > 0.0 ? workload.bytes_per_iteration / median * kGigaScale : 0.0;
   }
 };
 
 inline void ValidateProfiles(const std::vector<ResourceProfile>& profiles)
 {
-  std::vector<std::string> scope_keys;
+  std::vector<std::string> scope_keys{};
   for (const ResourceProfile& profile : profiles) {
     detail::ValidateScope(profile.scope);
     const std::string scope_key = detail::ScopeKey(profile.scope);
@@ -463,8 +535,9 @@ inline void ValidateProfiles(const std::vector<ResourceProfile>& profiles)
     std::vector<std::string> metric_names;
     for (const MetricSeries& metric : profile.metrics) {
       detail::ValidateMetric(metric);
-      const std::string& name =
-          std::visit([](const auto& series) -> const std::string& { return series.name; }, metric);
+      const std::string& name = std::visit(
+          []<class Series>(const Series& series) -> const std::string& { return series.name; },
+          metric);
       if (std::find(metric_names.begin(), metric_names.end(), name) != metric_names.end()) {
         throw std::invalid_argument("a profile cannot contain duplicate metric names");
       }
@@ -494,7 +567,7 @@ inline void ValidateBenchmarkRun(const BenchmarkRun& run)
   }
 
   ValidateProfiles(run.profiles);
-  std::vector<std::string> stage_names;
+  std::vector<std::string> stage_names{};
   for (const AlgorithmStage& stage : run.stages) {
     if (stage.name.empty()) throw std::invalid_argument("algorithm stage name cannot be empty");
     if (std::find(stage_names.begin(), stage_names.end(), stage.name) != stage_names.end()) {
@@ -509,11 +582,17 @@ inline void ValidateBenchmarkRun(const BenchmarkRun& run)
 class BenchmarkReport
 {
  public:
+  /*****************************************************************************
+   *                               Constructors                                *
+   ****************************************************************************/
   explicit BenchmarkReport(ReportInfo info) : info_(std::move(info))
   {
     if (info_.title.empty()) throw std::invalid_argument("report title cannot be empty");
   }
 
+  /*****************************************************************************
+   *                             Member Functions                              *
+   ****************************************************************************/
   void AddRun(BenchmarkRun run)
   {
     ValidateBenchmarkRun(run);
@@ -531,58 +610,67 @@ class BenchmarkReport
   }
 
  private:
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
   ReportInfo info_;
-  std::vector<BenchmarkRun> runs_;
+  std::vector<BenchmarkRun> runs_{};
 };
 
 namespace detail
 {
 
 struct RenderedMetric {
-  std::string name;
-  std::string unit;
-  const char* summary;
-  std::size_t samples;
-  double headline;
-  double minimum;
-  double maximum;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::string name{};
+  std::string unit{};
+  const char* summary = nullptr;
+  std::size_t samples{};
+  double headline{};
+  double minimum{};
+  double maximum{};
 };
 
 SPND inline RenderedMetric RenderMetric(const MetricSeries& metric)
 {
-  return std::visit(
-      [](const auto& series) {
-        using Series = std::decay_t<decltype(series)>;
+  RenderedMetric rendered = std::visit(
+      []<class Series>(const Series& series) {
         std::vector<double> values;
         values.reserve(series.samples.size());
-        for (auto sample : series.samples) values.push_back(static_cast<double>(sample));
+        using Sample = typename decltype(series.samples)::value_type;
+        for (Sample sample : series.samples) values.push_back(static_cast<double>(sample));
         constexpr bool kAllowNegative = std::is_same_v<Series, GaugeSeries>;
         const TimingStats stats = TimingStats::From(values, kAllowNegative);
+        constexpr double kMillisecondsPerSecond = 1.0e3;
+        constexpr double kBytesPerMebibyte = 1024.0 * 1024.0;
+        constexpr double kPercentScale = 100.0;
         double scale = 1.0;
         std::string unit;
         if constexpr (std::is_same_v<Series, SecondsSeries>) {
-          scale = 1.0e3;
+          scale = kMillisecondsPerSecond;
           unit = "ms";
         } else if constexpr (std::is_same_v<Series, BytesSeries>) {
-          scale = 1.0 / (1024.0 * 1024.0);
+          scale = 1.0 / kBytesPerMebibyte;
           unit = "MiB";
         } else if constexpr (std::is_same_v<Series, CountSeries>) {
           unit = "count";
         } else if constexpr (std::is_same_v<Series, RatioSeries>) {
-          scale = 100.0;
+          scale = kPercentScale;
           unit = "%";
         } else {
           unit = series.unit;
         }
-        return RenderedMetric{series.name,
-                              std::move(unit),
-                              SummaryName(series.headline),
-                              series.samples.size(),
-                              Headline(series.samples, series.headline, kAllowNegative) * scale,
-                              stats.minimum * scale,
-                              stats.maximum * scale};
+        const char* summary = SummaryName(series.headline);
+        const double headline = Headline(series.samples, series.headline, kAllowNegative) * scale;
+        RenderedMetric rendered{series.name,           std::move(unit), summary,
+                                series.samples.size(), headline,        stats.minimum * scale,
+                                stats.maximum * scale};
+        return rendered;
       },
       metric);
+  return rendered;
 }
 
 SPND inline std::string Truncate(std::string_view text, std::size_t limit)
@@ -595,6 +683,9 @@ SPND inline std::string Truncate(std::string_view text, std::size_t limit)
 class TextReportRenderer
 {
  public:
+  /*****************************************************************************
+   *                             Member Functions                              *
+   ****************************************************************************/
   SPND std::string RenderSummary(const BenchmarkReport& report) const
   {
     report.Validate();
@@ -656,10 +747,16 @@ class TextReportRenderer
 
   SPND std::string Render(const BenchmarkReport& report) const
   {
-    return RenderSummary(report) + "\n" + RenderDetails(report);
+    std::string output = RenderSummary(report);
+    output += "\n";
+    output += RenderDetails(report);
+    return output;
   }
 
  private:
+  /*****************************************************************************
+   *                              Static Members                               *
+   ****************************************************************************/
   static void AppendProfiles(std::string& output, const std::vector<ResourceProfile>& profiles,
                              std::string_view label)
   {
@@ -688,6 +785,9 @@ class TextReportRenderer
 class JsonReportRenderer
 {
  public:
+  /*****************************************************************************
+   *                             Member Functions                              *
+   ****************************************************************************/
   SPND std::string Render(const BenchmarkReport& report) const
   {
     report.Validate();
@@ -753,6 +853,9 @@ class JsonReportRenderer
   }
 
  private:
+  /*****************************************************************************
+   *                              Static Members                               *
+   ****************************************************************************/
   static void AppendProfiles(std::string& output, const std::vector<ResourceProfile>& profiles,
                              int indent)
   {
@@ -773,8 +876,7 @@ class JsonReportRenderer
       output += "}, \"metrics\": [";
       for (std::size_t metric_index = 0; metric_index < profile.metrics.size(); ++metric_index) {
         std::visit(
-            [&](const auto& series) {
-              using Series = std::decay_t<decltype(series)>;
+            [&]<class Series>(const Series& series) {
               std::string unit;
               if constexpr (std::is_same_v<Series, SecondsSeries>) {
                 unit = "seconds";
@@ -818,8 +920,11 @@ inline void WriteReportFile(const std::string& path, std::string_view text)
 }
 
 struct HostTimingSamples {
-  std::vector<double> wall_seconds;
-  std::vector<double> process_cpu_seconds;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::vector<double> wall_seconds{};
+  std::vector<double> process_cpu_seconds{};
 };
 
 SPND inline double ProcessCpuSeconds()
@@ -879,7 +984,7 @@ SPND std::vector<double> TimeIterations(Body&& body, int iterations)
     throw std::invalid_argument("TimeIterations requires at least one iteration");
   }
 
-  std::vector<double> seconds;
+  std::vector<double> seconds{};
   seconds.reserve(static_cast<std::size_t>(iterations));
   for (int iteration = 0; iteration < iterations; ++iteration) {
     const auto start = std::chrono::steady_clock::now();

@@ -40,7 +40,7 @@ SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double
   }
 
   using UnsignedIndex = std::make_unsigned_t<IT>;
-  const auto scale_value = static_cast<std::uintmax_t>(scale);
+  const std::uintmax_t scale_value = static_cast<std::uintmax_t>(scale);
   if (scale_value >= std::numeric_limits<IT>::digits) {
     throw std::invalid_argument("R-MAT scale does not fit the index type");
   }
@@ -54,17 +54,18 @@ SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double
     throw std::invalid_argument("R-MAT initiator weights must be finite and nonnegative");
   }
 
-  const auto vertices_unsigned = static_cast<UnsignedIndex>(UnsignedIndex{1} << scale_value);
+  const UnsignedIndex vertices_unsigned =
+      static_cast<UnsignedIndex>(UnsignedIndex{1} << scale_value);
   if constexpr (sizeof(UnsignedIndex) > sizeof(std::size_t)) {
     if (vertices_unsigned > std::numeric_limits<std::size_t>::max()) {
       throw std::length_error("R-MAT vertex count exceeds addressable memory");
     }
   }
-  const auto vertex_count = static_cast<std::size_t>(vertices_unsigned);
+  const std::size_t vertex_count = static_cast<std::size_t>(vertices_unsigned);
   if (vertex_count > std::numeric_limits<std::size_t>::max() / edge_factor) {
     throw std::length_error("R-MAT edge count exceeds addressable memory");
   }
-  const auto sample_count = vertex_count * edge_factor;
+  const std::size_t sample_count = vertex_count * edge_factor;
 
   std::mt19937_64 generator(seed);
   std::uniform_real_distribution<double> uniform(0.0, total_weight);
@@ -78,7 +79,8 @@ SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double
     UnsignedIndex destination = 0;
 
     for (std::uintmax_t level = 0; level < scale_value; ++level) {
-      const auto bit = static_cast<UnsignedIndex>(UnsignedIndex{1} << (scale_value - level - 1));
+      const UnsignedIndex bit =
+          static_cast<UnsignedIndex>(UnsignedIndex{1} << (scale_value - level - 1));
       const double quadrant = uniform(generator);
       if (quadrant >= ab) {
         source |= bit;
@@ -101,14 +103,16 @@ SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double
     throw std::runtime_error("R-MAT sampling produced no non-self edges");
   }
 
-  const auto max_offset = static_cast<std::uintmax_t>(std::numeric_limits<OT>::max());
+  const std::uintmax_t max_offset = static_cast<std::uintmax_t>(std::numeric_limits<OT>::max());
   if (edges.size() > max_offset / 2) {
     throw std::length_error("R-MAT nonzero count does not fit the offset type");
   }
 
   const IT vertices = static_cast<IT>(vertices_unsigned);
   std::vector<OT> degrees(vertex_count, 0);
-  for (const auto& [source, destination] : edges) {
+  for (const std::pair<IT, IT>& edge : edges) {
+    const IT source = edge.first;
+    const IT destination = edge.second;
     ++degrees[static_cast<std::size_t>(source)];
     ++degrees[static_cast<std::size_t>(destination)];
   }
@@ -122,7 +126,9 @@ SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double
   }
 
   std::vector<OT> next(graph.row_ptr, graph.row_ptr + vertices);
-  for (const auto& [source, destination] : edges) {
+  for (const std::pair<IT, IT>& edge : edges) {
+    const IT source = edge.first;
+    const IT destination = edge.second;
     const OT forward = next[static_cast<std::size_t>(source)]++;
     const OT reverse = next[static_cast<std::size_t>(destination)]++;
     graph.col_id[forward] = destination;

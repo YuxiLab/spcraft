@@ -70,7 +70,7 @@ PageRankResult<NT> pagerank_openmp(const SPCSR& op, SPDVEC& rank,
   const NT damping = options.damping;
   const NT uniform = NT{1} / static_cast<NT>(n);
 
-  OMP_PARALLEL_FOR(schedule(static) default(none) shared(rank, n, uniform))
+  OMP_PARALLEL_FOR(schedule(static))
   for (IT vertex = 0; vertex < n; ++vertex) {
     rank.val[vertex] = uniform;
   }
@@ -81,7 +81,7 @@ PageRankResult<NT> pagerank_openmp(const SPCSR& op, SPDVEC& rank,
     OmpSpMV<PlusTimesRing<NT>>(op, rank, y);
 
     NT total = NT{0};
-    OMP_PARALLEL_FOR(schedule(static) default(none) shared(y, n) reduction(+ : total))
+    OMP_PARALLEL_FOR(schedule(static) reduction(+ : total))
     for (IT vertex = 0; vertex < n; ++vertex) {
       total += y.val[vertex];
     }
@@ -92,8 +92,7 @@ PageRankResult<NT> pagerank_openmp(const SPCSR& op, SPDVEC& rank,
     // rank is only read by the SpMV above, so the update runs in place and the
     // residual falls out of the same pass.
     NT residual = NT{0};
-    OMP_PARALLEL_FOR(schedule(static) default(none) shared(rank, y, n, base, damping)
-                         reduction(+ : residual))
+    OMP_PARALLEL_FOR(schedule(static) reduction(+ : residual))
     for (IT vertex = 0; vertex < n; ++vertex) {
       const NT updated = base + damping * y.val[vertex];
       residual += std::abs(updated - rank.val[vertex]);

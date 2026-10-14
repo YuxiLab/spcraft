@@ -1,6 +1,7 @@
 #include "utils/MatrixInputOptions.h"
 
 #include <filesystem>
+#include <memory>
 #include <stdexcept>
 #include <string>
 
@@ -11,10 +12,12 @@ namespace spcraft
 
 void AddMatrixInputOptions(cxxopts::Options& parser)
 {
-  const auto index = cxxopts::value<std::string>()->default_value("int64");
-  const auto value = cxxopts::value<std::string>()->default_value("double");
-  const auto offset = cxxopts::value<std::string>();
-  auto options = parser.add_options("Matrix input");
+  const std::shared_ptr<cxxopts::Value> index =
+      cxxopts::value<std::string>()->default_value("int64");
+  const std::shared_ptr<cxxopts::Value> value =
+      cxxopts::value<std::string>()->default_value("double");
+  const std::shared_ptr<cxxopts::Value> offset = cxxopts::value<std::string>();
+  cxxopts::OptionAdder options = parser.add_options("Matrix input");
   options("matrix", "Matrix Market input file", cxxopts::value<std::string>());
   options("it", "Index type: int32 or int64", index);
   options("nt", "Value type: float or double", value);
@@ -26,9 +29,9 @@ MatrixInputOptions ReadMatrixInputOptions(const cxxopts::ParseResult& result)
   if (result.count("matrix") == 0) throw std::invalid_argument("Missing --matrix input file");
   MatrixInputOptions input;
   input.matrix_path = result["matrix"].as<std::string>();
-  const auto index = result["it"].as<std::string>();
-  const auto value = result["nt"].as<std::string>();
-  const auto offset = result.count("ot") ? result["ot"].as<std::string>() : index;
+  const std::string index = result["it"].as<std::string>();
+  const std::string value = result["nt"].as<std::string>();
+  const std::string offset = result.count("ot") ? result["ot"].as<std::string>() : index;
 
   if (index == "int32")
     input.index_type = MatrixIntegerType::kInt32;

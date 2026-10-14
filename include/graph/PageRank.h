@@ -18,6 +18,9 @@ namespace spcraft
  */
 template <class NT>
 struct PageRankOptions {
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
   NT damping = NT{0.85};     //!< Probability of following an edge; must be in [0, 1).
   NT tolerance = NT{1e-6};   //!< Convergence threshold on the L1 change per iteration.
   int max_iterations = 100;  //!< Upper bound on power iterations.
@@ -28,6 +31,9 @@ struct PageRankOptions {
  */
 template <class NT>
 struct PageRankResult {
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
   int iterations = 0;      //!< Power iterations actually performed.
   NT residual = NT{0};     //!< L1 change over the final iteration.
   bool converged = false;  //!< Whether residual fell to or below the tolerance.
@@ -80,7 +86,7 @@ SPND SPCSR pagerank_operator(const SPCSR& adjacency)
   // Row sums double as the out-degree of each vertex; a zero sum marks a
   // dangling vertex whose edges are dropped from the operator.
   std::vector<NT> row_sum(static_cast<std::size_t>(n), NT{0});
-  OMP_PARALLEL_FOR(schedule(static) default(none) shared(adjacency, row_sum, n))
+  OMP_PARALLEL_FOR(schedule(static))
   for (IT row = 0; row < n; ++row) {
     NT sum = NT{0};
     for (OT position = adjacency.row_ptr[row]; position < adjacency.row_ptr[row + 1]; ++position) {

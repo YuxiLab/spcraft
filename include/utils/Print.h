@@ -20,8 +20,10 @@ namespace spcraft
 
 SP_MAT_TEMP
 class CsrMatrix;
+
 SP_MAT_TEMP
 class CscMatrix;
+
 SP_MAT_TEMP
 class CooMatrix;
 
@@ -48,7 +50,13 @@ namespace detail
 {
 
 struct MatrixPrintBlock {
-  std::int64_t row, col, rows, cols;
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  std::int64_t row = 0;
+  std::int64_t col = 0;
+  std::int64_t rows = 0;
+  std::int64_t cols = 0;
 };
 
 inline MatrixPrintBlock CheckedPrintBlock(std::int64_t m, std::int64_t n, std::int64_t row,
@@ -72,16 +80,30 @@ inline void PrintMatrixHeading(std::ostream& out, std::string_view name, std::in
 class SparseMatrixPreview
 {
   struct Cell {
-    std::string text;
+    /***************************************************************************
+     *                              Data Members                               *
+     **************************************************************************/
+    std::string text{};
     bool duplicate = false;
   };
-  MatrixPrintBlock block;
+  using CellMap = std::map<std::pair<std::int64_t, std::int64_t>, Cell>;
+
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
+  MatrixPrintBlock block{};
   std::ostream& out;
-  std::map<std::pair<std::int64_t, std::int64_t>, Cell> cells;
+  CellMap cells{};
 
  public:
+  /*****************************************************************************
+   *                               Constructors                                *
+   ****************************************************************************/
   SparseMatrixPreview(MatrixPrintBlock block_, std::ostream& out_) : block(block_), out(out_) {}
 
+  /*****************************************************************************
+   *                             Member Functions                              *
+   ****************************************************************************/
   template <class NT>
   void Add(std::int64_t row, std::int64_t col, const NT& value)
   {
@@ -91,9 +113,10 @@ class SparseMatrixPreview
     std::ostringstream formatted;
     formatted.copyfmt(out);
     formatted << value;
-    auto [it, inserted] = cells.try_emplace({row, col}, Cell{formatted.str()});
-    if (!inserted) {
-      auto& cell = it->second;
+    const std::pair<CellMap::iterator, bool> insertion =
+        cells.try_emplace({row, col}, Cell{formatted.str()});
+    if (!insertion.second) {
+      Cell& cell = insertion.first->second;
       // Preserve duplicate entries: combining them would assume an addition rule.
       if (cell.duplicate)
         cell.text.pop_back();
@@ -111,9 +134,10 @@ class SparseMatrixPreview
       out << "[]\n";
       return;
     }
-    const auto row_width = std::to_string(block.row + block.rows - 1).size();
-    auto width = std::to_string(block.col + block.cols - 1).size();
-    for (const auto& [position, cell] : cells) width = std::max(width, cell.text.size());
+    const std::size_t row_width = std::to_string(block.row + block.rows - 1).size();
+    std::size_t width = std::to_string(block.col + block.cols - 1).size();
+    for (const CellMap::value_type& entry : cells)
+      width = std::max(width, entry.second.text.size());
     const auto print_cell = [&](std::string_view text) {
       out << ' ' << std::string(width - text.size(), ' ') << text;
     };
@@ -122,10 +146,10 @@ class SparseMatrixPreview
       print_cell(std::to_string(col));
     out << '\n';
     for (std::int64_t row = block.row; row < block.row + block.rows; ++row) {
-      const auto label = std::to_string(row);
+      const std::string label = std::to_string(row);
       out << std::string(row_width - label.size(), ' ') << label;
       for (std::int64_t col = block.col; col < block.col + block.cols; ++col) {
-        const auto it = cells.find({row, col});
+        const CellMap::const_iterator it = cells.find({row, col});
         print_cell(it == cells.end() ? std::string_view(".") : std::string_view(it->second.text));
       }
       out << '\n';
@@ -142,10 +166,11 @@ SP_MAT_TEMP
 void PrintMatrix(const SPCSR& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
                  std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
-  const auto block = detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
+  const detail::MatrixPrintBlock block =
+      detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
   detail::SparseMatrixPreview preview(block, out);
   if (matrix.nnz != 0 && block.cols != 0) {
-    for (auto r = block.row; r < block.row + block.rows; ++r)
+    for (std::int64_t r = block.row; r < block.row + block.rows; ++r)
       for (OT p = matrix.row_ptr[r]; p < matrix.row_ptr[r + 1]; ++p)
         preview.Add(r, matrix.col_id[p], matrix.val[p]);
   }
@@ -157,10 +182,11 @@ SP_MAT_TEMP
 void PrintMatrix(const SPCSC& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
                  std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
-  const auto block = detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
+  const detail::MatrixPrintBlock block =
+      detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
   detail::SparseMatrixPreview preview(block, out);
   if (matrix.nnz != 0 && block.rows != 0) {
-    for (auto c = block.col; c < block.col + block.cols; ++c)
+    for (std::int64_t c = block.col; c < block.col + block.cols; ++c)
       for (OT p = matrix.col_ptr[c]; p < matrix.col_ptr[c + 1]; ++p)
         preview.Add(matrix.row_id[p], c, matrix.val[p]);
   }
@@ -172,11 +198,12 @@ SP_MAT_TEMP
 void PrintMatrix(const SPCOO& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
                  std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
-  const auto block = detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
+  const detail::MatrixPrintBlock block =
+      detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
   detail::SparseMatrixPreview preview(block, out);
   if (block.rows != 0 && block.cols != 0) {
     for (OT p = 0; p < matrix.nnz; ++p) {
-      const auto& entry = matrix.entries[p];
+      const typename SPCOO::Entry& entry = matrix.entries[p];
       preview.Add(entry.row, entry.col, entry.val);
     }
   }
@@ -194,7 +221,8 @@ template <class Matrix>
 void PrintMatrix(const Matrix& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
                  std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
-  const auto block = detail::CheckedPrintBlock(matrix.rows(), matrix.cols(), row, col, rows, cols);
+  const detail::MatrixPrintBlock block =
+      detail::CheckedPrintBlock(matrix.rows(), matrix.cols(), row, col, rows, cols);
   detail::PrintMatrixHeading(out, name, matrix.rows(), matrix.cols(), block);
   if (block.rows == 0 || block.cols == 0)
     out << "[]\n";

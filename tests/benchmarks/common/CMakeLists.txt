@@ -1,0 +1,4 @@
+include(GoogleTest)
+add_executable(test_benchmark_options test_BenchmarkOptions.cpp)
+target_link_libraries(test_benchmark_options PRIVATE SPCraftBenchmarkOptions cxxopts::cxxopts SPCraftTestMain)
+gtest_discover_tests(test_benchmark_options TEST_PREFIX benchmark_options. DISCOVERY_MODE PRE_TEST)

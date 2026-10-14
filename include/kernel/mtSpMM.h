@@ -17,6 +17,9 @@ namespace spcraft
 SP_SR_MAT_TEMP
 void spmm_openmp(const SPCSR& A, const NT* B, NT* C, std::size_t dense_columns)
 {
+  static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
+                "Semiring value type must match matrix value type");
+
   OMP_PARALLEL_FOR(schedule(static))
   for (IT row = 0; row < A.m; ++row) {
     const std::size_t output_row = static_cast<std::size_t>(row) * dense_columns;

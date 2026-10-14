@@ -25,10 +25,8 @@ add_library(SPCraftGoogleBenchmark INTERFACE)
 target_link_libraries(SPCraftGoogleBenchmark INTERFACE SPCraftBenchmarkCommon benchmark::benchmark)
 
 if(BUILD_TESTING)
-	include(GoogleTest)
-	add_executable(test_benchmark_options ../tests/test_benchmark_options.cpp)
-	target_link_libraries(test_benchmark_options PRIVATE SPCraftBenchmarkOptions cxxopts::cxxopts SPCraftTestMain)
-	gtest_discover_tests(test_benchmark_options TEST_PREFIX benchmark_options. DISCOVERY_MODE PRE_TEST)
+	add_subdirectory(${PROJECT_SOURCE_DIR}/tests/benchmarks/common
+		${PROJECT_BINARY_DIR}/tests/benchmarks/common)
 endif()
 
 add_subdirectory(spcraft)
@@ -44,3 +42,7 @@ endif()
 if(SPCRAFT_USE_CUDA)
 	add_subdirectory(cusparse)
 endif()
+
+# BEGIN scaffold: directory mpi
+add_subdirectory(mpi)
+# END scaffold: directory mpi

@@ -17,9 +17,9 @@
 
 namespace spcraft
 {
-/*************************************
- *             constructor
- *************************************/
+/*******************************************************************************
+ *                                Constructors                                 *
+ ******************************************************************************/
 
 SP_MAT_TEMP
 SPCSR::CsrMatrix() noexcept = default;
@@ -66,9 +66,9 @@ SPCSR& SPCSR::operator=(SPCSR&& rhs) noexcept
 SP_MAT_TEMP
 SPCSR::~CsrMatrix() { SafeDelete(memowned, row_ptr, col_id, val); }
 
-/*************************************
- *             member functions
- *************************************/
+/*******************************************************************************
+ *                              Member Functions                               *
+ ******************************************************************************/
 
 SP_MAT_TEMP
 SPCSR SPCSR::Clone() const
@@ -90,7 +90,7 @@ SPCSR SPCSR::Clone() const
 SP_MAT_TEMP
 void SPCSR::Allocate(OT require_nnz, IT nRows, IT nCols)
 {
-  auto replacement = SafeAllocate(require_nnz, nRows, nCols);
+  const std::tuple<OT*, IT*, NT*> replacement = SafeAllocate(require_nnz, nRows, nCols);
   SafeDelete(memowned, row_ptr, col_id, val);
   std::tie(row_ptr, col_id, val) = replacement;
   nnz = require_nnz;
@@ -111,9 +111,9 @@ void SPCSR::Reset() noexcept
   memowned = false;
 }
 
-/*************************************
- *             Static Members
- *************************************/
+/*******************************************************************************
+ *                               Static Members                                *
+ ******************************************************************************/
 SP_MAT_TEMP
 std::tuple<OT*, IT*, NT*> SPCSR::SafeAllocate(OT required_nnz, IT rows, IT columns)
 {

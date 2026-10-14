@@ -28,9 +28,9 @@
 
 namespace spcraft
 {
-/*************************************
- *             constructor
- *************************************/
+/*******************************************************************************
+ *                                Constructors                                 *
+ ******************************************************************************/
 
 SP_MAT_TEMP
 SPCOO::CooMatrix() noexcept = default;
@@ -94,9 +94,9 @@ SPCOO::CooMatrix(const std::string& filename)
   *this = std::move(coo);
 }
 
-/*************************************
- *             member functions
- *************************************/
+/*******************************************************************************
+ *                              Member Functions                               *
+ ******************************************************************************/
 
 SP_MAT_TEMP
 void SPCOO::Allocate(OT count, IT rows, IT columns)
@@ -113,7 +113,7 @@ void SPCOO::Allocate(OT count, IT rows, IT columns)
 SP_MAT_TEMP
 SPCOO SPCOO::Clone() const
 {
-  CooMatrix ret;
+  SPCOO ret;
   ret.Allocate(nnz, m, n);
   if (nnz > 0) {
     OMP_PARALLEL_FOR()
@@ -143,9 +143,9 @@ SPCSC SPCOO::ToCsc() const
   int invalid_data = 0;
   OMP_PARALLEL_FOR(reduction(| : invalid_data))
   for (OT i = 0; i < nnz; ++i) {
-    const auto& [row, col, value] = entries[i];
-    bool invalid = row >= m || col >= n;
-    if constexpr (std::is_signed_v<IT>) invalid |= row < 0 || col < 0;
+    const Entry& entry = entries[i];
+    bool invalid = entry.row >= m || entry.col >= n;
+    if constexpr (std::is_signed_v<IT>) invalid |= entry.row < 0 || entry.col < 0;
     invalid_data |= invalid;
   }
   if (invalid_data) {
@@ -165,10 +165,10 @@ SPCSC SPCOO::ToCsc() const
   // Scatter serially so duplicate coordinates retain their input order.
   std::vector<OT> next(csc.col_ptr, csc.col_ptr + n);
   for (OT i = 0; i < nnz; ++i) {
-    const auto& [row, col, value] = entries[i];
-    const OT pos = next[col]++;
-    csc.row_id[pos] = row;
-    csc.val[pos] = value;
+    const Entry& entry = entries[i];
+    const OT pos = next[entry.col]++;
+    csc.row_id[pos] = entry.row;
+    csc.val[pos] = entry.val;
   }
   return csc;
 }
@@ -179,42 +179,42 @@ SPCSR SPCOO::ToCsr() const
   SPCSR csr(nnz, m, n);
   std::fill(csr.row_ptr, csr.row_ptr + m + 1, OT{0});
   if (nnz == 0 || m == 0 || n == 0) return csr;
-  // loop nnz, check each nnz quality
   int invalid_data = 0;
-  OMP_PARALLEL_FOR(schedule(static, 32) reduction(| : invalid_data))
+  OMP_PARALLEL_FOR(schedule(static) reduction(| : invalid_data))
   for (OT i = 0; i < nnz; ++i) {
-    const auto& [r, c, value] = entries[i];
-    invalid_data |= (r < 0 || c < 0 || r >= m || c >= n);
+    const Entry& entry = entries[i];
+    bool invalid = entry.row >= m || entry.col >= n;
+    if constexpr (std::is_signed_v<IT>) invalid |= entry.row < 0 || entry.col < 0;
+    invalid_data |= invalid;
   }
   if (invalid_data) {
     throw std::invalid_argument("CooMatrix::ToCsr index is out of range");
   }
   // create row ptr - step 1: counting nnz per row
-  OMP_PARALLEL_FOR(schedule(static, 32))
+  OMP_PARALLEL_FOR(schedule(static))
   for (OT i = 0; i < nnz; ++i) {
-    const auto& [r, c, value] = entries[i];
+    const Entry& entry = entries[i];
     OMP_ATOMIC
-    csr.row_ptr[r + 1]++;
+    csr.row_ptr[entry.row + 1]++;
   }
   // create row ptr - step 2: prefix sum
-  // TODO: parallize this step.
   for (IT row = 0; row < m; ++row) {
     csr.row_ptr[row + 1] += csr.row_ptr[row];
   }
   // Scatter serially so duplicate coordinates retain their input order.
   std::vector<OT> next(csr.row_ptr, csr.row_ptr + m);
   for (OT i = 0; i < nnz; ++i) {
-    const auto& [r, c, value] = entries[i];
-    const OT pos = next[r]++;
-    csr.col_id[pos] = c;
-    csr.val[pos] = value;
+    const Entry& entry = entries[i];
+    const OT pos = next[entry.row]++;
+    csr.col_id[pos] = entry.col;
+    csr.val[pos] = entry.val;
   }
   return csr;
 }
 
-/*************************************
- *             Static Members
- *************************************/
+/*******************************************************************************
+ *                               Static Members                                *
+ ******************************************************************************/
 
 SP_MAT_TEMP
 typename SPCOO::Entry* SPCOO::SafeAllocate(OT count, IT rows, IT columns)

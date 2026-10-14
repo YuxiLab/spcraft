@@ -201,7 +201,7 @@ The old CSR/CSC/DCSC compressed-output kernels and alternate tuple kernel are
 removed. There are no compatibility entry points or hidden kernel-selection
 flags. The [example](examples/spcraft/e03_column_spgemm.cpp),
 [source correspondence](benchmarks/combblas/SourceMapping.md), and
-[kernel tests](tests/test_mtspgemm.cpp) describe the supported contract.
+[kernel tests](tests/kernel/test_mtSpGEMM.cpp) describe the supported contract.
 
 Python's CSR `spgemm` method explicitly sorts and merges duplicate input
 coordinates into canonical DCSC, calls this same kernel, then converts COO to

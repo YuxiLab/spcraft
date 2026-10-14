@@ -1,0 +1,3 @@
+add_executable(test_semiring test_SemiRing.cpp)
+target_link_libraries(test_semiring PRIVATE SPCraftTestMain SPCraft)
+gtest_discover_tests(test_semiring TEST_PREFIX semiring. DISCOVERY_MODE PRE_TEST)

@@ -11,27 +11,25 @@ namespace spcraft
 {
 
 /**
- * @brief Reference omp spmv.
+ * @brief Compute y = A * x over a semiring using OpenMP CSR row traversal.
  */
 SP_SR_MAT_TEMP
 void OmpSpMV(const SPCSR& A, const SPDVEC& x, SPDVEC& y)
 {
+  static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
+                "Semiring value type must match matrix value type");
+
   if (x.n != A.n || y.n != A.m) {
     throw std::invalid_argument("SpMV vector dimensions do not match the matrix");
   }
   OMP_PARALLEL_FOR(schedule(dynamic))
-  // loop each row in A matrix.
   for (IT row = 0; row < A.m; ++row) {
-    // sum is variable store the output of the dot product.
     NT sum = SemiRing::kAdditiveIdentity;
-    // get the column id for each nnz in that row.
     for (OT a_col = A.row_ptr[row]; a_col < A.row_ptr[row + 1]; ++a_col) {
-      const NT aval = A.val[a_col];            // the value of current nnz element
-      const NT xval = x.val[A.col_id[a_col]];  // the value of corresponding x value
-      // add into the sum variable.
+      const NT aval = A.val[a_col];
+      const NT xval = x.val[A.col_id[a_col]];
       sum = SemiRing::Add(sum, SemiRing::Multiply(aval, xval));
     }
-    // finish dot product, store the result to output y vector.
     y.val[row] = sum;
   }
 }

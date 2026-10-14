@@ -18,7 +18,7 @@ class CsrMatrix
 {
  public:
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
   OT* row_ptr = nullptr;  //!< row pointers, size m+1
   IT* col_id = nullptr;   //!< column indices, size nnz
@@ -29,7 +29,7 @@ class CsrMatrix
   bool memowned = true;   //!< owns the storage (views opt out)
 
   /*****************************************************************************
-   *                                Constructors                               *
+   *                               Constructors                                *
    ****************************************************************************/
   //! Empty matrix (owns nothing yet).
   CsrMatrix() noexcept;
@@ -55,7 +55,7 @@ class CsrMatrix
   CsrMatrix& operator=(const SPCSR& rhs) = delete;
 
   /*****************************************************************************
-   *                              Member Functions                             *
+   *                             Member Functions                              *
    ****************************************************************************/
   //! clone a new CsrMatrix explicitly.
   SPCSR Clone() const;
@@ -68,7 +68,7 @@ class CsrMatrix
 
  private:
   /*****************************************************************************
-   *                               Static Members                              *
+   *                              Static Members                               *
    ****************************************************************************/
   // tedious function with all boundary check.
   SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(OT required_nnz, IT rows, IT columns);

@@ -22,6 +22,9 @@ template <class NT>
 struct PlusTimesRing {
   using ValueType = NT;
 
+  /*****************************************************************************
+   *                              Static Members                               *
+   ****************************************************************************/
   inline static constexpr NT kAdditiveIdentity = NT{0};
   inline static constexpr NT kMultiplicativeIdentity = NT{1};
 

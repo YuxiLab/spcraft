@@ -1,0 +1,11 @@
+add_executable(test_matrix_input_options test_MatrixInputOptions.cpp)
+target_link_libraries(test_matrix_input_options PRIVATE SPCraftTestMain SPCraftInput cxxopts::cxxopts)
+gtest_discover_tests(test_matrix_input_options TEST_PREFIX matrix_input_options. DISCOVERY_MODE PRE_TEST)
+
+add_executable(test_print test_Print.cpp)
+target_link_libraries(test_print PRIVATE SPCraftTestMain SPCraft ${EIGEN3_TARGET})
+gtest_discover_tests(test_print TEST_PREFIX print_vector. DISCOVERY_MODE PRE_TEST)
+
+add_executable(test_print_matrix test_Print_matrix.cpp)
+target_link_libraries(test_print_matrix PRIVATE SPCraftTestMain SPCraft ${EIGEN3_TARGET})
+gtest_discover_tests(test_print_matrix TEST_PREFIX print_matrix. DISCOVERY_MODE PRE_TEST)

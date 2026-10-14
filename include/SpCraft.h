@@ -11,6 +11,7 @@
 #include "core/CsrMatrix.h"
 #include "core/DcscMatrix.h"
 #include "core/DenseVector.h"
+#include "eigen/eigeninterface.h"
 #include "graph/PageRank.h"
 #include "graph/mtPageRank.h"
 #include "kernel/mtBlas1.h"
@@ -35,4 +36,8 @@
 #include "core/cuCsrMatrix.cuh"
 #include "graph/cuPageRank.cuh"
 #include "kernel/cuSpMV.cuh"
+#endif
+
+#ifdef SPCRAFT_USE_MPI
+#include "mpi/2dspgemm.h"
 #endif

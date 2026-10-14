@@ -23,7 +23,7 @@ class cuCooMatrix
 {
  public:
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
   using Entry = TupleEntry<IT, NT>;
   Entry* entries = nullptr;  //!< Coordinate entries, size nnz, in device memory.
@@ -33,7 +33,7 @@ class cuCooMatrix
   bool memowned = true;
 
   /*****************************************************************************
-   *                                Constructors                               *
+   *                               Constructors                                *
    ****************************************************************************/
   cuCooMatrix() noexcept;
 
@@ -54,7 +54,7 @@ class cuCooMatrix
   ~cuCooMatrix();
 
   /*****************************************************************************
-   *                              Member Functions                             *
+   *                             Member Functions                              *
    ****************************************************************************/
   //! Allocate zeroed replacement storage, preserving this object on failure.
   void Allocate(OT count, IT rows, IT columns);
@@ -72,7 +72,7 @@ class cuCooMatrix
 
  private:
   /*****************************************************************************
-   *                               Static Members                              *
+   *                              Static Members                               *
    ****************************************************************************/
   SPND static Entry* SafeAllocate(OT count, IT rows, IT columns);
 

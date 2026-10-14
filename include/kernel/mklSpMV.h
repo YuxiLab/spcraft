@@ -80,6 +80,9 @@ class MklCsrSpmv
                 "MklCsrSpmv supports float and double values");
 
  public:
+  /*****************************************************************************
+   *                               Constructors                                *
+   ****************************************************************************/
   explicit MklCsrSpmv(const SPCSR& matrix, MKL_INT expected_calls = 1000)
   {
     detail::CheckMklSparseStatus(
@@ -100,6 +103,7 @@ class MklCsrSpmv
   }
 
   MklCsrSpmv(const MklCsrSpmv&) = delete;
+
   MklCsrSpmv& operator=(const MklCsrSpmv&) = delete;
 
   MklCsrSpmv(MklCsrSpmv&& rhs) noexcept : handle_(rhs.handle_) { rhs.handle_ = nullptr; }
@@ -123,6 +127,9 @@ class MklCsrSpmv
     }
   }
 
+  /*****************************************************************************
+   *                             Member Functions                              *
+   ****************************************************************************/
   void Multiply(const NT* x, NT* y) const
   {
     detail::CheckMklSparseStatus(detail::MklSparseMv<NT>(handle_, descriptor_, x, y),
@@ -130,6 +137,9 @@ class MklCsrSpmv
   }
 
  private:
+  /*****************************************************************************
+   *                               Data Members                                *
+   ****************************************************************************/
   sparse_matrix_t handle_ = nullptr;
   matrix_descr descriptor_{SPARSE_MATRIX_TYPE_GENERAL, SPARSE_FILL_MODE_FULL, SPARSE_DIAG_NON_UNIT};
 };

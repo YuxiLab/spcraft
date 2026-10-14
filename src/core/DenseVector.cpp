@@ -18,9 +18,9 @@
 
 namespace spcraft
 {
-/*************************************
- *             constructor
- *************************************/
+/*******************************************************************************
+ *                                Constructors                                 *
+ ******************************************************************************/
 
 SP_VEC_TEMP
 SPDVEC::DenseVector() noexcept = default;
@@ -42,8 +42,8 @@ SPDVEC::DenseVector(IT size, NT initval)
   val = SafeAllocate(size);
   n = size;
   memowned = true;
-  OMP_PARALLEL_FOR(schedule(static, 32))
-  for (size_t i = 0; i < size; ++i) {
+  OMP_PARALLEL_FOR(schedule(static))
+  for (IT i = 0; i < size; ++i) {
     val[i] = initval;
   }
 }
@@ -69,9 +69,9 @@ SPDVEC& SPDVEC::operator=(SPDVEC&& rhs) noexcept
 
 SP_VEC_TEMP
 SPDVEC::~DenseVector() { SafeDelete(memowned, val); }
-/*************************************
- *             member functions
- *************************************/
+/*******************************************************************************
+ *                              Member Functions                               *
+ ******************************************************************************/
 
 SP_VEC_TEMP
 void SPDVEC::Allocate(IT size)
@@ -122,9 +122,9 @@ void SPDVEC::Random(int seed)
   }
 }
 
-/*************************************
- *             Static Members
- *************************************/
+/*******************************************************************************
+ *                               Static Members                                *
+ ******************************************************************************/
 SP_VEC_TEMP
 NT* SPDVEC::SafeAllocate(IT size)
 {
@@ -136,8 +136,8 @@ NT* SPDVEC::SafeAllocate(IT size)
   }
   if (size == IT{0}) return nullptr;
   // protect size overflow
-  auto tmp = detail::CheckedElementCount<NT>(size);
-  NT* ptr = static_cast<NT*>(malloc(tmp * sizeof(NT)));
+  const std::size_t count = detail::CheckedElementCount<NT>(size);
+  NT* ptr = static_cast<NT*>(std::malloc(count * sizeof(NT)));
   if (ptr == nullptr) {
     throw std::bad_alloc();
   }
@@ -147,7 +147,7 @@ NT* SPDVEC::SafeAllocate(IT size)
 SP_VEC_TEMP
 void SPDVEC::SafeDelete(bool owned, NT* ptr) noexcept
 {
-  if (owned && ptr != nullptr) free(ptr);
+  if (owned && ptr != nullptr) std::free(ptr);
 }
 
 #define SPCRAFT_DEFINE_DENSE_VECTOR(r, product) \

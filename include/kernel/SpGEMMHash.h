@@ -28,7 +28,7 @@ SPND inline std::size_t SpGEMMHashCapacity(std::uintmax_t count)
     }
     capacity *= 2;
   }
-  const auto size = CheckedElementCount<Entry>(capacity);
+  const std::size_t size = CheckedElementCount<Entry>(capacity);
   if (size > std::vector<Entry>().max_size()) {
     throw std::length_error("SpGEMM hash capacity exceeds vector max_size");
   }

@@ -19,6 +19,9 @@ namespace detail
 
 template <typename IT, typename NT, typename OT, int kBlockSize>
 struct PageRankCudaImpl {
+  /*****************************************************************************
+   *                              Static Members                               *
+   ****************************************************************************/
   static cudaError_t Run(const SPCSR& op, SPDVEC& rank, const PageRankOptions<NT>& options,
                          PageRankResult<NT>* result, cudaStream_t stream);
 };
@@ -56,6 +59,28 @@ cudaError_t PageRankCuda(const SPCSR& op, SPDVEC& rank,
                          PageRankResult<NT>* result = nullptr, cudaStream_t stream = nullptr)
 {
   static_assert(std::is_floating_point_v<NT>, "PageRank requires a floating-point value type");
+  if (result != nullptr) *result = PageRankResult<NT>{};
+
+  if constexpr (std::is_signed_v<IT>) {
+    if (op.m < IT{0} || op.n < IT{0}) return cudaErrorInvalidValue;
+  }
+  if constexpr (std::is_signed_v<OT>) {
+    if (op.nnz < OT{0}) return cudaErrorInvalidValue;
+  }
+  if (op.m != op.n || rank.n != op.m) return cudaErrorInvalidValue;
+  if (!detail::PageRankOptionsAreValid(options)) return cudaErrorInvalidValue;
+
+  const IT n = op.m;
+  if (n == IT{0}) {
+    if (result != nullptr) result->converged = true;
+    return cudaSuccess;
+  }
+
+  if (rank.val == nullptr || op.row_ptr == nullptr) return cudaErrorInvalidDevicePointer;
+  if (op.nnz != OT{0} && (op.col_id == nullptr || op.val == nullptr)) {
+    return cudaErrorInvalidDevicePointer;
+  }
+
   return detail::PageRankCudaImpl<IT, NT, OT, kBlockSize>::Run(op, rank, options, result, stream);
 }
 

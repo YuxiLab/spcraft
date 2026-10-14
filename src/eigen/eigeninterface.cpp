@@ -1,4 +1,4 @@
-#include "eigeninterface.h"
+#include "eigen/eigeninterface.h"
 
 #include <chrono>
 #include <cstdint>
@@ -73,36 +73,44 @@ SP_MAT_TEMP
 EigenComparison CompareSpMVWithEigen(const SPCSR& a, const SPDVEC& x, const SPDVEC& y, NT tol)
 {
   if (a.n != x.n || a.m != y.n) {
-    return {false, std::numeric_limits<double>::infinity()};
+    const EigenComparison result{false, std::numeric_limits<double>::infinity(), 0.0};
+    return result;
   }
 
-  const auto eigen_matrix = ToEigen(a);
-  const auto eigen_input = ToEigen(x);
+  // Convert outside the measured multiply and retain owning Eigen storage.
+  const EigenCsr<NT> eigen_matrix = ToEigen(a);
+  const Eigen::Map<const EigenVector<NT>> eigen_input = ToEigen(x);
   const auto start = std::chrono::steady_clock::now();
   const EigenVector<NT> reference = eigen_matrix * eigen_input;
   const auto stop = std::chrono::steady_clock::now();
   const double seconds = std::chrono::duration<double>(stop - start).count();
-  const auto actual = ToEigen(y);
+  const Eigen::Map<const EigenVector<NT>> actual = ToEigen(y);
   const bool matches = actual.isApprox(reference, tol);
-  return {matches, matches ? 0.0 : (actual - reference).norm(), seconds};
+  const double error = matches ? 0.0 : (actual - reference).norm();
+  const EigenComparison result{matches, error, seconds};
+  return result;
 }
 
 SP_MAT_TEMP
 EigenComparison CompareSpGEMMWithEigen(const SPCSC& a, const SPCSC& b, const SPCSC& c, NT tol)
 {
   if (a.n != b.m || c.m != a.m || c.n != b.n) {
-    return {false, std::numeric_limits<double>::infinity()};
+    const EigenComparison result{false, std::numeric_limits<double>::infinity(), 0.0};
+    return result;
   }
 
-  const auto eigen_lhs = ToEigen(a);
-  const auto eigen_rhs = ToEigen(b);
+  // Keep conversion and comparison outside the reference multiply timing.
+  const EigenCsc<NT> eigen_lhs = ToEigen(a);
+  const EigenCsc<NT> eigen_rhs = ToEigen(b);
   const auto start = std::chrono::steady_clock::now();
   const EigenCsc<NT> reference = eigen_lhs * eigen_rhs;
   const auto stop = std::chrono::steady_clock::now();
   const double seconds = std::chrono::duration<double>(stop - start).count();
-  const auto actual = ToEigen(c);
+  const EigenCsc<NT> actual = ToEigen(c);
   const bool matches = reference.isApprox(actual, tol);
-  return {matches, matches ? 0.0 : (reference - actual).norm(), seconds};
+  const double error = matches ? 0.0 : (reference - actual).norm();
+  const EigenComparison result{matches, error, seconds};
+  return result;
 }
 
 #define SPCRAFT_DEFINE_EIGEN_REFERENCE_TYPES(IT, NT, OT)                                         \

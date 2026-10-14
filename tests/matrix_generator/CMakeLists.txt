@@ -1,0 +1,3 @@
+add_executable(test_matrix_generator test_MatrixGenerator.cpp)
+target_link_libraries(test_matrix_generator PRIVATE SPCraftTestMain SPCraft)
+gtest_discover_tests(test_matrix_generator TEST_PREFIX matrix_generator. DISCOVERY_MODE PRE_TEST)

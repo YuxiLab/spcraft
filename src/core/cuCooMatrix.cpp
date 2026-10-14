@@ -33,7 +33,7 @@ cuCooMatrix<IT, NT, OT>::cuCooMatrix(const SPCOO& host)
   replacement.Allocate(host.nnz, host.m, host.n);
   if (host.nnz != OT{0}) {
     if (!host.entries) throw std::invalid_argument("cuCooMatrix upload requires host entries");
-    const auto bytes = static_cast<std::size_t>(host.nnz) * sizeof(Entry);
+    const std::size_t bytes = static_cast<std::size_t>(host.nnz) * sizeof(Entry);
     CUDACHK(cudaMemcpy(replacement.entries, host.entries, bytes, cudaMemcpyHostToDevice),
             "cuCooMatrix::FromHost entries");
   }
@@ -83,7 +83,7 @@ cuCooMatrix<IT, NT, OT> cuCooMatrix<IT, NT, OT>::Clone() const
   cuCooMatrix result;
   result.Allocate(nnz, m, n);
   if (nnz != OT{0}) {
-    const auto bytes = static_cast<std::size_t>(nnz) * sizeof(Entry);
+    const std::size_t bytes = static_cast<std::size_t>(nnz) * sizeof(Entry);
     CUDACHK(cudaMemcpy(result.entries, entries, bytes, cudaMemcpyDeviceToDevice),
             "cuCooMatrix::Clone entries");
   }
@@ -106,7 +106,7 @@ SPCOO cuCooMatrix<IT, NT, OT>::ToHost() const
   SPCOO result;
   result.Allocate(nnz, m, n);
   if (nnz != OT{0}) {
-    const auto bytes = static_cast<std::size_t>(nnz) * sizeof(Entry);
+    const std::size_t bytes = static_cast<std::size_t>(nnz) * sizeof(Entry);
     CUDACHK(cudaMemcpy(result.entries, entries, bytes, cudaMemcpyDeviceToHost),
             "cuCooMatrix::ToHost entries");
   }
@@ -132,9 +132,9 @@ typename cuCooMatrix<IT, NT, OT>::Entry* cuCooMatrix<IT, NT, OT>::SafeAllocate(O
   if ((rows == 0 || columns == 0) && count != OT{0}) {
     throw std::invalid_argument("nonempty cuCooMatrix requires nonzero dimensions");
   }
-  const auto entry_count = detail::CheckedElementCount<Entry>(count);
+  const std::size_t entry_count = detail::CheckedElementCount<Entry>(count);
   if (entry_count == 0) return nullptr;
-  const auto bytes = entry_count * sizeof(Entry);
+  const std::size_t bytes = entry_count * sizeof(Entry);
   Entry* replacement = nullptr;
   cudaError_t status = cudaMalloc(reinterpret_cast<void**>(&replacement), bytes);
   if (status == cudaSuccess) status = cudaMemset(replacement, 0, bytes);

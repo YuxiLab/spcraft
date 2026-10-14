@@ -93,7 +93,15 @@ list(REMOVE_ITEM SPCRAFT_SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/MatrixInput.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/MatrixInputOptions.cpp"
 )
+# BEGIN scaffold: exclude src/mpi/2dspgemm.cpp
+list(REMOVE_ITEM SPCRAFT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/mpi/2dspgemm.cpp")
+# END scaffold: exclude src/mpi/2dspgemm.cpp
+
 add_library(SPCraft SHARED ${SPCRAFT_SOURCES})
+
+# BEGIN scaffold: directory src/mpi
+add_subdirectory(src/mpi)
+# END scaffold: directory src/mpi
 target_include_directories(SPCraft
 	PUBLIC
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

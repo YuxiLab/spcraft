@@ -12,11 +12,11 @@ namespace spcraft
 SP_VEC_TEMP
 struct TupleEntry {
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
-  IT row;
-  IT col;
-  NT val;
+  IT row{};
+  IT col{};
+  NT val{};
 };
 
 /**
@@ -32,7 +32,7 @@ class CooMatrix
 {
  public:
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
   using Entry = TupleEntry<IT, NT>;
   Entry* entries = nullptr;
@@ -42,7 +42,7 @@ class CooMatrix
   bool memowned = true;
 
   /*****************************************************************************
-   *                                Constructors                               *
+   *                               Constructors                                *
    ****************************************************************************/
   CooMatrix() noexcept;
 
@@ -61,7 +61,7 @@ class CooMatrix
   explicit CooMatrix(const std::string& filename);
 
   /*****************************************************************************
-   *                              Member Functions                             *
+   *                             Member Functions                              *
    ****************************************************************************/
   void Allocate(OT count, IT rows, IT columns);
 
@@ -75,7 +75,7 @@ class CooMatrix
 
  private:
   /*****************************************************************************
-   *                               Static Members                              *
+   *                              Static Members                               *
    ****************************************************************************/
   SPND static Entry* SafeAllocate(OT count, IT rows, IT columns);
 

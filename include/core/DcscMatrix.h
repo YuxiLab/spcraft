@@ -23,7 +23,7 @@ class DcscMatrix
 {
  public:
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
   OT* col_ptr = nullptr;  //!< offsets, size `nzc+1`
   IT* col_id = nullptr;   //!< logical column IDs, size nzc
@@ -36,7 +36,7 @@ class DcscMatrix
   bool memowned = true;
 
   /*****************************************************************************
-   *                                Constructors                               *
+   *                               Constructors                                *
    ****************************************************************************/
   DcscMatrix() noexcept;
 
@@ -60,7 +60,7 @@ class DcscMatrix
   ~DcscMatrix();
 
   /*****************************************************************************
-   *                              Member Functions                             *
+   *                             Member Functions                              *
    ****************************************************************************/
   //! Allocate zeroed replacement storage, preserving this object on failure.
   void Allocate(OT nonzeros, IT nRows, IT nCols, IT storedColumns);
@@ -74,14 +74,14 @@ class DcscMatrix
   SPND SPCSC ToCsc() const;
 
   /*****************************************************************************
-   *                               Static Members                              *
+   *                              Static Members                               *
    ****************************************************************************/
   //! Copy a well-formed CSC matrix, dropping empty column headers only.
   SPND static DcscMatrix FromCsc(const SPCSC& source);
 
  private:
   /*****************************************************************************
-   *                               Static Members                              *
+   *                              Static Members                               *
    ****************************************************************************/
   SPND static std::tuple<OT*, IT*, IT*, NT*> SafeAllocate(IT nzc, OT nnz);
 

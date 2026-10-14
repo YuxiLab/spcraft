@@ -35,7 +35,7 @@ void sddmm_openmp(SPCSR& samples, const NT* left, const NT* right, std::size_t f
     throw std::invalid_argument("SDDMM output values must not be null");
   }
 
-  OMP_PARALLEL_FOR(schedule(static) default(none) shared(samples, left, right, feature_count))
+  OMP_PARALLEL_FOR(schedule(static))
   for (IT row = 0; row < samples.m; ++row) {
     const std::size_t left_row = static_cast<std::size_t>(row) * feature_count;
     for (OT position = samples.row_ptr[row]; position < samples.row_ptr[row + 1]; ++position) {
@@ -43,8 +43,9 @@ void sddmm_openmp(SPCSR& samples, const NT* left, const NT* right, std::size_t f
           static_cast<std::size_t>(samples.col_id[position]) * feature_count;
       NT sum = SemiRing::kAdditiveIdentity;
       for (std::size_t feature = 0; feature < feature_count; ++feature) {
-        sum = SemiRing::Add(
-            sum, SemiRing::Multiply(left[left_row + feature], right[right_row + feature]));
+        const NT left_value = left[left_row + feature];
+        const NT right_value = right[right_row + feature];
+        sum = SemiRing::Add(sum, SemiRing::Multiply(left_value, right_value));
       }
       samples.val[position] = sum;
     }

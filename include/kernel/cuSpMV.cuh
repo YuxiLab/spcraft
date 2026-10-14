@@ -19,6 +19,9 @@ namespace detail
 
 template <class SemiRing, typename IT, typename NT, typename OT, int kBlockSize>
 struct SpmvCudaBlockPerRowImpl {
+  /*****************************************************************************
+   *                              Static Members                               *
+   ****************************************************************************/
   static cudaError_t Run(const SPCSR& matrix, const SPDVEC& x, SPDVEC& y, cudaStream_t stream);
 };
 
@@ -44,6 +47,19 @@ cudaError_t SpmvCudaBlockPerRow(const SPCSR& matrix, const SPDVEC& x, SPDVEC& y,
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "SpMV semiring value type must match the matrix value type");
+  if constexpr (std::is_signed_v<IT>) {
+    if (matrix.m < IT{0} || matrix.n < IT{0}) return cudaErrorInvalidValue;
+  }
+  if constexpr (std::is_signed_v<OT>) {
+    if (matrix.nnz < OT{0}) return cudaErrorInvalidValue;
+  }
+  if (x.n != matrix.n || y.n != matrix.m) return cudaErrorInvalidValue;
+  if (matrix.m == IT{0}) return cudaSuccess;
+  if (matrix.row_ptr == nullptr || matrix.col_id == nullptr || matrix.val == nullptr ||
+      x.val == nullptr || y.val == nullptr) {
+    return cudaErrorInvalidDevicePointer;
+  }
+
   return detail::SpmvCudaBlockPerRowImpl<SemiRing, IT, NT, OT, kBlockSize>::Run(matrix, x, y,
                                                                                 stream);
 }

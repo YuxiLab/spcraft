@@ -31,13 +31,13 @@ cuCscMatrix<IT, NT, OT>::cuCscMatrix(const SPCSC& host)
     throw std::invalid_argument("cuCscMatrix upload requires nonnull host buffers");
   }
   if (host.col_ptr) {
-    const auto bytes = (static_cast<std::size_t>(host.n) + 1) * sizeof(OT);
+    const std::size_t bytes = (static_cast<std::size_t>(host.n) + 1) * sizeof(OT);
     CUDACHK(cudaMemcpy(replacement.col_ptr, host.col_ptr, bytes, cudaMemcpyHostToDevice),
             "cuCscMatrix::FromHost col_ptr");
   }
   if (host.nnz != OT{0}) {
-    const auto index_bytes = static_cast<std::size_t>(host.nnz) * sizeof(IT);
-    const auto value_bytes = static_cast<std::size_t>(host.nnz) * sizeof(NT);
+    const std::size_t index_bytes = static_cast<std::size_t>(host.nnz) * sizeof(IT);
+    const std::size_t value_bytes = static_cast<std::size_t>(host.nnz) * sizeof(NT);
     CUDACHK(cudaMemcpy(replacement.row_id, host.row_id, index_bytes, cudaMemcpyHostToDevice),
             "cuCscMatrix::FromHost row_id");
     CUDACHK(cudaMemcpy(replacement.val, host.val, value_bytes, cudaMemcpyHostToDevice),
@@ -104,7 +104,7 @@ void cuCscMatrix<IT, NT, OT>::Allocate(OT require_nnz, IT nRows, IT nCols)
   if ((nRows == 0 || nCols == 0) && require_nnz != OT{0}) {
     throw std::invalid_argument("nonempty cuCscMatrix requires nonzero dimensions");
   }
-  auto replacement = SafeAllocate(nCols, require_nnz);
+  const std::tuple<OT*, IT*, NT*> replacement = SafeAllocate(nCols, require_nnz);
   SafeDelete(memowned, col_ptr, row_id, val);
   m = nRows;
   n = nCols;
@@ -175,9 +175,9 @@ SPCSC cuCscMatrix<IT, NT, OT>::ToHost() const
 SP_MAT_TEMP
 SPCSC cuCscMatrix<IT, NT, OT>::View() const { return SPCSC(col_ptr, row_id, val, nnz, m, n); }
 
-/*************************************
- *             Static Members
- *************************************/
+/*******************************************************************************
+ *                               Static Members                                *
+ ******************************************************************************/
 
 SP_MAT_TEMP
 std::tuple<OT*, IT*, NT*> cuCscMatrix<IT, NT, OT>::SafeAllocate(IT n, OT nnz)
@@ -190,13 +190,13 @@ std::tuple<OT*, IT*, NT*> cuCscMatrix<IT, NT, OT>::SafeAllocate(IT n, OT nnz)
   }
 
   // Size every buffer before acquiring any device storage.
-  const auto offsets = detail::CheckedElementCount<OT>(n);
-  const auto pointer_count = detail::CheckedElementCount<OT>(offsets + 1);
-  const auto index_count = detail::CheckedElementCount<IT>(nnz);
-  const auto value_count = detail::CheckedElementCount<NT>(nnz);
-  const auto pointer_bytes = pointer_count * sizeof(OT);
-  const auto index_bytes = index_count * sizeof(IT);
-  const auto value_bytes = value_count * sizeof(NT);
+  const std::size_t offsets = detail::CheckedElementCount<OT>(n);
+  const std::size_t pointer_count = detail::CheckedElementCount<OT>(offsets + 1);
+  const std::size_t index_count = detail::CheckedElementCount<IT>(nnz);
+  const std::size_t value_count = detail::CheckedElementCount<NT>(nnz);
+  const std::size_t pointer_bytes = pointer_count * sizeof(OT);
+  const std::size_t index_bytes = index_count * sizeof(IT);
+  const std::size_t value_bytes = value_count * sizeof(NT);
 
   OT* r = nullptr;
   IT* c = nullptr;

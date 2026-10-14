@@ -20,7 +20,7 @@ enum class MatrixValueType { kFloat, kDouble };
 
 struct MatrixInputOptions {
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
   std::string matrix_path;
   MatrixIntegerType index_type = MatrixIntegerType::kInt64;

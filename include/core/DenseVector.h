@@ -17,14 +17,14 @@ class DenseVector
 {
  public:
   /*****************************************************************************
-   *                                Data Members                               *
+   *                               Data Members                                *
    ****************************************************************************/
   NT* val = nullptr;     //!< Elements, size n.
   IT n = 0;              //!< Number of elements.
   bool memowned = true;  //!< Owns the storage (views opt out).
 
   /*****************************************************************************
-   *                                Constructors                               *
+   *                               Constructors                                *
    ****************************************************************************/
   DenseVector() noexcept;
 
@@ -48,7 +48,7 @@ class DenseVector
   DenseVector& operator=(DenseVector&& rhs) noexcept;
 
   /*****************************************************************************
-   *                              Member Functions                             *
+   *                             Member Functions                              *
    ****************************************************************************/
   SPND IT size() const noexcept { return n; }
 
@@ -72,7 +72,7 @@ class DenseVector
 
  private:
   /*****************************************************************************
-   *                               Static Members                              *
+   *                              Static Members                               *
    ****************************************************************************/
   SPND static NT* SafeAllocate(IT size);
 

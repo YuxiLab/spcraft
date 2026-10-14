@@ -27,7 +27,9 @@ Three pieces of work are cached separately:
 
 - `SPCraftInput` compiles cxxopts option groups and the typed Matrix Market reader
   in `src/utils/MatrixInputOptions.cpp` and `src/utils/MatrixInput.cpp`.
-- `../eigeninterface.cpp` compiles the Eigen reference operations once.
+- `src/eigen/eigeninterface.cpp` compiles the Eigen reference operations once
+  as part of `SPCraft`; declarations live in `include/eigen/eigeninterface.h`
+  and are available through `SpCraft.h`.
 - `include/utils/StablePch.h` precompiles container and dependency headers. It deliberately
   excludes `SpCraft.h` and kernel headers, so kernel edits do not invalidate it.
 
