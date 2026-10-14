@@ -4,19 +4,19 @@
     ".overseer/experiments/spmv-remote-development.json": {
       "folder": "results/overseer/20261014-013518-36302120764450",
       "progress": {
-        "status": "FAILURE",
+        "status": "DISCONNECTED",
         "allocations": {
           "lair-cpu": {
-            "status": "FAILURE",
-            "server": "lair-cpu",
             "allocation_session": "0b214d7db9584a34b1e0e16212db7245",
+            "status": "FAILURE",
+            "job_id": "121439",
+            "server": "lair-cpu",
             "stages": {
-              "resources": "SUCCESS",
               "build": "FAILURE",
-              "configure": "SUCCESS",
-              "run": "NONE"
-            },
-            "job_id": "121439"
+              "run": "NONE",
+              "resources": "SUCCESS",
+              "configure": "SUCCESS"
+            }
           }
         },
         "mode": "run"
