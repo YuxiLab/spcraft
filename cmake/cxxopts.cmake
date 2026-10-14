@@ -1,6 +1,9 @@
 function(find_cxxopts)
 	find_package(cxxopts 3.3.1 QUIET CONFIG)
 	if(NOT cxxopts_FOUND)
+		if(NOT SPCRAFT_FETCH_DEPENDENCIES)
+			message(FATAL_ERROR "cxxopts was not found; install it or enable SPCRAFT_FETCH_DEPENDENCIES")
+		endif()
 		message(STATUS "cxxopts not found, adding it via CPM")
 		CPMAddPackage(
 			NAME cxxopts

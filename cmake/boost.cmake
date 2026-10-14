@@ -34,6 +34,9 @@ function(find_boost)
 			add_library(Boost::preprocessor ALIAS spcraft_boost_preprocessor)
 		endif()
 	else()
+		if(NOT SPCRAFT_FETCH_DEPENDENCIES)
+			message(FATAL_ERROR "Boost was not found; install it or enable SPCRAFT_FETCH_DEPENDENCIES")
+		endif()
 		message(STATUS "Boost not found, adding Boost.Preprocessor via CPM")
 		CPMAddPackage(
 			NAME boost_preprocessor

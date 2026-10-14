@@ -1,0 +1,106 @@
+{
+  "mode": "run",
+  "total": 2,
+  "stop_on_failure": false,
+  "entries": [
+    {
+      "job": "65862d6a76a5466a9b799fe530c1b11e",
+      "profile": {
+        "slurm": {
+          "partition": "general",
+          "account": "yuxilab",
+          "nodes": 1,
+          "cpus_per_task": 4,
+          "memory": "8G",
+          "time": "00:10:00",
+          "ntasks": 1,
+          "qos": "interactive",
+          "constraint": "cpujobs"
+        },
+        "kind": "ssh",
+        "id": "lair-cpu",
+        "environment": {
+          "CPM_SOURCE_CACHE": "/u/yuxihong/.cache/CPM"
+        },
+        "host": "lair",
+        "slurm_batch": {
+          "qos": "normal"
+        },
+        "project_dir": "/data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/41fb8bec5ebaa36bd3dc71d2dec6a49765b1d7a92396bfa22509c0ddd9d223da/source",
+        "parents": [
+          "lair-cpu",
+          "lair"
+        ],
+        "extends": "lair",
+        "data_dir": "/u/yuxihong/workspace/omo-spcraft",
+        "agent_root": "/u/yuxihong/workspace/omo-spcraft",
+        "revision": "41fb8bec5ebaa36bd3dc71d2dec6a49765b1d7a92396bfa22509c0ddd9d223da"
+      },
+      "allocation": "lair-cpu",
+      "server": "lair-cpu",
+      "client_folder": "/home/yuxihong/workspace/code/sparse_computation/spcraft/results/overseer/20261014-013518-36302120764450",
+      "request": {
+        "job": "65862d6a76a5466a9b799fe530c1b11e",
+        "experiment": "08cdd7caaf4246127e9fefa339deb66be889a3797a2a307fb20361447cdae220",
+        "stages": [
+          "resources",
+          "configure",
+          "build",
+          "run"
+        ],
+        "revision": "41fb8bec5ebaa36bd3dc71d2dec6a49765b1d7a92396bfa22509c0ddd9d223da",
+        "script": "#!/usr/bin/env bash\nset -uo pipefail\ncd /data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/41fb8bec5ebaa36bd3dc71d2dec6a49765b1d7a92396bfa22509c0ddd9d223da/source || exit 1\nexport CPM_SOURCE_CACHE=/u/yuxihong/.cache/CPM\nmkdir -p build/overseer-options/.cmake/api/v1/query || exit 1\n: > build/overseer-options/.cmake/api/v1/query/codemodel-v2\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build\", \"server\": \"lair-cpu\", \"argv\": [\"cmake\", \"--preset\", \"openmp-examples\", \"-B\", \"build/overseer-options\", \"-DSPCRAFT_BUILD_BENCHMARKS=ON\"]}'\nprintf '%s\\n' '@@OVERSEER {\"event\": \"stage\", \"status\": \"PENDING\", \"stage\": \"configure\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\nif srun --nodes=1 --ntasks=1 --cpus-per-task=4 bash -c 'printf '\"'\"'%s\\n'\"'\"' '\"'\"'@@OVERSEER {\"event\": \"stage\", \"status\": \"RUNNING\", \"stage\": \"configure\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\"'\"'\ncmake --preset openmp-examples -B build/overseer-options -DSPCRAFT_BUILD_BENCHMARKS=ON'; then\nprintf '%s\\n' '@@OVERSEER {\"event\": \"stage\", \"status\": \"SUCCESS\", \"stage\": \"configure\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\nelse\nprintf '%s\\n' '@@OVERSEER {\"event\": \"stage\", \"status\": \"FAILURE\", \"stage\": \"configure\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build_failed\", \"server\": \"lair-cpu\"}'\nexit 1\nfi\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build\", \"server\": \"lair-cpu\", \"argv\": [\"cmake\", \"--build\", \"build/overseer-options\", \"--target\", \"bench_ompspmv\", \"--parallel\", \"4\"]}'\nprintf '%s\\n' '@@OVERSEER {\"event\": \"stage\", \"status\": \"PENDING\", \"stage\": \"build\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\nif srun --nodes=1 --ntasks=1 --cpus-per-task=4 bash -c 'printf '\"'\"'%s\\n'\"'\"' '\"'\"'@@OVERSEER {\"event\": \"stage\", \"status\": \"RUNNING\", \"stage\": \"build\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\"'\"'\ncmake --build build/overseer-options --target bench_ompspmv --parallel 4'; then\nprintf '%s\\n' '@@OVERSEER {\"event\": \"stage\", \"status\": \"SUCCESS\", \"stage\": \"build\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\nelse\nprintf '%s\\n' '@@OVERSEER {\"event\": \"stage\", \"status\": \"FAILURE\", \"stage\": \"build\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\nprintf '%s\\n' '@@OVERSEER {\"event\": \"build_failed\", \"server\": \"lair-cpu\"}'\nexit 1\nfi\nprintf '%s\\n' '@@OVERSEER {\"event\": \"stage\", \"stage\": \"run\", \"status\": \"PENDING\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\nfailures=0\nmkdir -p /u/yuxihong/workspace/omo-spcraft/results/overseer/20261014-013518-36302120764450/0001 || exit 1\nprintf '%s\\n' '@@OVERSEER {\"event\": \"start\", \"total\": 2, \"id\": 1, \"server\": \"lair-cpu\", \"parameters\": {\"dataset\": \"/u/yuxihong/workspace/omo-spcraft/dataset/output/gupta3/gupta3.mtx\", \"threads\": 4, \"method\": \"openmp-double\"}, \"choices\": {\"dataset\": \"gupta3\", \"threads\": \"4\", \"method\": \"openmp-double\"}}'\nenv OMP_NUM_THREADS=4 CPM_SOURCE_CACHE=/u/yuxihong/.cache/CPM srun --nodes=1 --ntasks=1 --cpus-per-task=4 bash -c 'printf '\"'\"'%s\\n'\"'\"' '\"'\"'@@OVERSEER {\"event\": \"stage\", \"stage\": \"run\", \"status\": \"RUNNING\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\"'\"'\nexec /data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/41fb8bec5ebaa36bd3dc71d2dec6a49765b1d7a92396bfa22509c0ddd9d223da/source/build/overseer-options/bin/bench_ompspmv --matrix /u/yuxihong/workspace/omo-spcraft/dataset/output/gupta3/gupta3.mtx --threads 4 --index int32 --offset int32 --iterations 5 --max-time 0.05 --output /u/yuxihong/workspace/omo-spcraft/results/overseer/20261014-013518-36302120764450/0001/result.json --precision double' 2>&1 | tee /u/yuxihong/workspace/omo-spcraft/results/overseer/20261014-013518-36302120764450/0001/output.log\ncode=${PIPESTATUS[0]}\nprintf '%s%s%s\\n' '@@OVERSEER {\"event\": \"finish\", \"id\": 1, \"server\": \"lair-cpu\", \"parameters\": {\"dataset\": \"/u/yuxihong/workspace/omo-spcraft/dataset/output/gupta3/gupta3.mtx\", \"threads\": 4, \"method\": \"openmp-double\"}, \"choices\": {\"dataset\": \"gupta3\", \"threads\": \"4\", \"method\": \"openmp-double\"}, \"exit_code\": ' \"$code\" '}'\nif [ \"$code\" -ne 0 ]; then failures=$((failures+1)); fi\nmkdir -p /u/yuxihong/workspace/omo-spcraft/results/overseer/20261014-013518-36302120764450/0002 || exit 1\nprintf '%s\\n' '@@OVERSEER {\"event\": \"start\", \"total\": 2, \"id\": 2, \"server\": \"lair-cpu\", \"parameters\": {\"dataset\": \"/u/yuxihong/workspace/omo-spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx\", \"threads\": 4, \"method\": \"openmp-double\"}, \"choices\": {\"dataset\": \"pdb1HYS\", \"threads\": \"4\", \"method\": \"openmp-double\"}}'\nenv OMP_NUM_THREADS=4 CPM_SOURCE_CACHE=/u/yuxihong/.cache/CPM srun --nodes=1 --ntasks=1 --cpus-per-task=4 bash -c 'printf '\"'\"'%s\\n'\"'\"' '\"'\"'@@OVERSEER {\"event\": \"stage\", \"stage\": \"run\", \"status\": \"RUNNING\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\"'\"'\nexec /data/project/yuxilab/yuxihong/workspace/omo-spcraft/.omo/workspaces/41fb8bec5ebaa36bd3dc71d2dec6a49765b1d7a92396bfa22509c0ddd9d223da/source/build/overseer-options/bin/bench_ompspmv --matrix /u/yuxihong/workspace/omo-spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx --threads 4 --index int32 --offset int32 --iterations 5 --max-time 0.05 --output /u/yuxihong/workspace/omo-spcraft/results/overseer/20261014-013518-36302120764450/0002/result.json --precision double' 2>&1 | tee /u/yuxihong/workspace/omo-spcraft/results/overseer/20261014-013518-36302120764450/0002/output.log\ncode=${PIPESTATUS[0]}\nprintf '%s%s%s\\n' '@@OVERSEER {\"event\": \"finish\", \"id\": 2, \"server\": \"lair-cpu\", \"parameters\": {\"dataset\": \"/u/yuxihong/workspace/omo-spcraft/dataset/output/pdb1HYS/pdb1HYS.mtx\", \"threads\": 4, \"method\": \"openmp-double\"}, \"choices\": {\"dataset\": \"pdb1HYS\", \"threads\": \"4\", \"method\": \"openmp-double\"}, \"exit_code\": ' \"$code\" '}'\nif [ \"$code\" -ne 0 ]; then failures=$((failures+1)); fi\nif [ \"$failures\" -eq 0 ]; then\nprintf '%s\\n' '@@OVERSEER {\"event\": \"stage\", \"stage\": \"run\", \"status\": \"SUCCESS\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\nelse\nprintf '%s\\n' '@@OVERSEER {\"event\": \"stage\", \"stage\": \"run\", \"status\": \"FAILURE\", \"server\": \"lair-cpu\", \"allocation\": \"lair-cpu\"}'\nexit 1\nfi\n",
+        "scheduler": "allocation",
+        "setup": [
+          "export CPM_SOURCE_CACHE=/u/yuxihong/.cache/CPM"
+        ],
+        "resources": {
+          "partition": "general",
+          "account": "yuxilab",
+          "nodes": 1,
+          "cpus_per_task": 4,
+          "memory": "8G",
+          "time": "00:10:00",
+          "ntasks": 1,
+          "qos": "interactive",
+          "constraint": "cpujobs"
+        },
+        "server": "lair-cpu",
+        "allocation": "lair-cpu",
+        "client_folder": "/home/yuxihong/workspace/code/sparse_computation/spcraft/results/overseer/20261014-013518-36302120764450",
+        "expected_runs": [
+          1,
+          2
+        ],
+        "expected_build": null,
+        "trial_logs": {
+          "1": "/u/yuxihong/workspace/omo-spcraft/results/overseer/20261014-013518-36302120764450/0001/output.log",
+          "2": "/u/yuxihong/workspace/omo-spcraft/results/overseer/20261014-013518-36302120764450/0002/output.log"
+        }
+      },
+      "attempted": true,
+      "state": {
+        "allocation_session": "0b214d7db9584a34b1e0e16212db7245",
+        "allocation_status": "READY",
+        "child": {
+          "birth": "1204134146",
+          "pid": 3607935
+        },
+        "created_at": 1791956120.3524883,
+        "exit_code": 1,
+        "fingerprint": "ea26bd2d675b8850cd60785720f227fa885fdcaa4eb4662c4ba80303366415c5",
+        "finished_at": 1791956123.4208183,
+        "job": "65862d6a76a5466a9b799fe530c1b11e",
+        "job_id": "121439",
+        "revision": "41fb8bec5ebaa36bd3dc71d2dec6a49765b1d7a92396bfa22509c0ddd9d223da",
+        "scheduler": "allocation",
+        "status": "FAILURE",
+        "terminal": true,
+        "worker": {
+          "birth": "1204134090",
+          "pid": 3607883
+        }
+      }
+    }
+  ]
+}

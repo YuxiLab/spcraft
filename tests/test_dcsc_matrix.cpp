@@ -139,13 +139,13 @@ TEST(DcscMatrix, Correctness)
   }
   {
     // This logical width cannot have a dense offset array. DCSC needs two offsets only.
-    spcraft::DcscMatrix<std::uint64_t, bool, std::uint64_t> huge;
-    huge.Allocate(1, 1, std::numeric_limits<std::uint64_t>::max(), 1);
+    spcraft::DcscMatrix<std::int64_t, bool, std::int64_t> huge;
+    huge.Allocate(1, 1, std::numeric_limits<std::int64_t>::max(), 1);
     huge.col_ptr[1] = 1;
     huge.col_id[0] = huge.n - 1;
     huge.val[0] = true;
     auto copy = huge.Clone();
-    EXPECT_TRUE((copy.n == huge.n && copy.nzc == 1 && copy.val[0])) << "hypersparse unsigned clone";
+    EXPECT_TRUE((copy.n == huge.n && copy.nzc == 1 && copy.val[0])) << "hypersparse Boolean clone";
   }
 }
 

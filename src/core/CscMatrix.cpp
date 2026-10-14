@@ -1,5 +1,3 @@
-#pragma once
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
@@ -11,6 +9,9 @@
 
 #include "core/AllocationGuard.h"
 #include "core/CscMatrix.h"
+#include <boost/preprocessor/seq/elem.hpp>
+#include <boost/preprocessor/seq/for_each_product.hpp>
+
 #include "utils/MatrixMacros.h"
 
 namespace spcraft
@@ -18,6 +19,29 @@ namespace spcraft
 /*************************************
  *             constructor
  *************************************/
+
+SP_MAT_TEMP
+SPCSC::CscMatrix() noexcept = default;
+
+SP_MAT_TEMP
+SPCSC::CscMatrix(OT* col_ptr_, IT* row_id_, NT* val_, OT nnz_, IT m_, IT n_)
+    : col_ptr(col_ptr_), row_id(row_id_), val(val_), nnz(nnz_), m(m_), n(n_), memowned(false)
+{
+}
+
+SP_MAT_TEMP
+SPCSC::CscMatrix(SPCSC&& rhs) noexcept
+    : col_ptr(rhs.col_ptr),
+      row_id(rhs.row_id),
+      val(rhs.val),
+      nnz(rhs.nnz),
+      m(rhs.m),
+      n(rhs.n),
+      memowned(rhs.memowned)
+{
+  rhs.Reset();
+}
+
 SP_MAT_TEMP
 SPCSC& SPCSC::operator=(SPCSC&& rhs) noexcept
 {
@@ -145,5 +169,20 @@ void SPCSC::SafeDelete(bool memowned, OT* col_ptr, IT* row_id, NT* val)
     std::free(val);
   }
 }
+
+#define SPCRAFT_DEFINE_CSC_MATRIX(r, product)                                   \
+  template class CscMatrix<BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), \
+                           BOOST_PP_SEQ_ELEM(1, product),                       \
+                           BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(0, product))>;
+
+// Match the compiled kernels' storage pairs and retain Boolean graph storage.
+// clang-format off
+BOOST_PP_SEQ_FOR_EACH_PRODUCT(SPCRAFT_DEFINE_CSC_MATRIX,
+                              (((std::int32_t)(std::int32_t))
+                               ((std::int32_t)(std::int64_t))
+                               ((std::int64_t)(std::int64_t)))
+                              ((float)(double)(bool)))
+// clang-format on
+#undef SPCRAFT_DEFINE_CSC_MATRIX
 
 }  // namespace spcraft

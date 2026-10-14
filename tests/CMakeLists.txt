@@ -26,6 +26,10 @@ add_executable(test_dense_vector test_dense_vector.cpp)
 target_link_libraries(test_dense_vector PRIVATE SPCraftTestMain SPCraft)
 gtest_discover_tests(test_dense_vector TEST_PREFIX dense_vector. DISCOVERY_MODE PRE_TEST)
 
+add_executable(test_matrix_input_options test_matrix_input_options.cpp)
+target_link_libraries(test_matrix_input_options PRIVATE SPCraftTestMain SPCraftInput cxxopts::cxxopts)
+gtest_discover_tests(test_matrix_input_options TEST_PREFIX matrix_input_options. DISCOVERY_MODE PRE_TEST)
+
 add_executable(test_print test_print.cpp)
 target_link_libraries(test_print PRIVATE SPCraftTestMain SPCraft ${EIGEN3_TARGET})
 gtest_discover_tests(test_print TEST_PREFIX print_vector. DISCOVERY_MODE PRE_TEST)
@@ -81,6 +85,14 @@ if(SPCRAFT_USE_CUDA)
 	add_executable(test_cucsr_matrix test_cucsr_matrix.cu)
 	target_link_libraries(test_cucsr_matrix PRIVATE SPCraft)
 	add_test(NAME cucsr_matrix COMMAND test_cucsr_matrix)
+
+	add_executable(test_cucsc_matrix test_cucsc_matrix.cu)
+	target_link_libraries(test_cucsc_matrix PRIVATE SPCraft)
+	add_test(NAME cucsc_matrix COMMAND test_cucsc_matrix)
+
+	add_executable(test_cucoo_matrix test_cucoo_matrix.cu)
+	target_link_libraries(test_cucoo_matrix PRIVATE SPCraft)
+	add_test(NAME cucoo_matrix COMMAND test_cucoo_matrix)
 
 	add_executable(test_cuspmv test_cuspmv.cu)
 	target_link_libraries(test_cuspmv PRIVATE ${EIGEN3_TARGET} SPCraft)

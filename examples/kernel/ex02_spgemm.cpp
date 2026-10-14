@@ -1,89 +1,64 @@
 #include <chrono>
 #include <cstdint>
-#include <numeric>
-#include <string>
+#include <exception>
 #include <type_traits>
 
 #include <fmt/format.h>
 
 #include "SpCraft.h"
+#include "core/CooMatrix.h"
 #include "eigeninterface.h"
 
-namespace spcraft
+using namespace spcraft;
+
+SP_MAT_TEMP
+int ExampleRun(const MatrixInputOptions& input)
 {
-namespace
-{
-int ExampleRun(const std::string& matrix_path)
-{
-  // Match the compiled Eigen reference's 64-bit indices and double-precision values.
-  using IT = std::int64_t;
-  using NT = double;
-  using OT = IT;
-  using COO = spcraft::CooMatrix<IT, NT, OT>;
-  using CSC = spcraft::CscMatrix<IT, NT, OT>;
-  using Ring = spcraft::PlusTimesRing<NT>;
+  using Ring = PlusTimesRing<NT>;
   using Clock = std::chrono::steady_clock;
   using Seconds = std::chrono::duration<double>;
 
-  // Read both operands in COO form, then convert to CSC for column-oriented multiplication.
-  const COO lhs_coo = spcraft::ReadMatrixInput(matrix_path);
-  const CSC lhs = lhs_coo.ToCsc();
-  const COO rhs_coo = spcraft::ReadMatrixInput(matrix_path);
-  const CSC rhs = rhs_coo.ToCsc();
+  // Use the same square matrix for both operands, with the selected IT/NT/OT.
+  const SPCOO coo = ReadMatrixInput<IT, NT, OT>(input.matrix_path);
+  const CscMatrix<IT, NT, OT> matrix = coo.ToCsc();
 
-  // Time only SpCraft's multiplication; conversion and verification happen afterward.
+  // Call the tested kernel; reference conversion and checking happen afterward.
   const auto start = Clock::now();
-  const auto result = spcraft::OmpHashSpGEMM<Ring, IT, NT, OT>(lhs, rhs);
+  const SPCOO result = OmpHashSpGEMM<Ring>(matrix, matrix);
+
   const auto stop = Clock::now();
   const Seconds elapsed = stop - start;
-  const double seconds = elapsed.count();
+  const SPCSC result_csc = result.ToCsc();
+  constexpr NT kTolerance = std::is_same_v<NT, float> ? NT{1e-6} : NT{1e-13};
+  const auto comparison = CompareSpGEMMWithEigen(matrix, matrix, result_csc, kTolerance);
 
-  // Count one multiply and one add per scalar product for comparable throughput figures.
-  constexpr double kFlopsPerProduct = 2.0;
-  const auto products = spcraft::HashSpGEMMCscEstimateFlops(lhs, rhs);
-  const IT scalar_products = std::accumulate(products.begin(), products.end(), IT{0});
-  const double flops = kFlopsPerProduct * static_cast<double>(scalar_products);
-
-  // Verify the output shape before comparing values against the independent Eigen result.
-  const auto result_csc = result.ToCsc();
-  constexpr NT kTolerance = std::is_same_v<NT, float> ? 1e-6f : 1e-13;
-  if (result_csc.m != lhs.m || result_csc.n != rhs.n) {
-    constexpr auto kShapeError =
-        "SpGEMM verification failed: output shape is {} x {}, expected {} x {}\n";
-    fmt::print(stderr, kShapeError, result_csc.m, result_csc.n, lhs.m, rhs.n);
-    return 1;
-  }
-  const auto comparison = spcraft::CompareSpGEMMWithEigen(lhs, rhs, result_csc, kTolerance);
-
-  // Report verification and both multiplication rates using the same FLOP count.
+  // Report correctness and explicitly label these illustrative timings.
   if (comparison.matches) {
-    constexpr auto kSuccess =
-        "SpGEMM verification passed: output matches Eigen reference (tol = {})\n";
+    constexpr auto kSuccess = "SpGEMM verification passed: matches Eigen (tol = {})\n";
     fmt::print(kSuccess, kTolerance);
-    constexpr double kFlopsPerGflop = 1e9;
-    const double spcraft_gflops = flops / seconds / kFlopsPerGflop;
-    const double eigen_seconds = comparison.multiply_seconds;
-    const double eigen_gflops = flops / eigen_seconds / kFlopsPerGflop;
-    fmt::print("FLOPs: {:.0f}\n", flops);
-    fmt::print("SpCraft: {:.6f} s, {:.3f} GFLOPS\n", seconds, spcraft_gflops);
-    fmt::print("Eigen:   {:.6f} s, {:.3f} GFLOPS\n", eigen_seconds, eigen_gflops);
   } else {
-    constexpr auto kValueError =
-        "SpGEMM verification failed: output differs from Eigen reference (error = {}, tol = {})\n";
-    fmt::print(stderr, kValueError, comparison.error, kTolerance);
+    constexpr auto kFailure = "SpGEMM verification failed: error = {}, tol = {}\n";
+    fmt::print(stderr, kFailure, comparison.error, kTolerance);
   }
+  fmt::print("Example timing is not accurate; use benchmarks/ for more accurate timing.\n");
+  const double spcraft_seconds = elapsed.count();
+  const double eigen_seconds = comparison.multiply_seconds;
+  fmt::print("SpCraft: {:.6f} s\nEigen:   {:.6f} s\n", spcraft_seconds, eigen_seconds);
   return comparison.matches ? 0 : 1;
 }
-}  // namespace
-}  // namespace spcraft
 
 int main(int argc, char** argv)
 {
-  // Parse the matrix path, leaving help and input errors to the shared input utility.
   constexpr auto kDescription = "Verify SpCraft OpenMP SpGEMM against Eigen";
-  const auto input = spcraft::ParseMatrixInput(argc, argv, kDescription);
-  if (!input.path) return input.exit_code;
-
-  // Run the complete example and return its verification status.
-  return spcraft::ExampleRun(*input.path);
+  const auto input = ParseMatrixInput(argc, argv, kDescription);
+  if (!input.options) return input.exit_code;
+  try {
+    const auto run = [&]<class IT, class NT, class OT>() {
+      return ExampleRun<IT, NT, OT>(*input.options);
+    };
+    return DispatchMatrixInputTypes(*input.options, run);
+  } catch (const std::exception& error) {
+    fmt::print(stderr, "{}\n", error.what());
+    return 1;
+  }
 }

@@ -10,29 +10,62 @@ cmake --build build --target ex02_spgemm
 
 `cmake --build --preset examples -j 2` builds both kernel examples in `build/`.
 
+When `SPCRAFT_BUILD_EXAMPLES=ON` and `SPCRAFT_BUILD_DOWNSTREAM=OFF`, these two
+kernel examples remain available as explicit targets and are excluded from the
+default build:
+
+```bash
+cmake --build build --target ex01_spmv ex02_spgemm --parallel
+```
+
 These examples and their Eigen reference helper follow the selected CMake build
 type. Use `Release` or `RelWithDebInfo` for optimized execution on large matrices,
-and `Debug` for unoptimized code. They verify correctness; use the benchmark
-targets for performance measurements.
+and `Debug` for unoptimized code. They verify correctness. Printed example timing
+is not accurate; use `benchmarks/` for more accurate performance measurements.
 
 Three pieces of work are cached separately:
 
-- `SPCraftInput` compiles cxxopts parsing and the Matrix Market reader once in
-  `src/utils/MatrixInput.cpp`, with declarations in `include/utils/MatrixInput.h`.
+- `SPCraftInput` compiles cxxopts option groups and the typed Matrix Market reader
+  in `src/utils/MatrixInputOptions.cpp` and `src/utils/MatrixInput.cpp`.
 - `../eigeninterface.cpp` compiles the Eigen reference operations once.
 - `include/utils/StablePch.h` precompiles container and dependency headers. It deliberately
   excludes `SpCraft.h` and kernel headers, so kernel edits do not invalidate it.
 
-The main programs still include `SpCraft.h` and instantiate the actual SpCraft
-kernels. Editing a kernel recompiles the main and relinks the executable. The
-input helper, Eigen helper, and precompiled header are reused. Editing container
-headers, helper sources, or compiler options can require a larger rebuild.
-The compiled helpers currently use `int64_t` indices/offsets and `double` values.
+Both main programs include `SpCraft.h`, parse the shared options, and dispatch to
+`ExampleRun<IT, NT, OT>`. Each run loads its chosen storage types, calls the public
+SpCraft kernel, verifies with Eigen, and reports the outcome. The shared Eigen
+helper supports mixed index/offset widths through conversion to Eigen triplets.
+
+Choose `--it int32|int64`, `--nt float|double`, and `--ot int32|int64`.
+Defaults are `IT=int64`, `NT=double`, and `OT=IT`. The supported integer pairs are
+`(32,32)`, `(32,64)`, and `(64,64)`; `IT=int64, OT=int32` is rejected.
+
+```bash
+build/bin/ex01_spmv matrix.mtx --it int32 --nt float --ot int64
+build/bin/ex02_spgemm matrix.mtx --it int64 --nt double
+```
+
+SpMV accepts rectangular matrices. This SpGEMM example squares its input, so the
+matrix must be square. Timings exclude loading and conversion and remain
+illustrative; use the benchmark drivers for performance comparisons.
+
+The compiled SpGEMM implementation lives in `src/kernel/HashSpGEMMCsc.cpp`.
+Editing that implementation rebuilds the library and relinks its consumers.
+Header, input-helper, Eigen-helper, and compiler-option changes can require a
+larger rebuild.
 
 These utilities are available outside the examples. Include `SpCraft.h` to call
-`spcraft::ParseMatrixInput` and `spcraft::ReadMatrixInput`, and link the optional
-`SPCraftInput` target. The core `SPCraft` library remains header-only; programs
-that do not use the compiled input utilities do not need to link them.
+`spcraft::ParseMatrixInput`, `spcraft::DispatchMatrixInputTypes`, and
+`spcraft::ReadMatrixInput<IT, NT, OT>`, and link the optional `SPCraftInput` target.
+The core `SPCraft` target is a shared library; the optional input target adds the
+command-line parser and file-reader entry points.
+
+To compose matrix flags with options owned by another main file, call
+`spcraft::AddMatrixInputOptions(parser)`, register the main's other flags, parse
+once, and call `spcraft::ReadMatrixInputOptions(arguments)`. The registration
+helper adds `--matrix`, `--it`, `--nt`, and `--ot`; each main owns its help flag
+and positional-argument policy. Link `cxxopts::cxxopts` when the main uses its
+parser directly.
 
 ```cmake
 target_link_libraries(my_program PRIVATE SPCraftInput)
@@ -71,7 +104,7 @@ for the current kernel implementation, not a guarantee for larger future kernels
 To reproduce the incremental measurement without changing source contents:
 
 ```bash
-touch include/kernel/HashSpGEMMCsc_impl.h
+touch src/kernel/HashSpGEMMCsc.cpp
 /usr/bin/time -p cmake --build build --target ex02_spgemm
 ```
 

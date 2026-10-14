@@ -1,6 +1,9 @@
 function(find_benchmark)
 	find_package(benchmark 1.9.1 QUIET CONFIG)
 	if(NOT benchmark_FOUND)
+		if(NOT SPCRAFT_FETCH_DEPENDENCIES)
+			message(FATAL_ERROR "benchmark was not found; install it or enable SPCRAFT_FETCH_DEPENDENCIES")
+		endif()
 		message(STATUS "Google Benchmark not found, adding it via CPM")
 		CPMAddPackage(
 			NAME benchmark

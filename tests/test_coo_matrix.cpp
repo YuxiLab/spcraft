@@ -101,11 +101,11 @@ TEST(CooMatrix, Correctness)
   EXPECT_TRUE(
       (!a.entries && a.nnz == 0 && a.memowned && empty.m == 3 && empty.n == 4 && !empty.entries))
       << "shaped empty allocation and clone";
-  spcraft::CooMatrix<unsigned, bool> boolean;
+  spcraft::CooMatrix<std::int32_t, bool> boolean;
   boolean.Allocate(1, 1, 1);
   ASSERT_NE(boolean.entries, nullptr);
   boolean.entries[0] = {0, 0, false};
-  EXPECT_FALSE(boolean.entries[0].val) << "unsigned Boolean storage retains caller values";
+  EXPECT_FALSE(boolean.entries[0].val) << "Boolean storage retains caller values";
   spcraft::CooMatrix<int, double> signed_count;
   threw = false;
   try {
@@ -248,12 +248,12 @@ TEST(CooMatrix, Correctness)
         << "Allocate replaces a view without freeing borrowed entries";
   }
   {
-    spcraft::CooMatrix<unsigned, bool> coo;
+    spcraft::CooMatrix<std::int32_t, bool> coo;
     coo.Allocate(2, 2, 3);
     coo.entries[0] = {1, 2, true};
     coo.entries[1] = {0, 1, false};
     const auto csr = coo.ToCsr();
-    EXPECT_TRUE((csr.row_ptr[2] == 2 && !csr.val[0] && csr.val[1])) << "unsigned Boolean ToCsr";
+    EXPECT_TRUE((csr.row_ptr[2] == 2 && !csr.val[0] && csr.val[1])) << "Boolean ToCsr";
   }
   {
     Matrix matrix = Sample();
@@ -306,6 +306,96 @@ TEST(CooMatrix, Correctness)
         << "pattern Matrix Market values remain one";
     std::remove(path.c_str());
   }
+}
+
+template <class Types>
+class CooMatrixTypeTest : public ::testing::Test
+{
+};
+
+using CooMatrixTypes = ::testing::Types<
+    std::tuple<std::int32_t, float, std::int32_t>, std::tuple<std::int32_t, double, std::int32_t>,
+    std::tuple<std::int32_t, bool, std::int32_t>, std::tuple<std::int32_t, float, std::int64_t>,
+    std::tuple<std::int32_t, double, std::int64_t>, std::tuple<std::int32_t, bool, std::int64_t>,
+    std::tuple<std::int64_t, float, std::int64_t>, std::tuple<std::int64_t, double, std::int64_t>,
+    std::tuple<std::int64_t, bool, std::int64_t>>;
+TYPED_TEST_SUITE(CooMatrixTypeTest, CooMatrixTypes);
+
+TYPED_TEST(CooMatrixTypeTest, CompiledStorageAndConversions)
+{
+  using IT = std::tuple_element_t<0, TypeParam>;
+  using NT = std::tuple_element_t<1, TypeParam>;
+  using OT = std::tuple_element_t<2, TypeParam>;
+  using TypedMatrix = spcraft::CooMatrix<IT, NT, OT>;
+  TypedMatrix matrix;
+  matrix.Allocate(3, 2, 3);
+  ASSERT_NE(matrix.entries, nullptr);
+  matrix.entries[0] = {1, 2, NT{1}};
+  matrix.entries[1] = {0, 1, NT{0}};
+  matrix.entries[2] = {0, 1, NT{1}};
+
+  auto clone = matrix.Clone();
+  ASSERT_NE(clone.entries, nullptr);
+  EXPECT_NE(clone.entries, matrix.entries);
+  clone.entries[0].val = NT{0};
+  EXPECT_EQ(matrix.entries[0].val, NT{1});
+  auto* storage = clone.entries;
+  TypedMatrix moved(std::move(clone));
+  EXPECT_EQ(moved.entries, storage);
+  EXPECT_EQ(clone.entries, nullptr);
+  EXPECT_FALSE(clone.memowned);
+  TypedMatrix target;
+  target.Allocate(1, 1, 1);
+  target = std::move(moved);
+  EXPECT_EQ(target.entries, storage);
+  EXPECT_EQ(moved.entries, nullptr);
+  auto& self = target;
+  target = std::move(self);
+  EXPECT_EQ(target.entries, storage);
+
+  const auto csr = matrix.ToCsr();
+  const auto csc = matrix.ToCsc();
+  ASSERT_EQ(csr.nnz, OT{3});
+  ASSERT_EQ(csc.nnz, OT{3});
+  const OT row_offsets[] = {0, 2, 3};
+  const OT col_offsets[] = {0, 0, 2, 3};
+  EXPECT_TRUE(std::equal(row_offsets, row_offsets + 3, csr.row_ptr));
+  EXPECT_TRUE(std::equal(col_offsets, col_offsets + 4, csc.col_ptr));
+  EXPECT_EQ(csr.col_id[0], IT{1});
+  EXPECT_EQ(csr.col_id[1], IT{1});
+  EXPECT_EQ(csc.row_id[0], IT{0});
+  EXPECT_EQ(csc.row_id[1], IT{0});
+  EXPECT_EQ(csr.val[0], NT{0});
+  EXPECT_EQ(csr.val[1], NT{1});
+  EXPECT_EQ(csc.val[0], NT{0});
+  EXPECT_EQ(csc.val[1], NT{1});
+
+  target.Allocate(0, 2, 3);
+  const auto empty = target.Clone();
+  EXPECT_EQ(empty.entries, nullptr);
+  EXPECT_EQ(empty.nnz, OT{0});
+  EXPECT_EQ(empty.m, IT{2});
+  EXPECT_EQ(empty.n, IT{3});
+}
+
+TYPED_TEST(CooMatrixTypeTest, CompiledMatrixMarketConstructor)
+{
+  using IT = std::tuple_element_t<0, TypeParam>;
+  using NT = std::tuple_element_t<1, TypeParam>;
+  using OT = std::tuple_element_t<2, TypeParam>;
+  using TypedMatrix = spcraft::CooMatrix<IT, NT, OT>;
+  const auto path = WriteTemporaryMatrixMarket(
+      "%%MatrixMarket matrix coordinate pattern symmetric\n3 3 2\n1 1\n3 1\n");
+  const TypedMatrix matrix(path);
+  std::remove(path.c_str());
+  EXPECT_EQ(matrix.m, IT{3});
+  EXPECT_EQ(matrix.n, IT{3});
+  ASSERT_EQ(matrix.nnz, OT{3});
+  EXPECT_TRUE(std::all_of(matrix.entries, matrix.entries + matrix.nnz,
+                          [](const auto& entry) { return entry.val == NT{1}; }));
+  const auto csr = matrix.ToCsr();
+  const OT offsets[] = {0, 2, 2, 3};
+  EXPECT_TRUE(std::equal(offsets, offsets + 4, csr.row_ptr));
 }
 
 }  // namespace spcraft::tests

@@ -30,6 +30,8 @@ c++/g++/clang++ on PATH, then linked into the selected build directory.
 Set OPENMP_INCLUDE_DIR explicitly if compiler detection cannot find omp.h.
 OpenMP_ROOT/include is also checked when OpenMP_ROOT is exported.
 No linker flags are added: clangd only needs the header for parsing.
+The selected compiler's GCC installation is also detected and pinned when
+available, so clangd does not select a newer installation missing C++ headers.
 EOF
 }
 
@@ -137,6 +139,20 @@ find_openmp_header() {
     return 1
 }
 
+find_gcc_install_dir() {
+    local cache_compiler compiler runtime
+    cache_compiler=$(cache_value CMAKE_CXX_COMPILER)
+    for compiler in "$cache_compiler" "${CXX:-}" c++ g++ clang++; do
+        [[ -n "$compiler" ]] && command -v "$compiler" >/dev/null || continue
+        runtime=$("$compiler" -print-file-name=crtbegin.o 2>/dev/null) || return 0
+        # Apple Clang and other toolchains without GCC return the bare filename.
+        if [[ -f "$runtime" && -r "$runtime" ]]; then
+            realpath --relative-to="$database_base" -- "$(dirname -- "$runtime")"
+        fi
+        return 0
+    done
+}
+
 if [[ ${1-} == --help || ${1-} == -h ]]; then
     usage
     exit 0
@@ -202,6 +218,11 @@ while IFS= read -r variable; do
 done <<< "$variables"
 [[ "$missing" == 0 ]] || exit 1
 
+gcc_install_dir=$(find_gcc_install_dir)
+case "$gcc_install_dir" in
+    *'"'*|*'\'*|*$'\n'*|*$'\r'*) fail 'GCC installation contains characters requiring YAML escaping.' ;;
+esac
+
 openmp_header=''
 if [[ "$template_text" == *clangd-openmp/include* ]]; then
     openmp_header=$(find_openmp_header) ||
@@ -216,6 +237,17 @@ trap 'rm -f -- "$temporary"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 envsubst "$template_text" < "$template" > "$temporary"
+if [[ -n "$gcc_install_dir" ]]; then
+    cat >> "$temporary" <<EOF
+
+---
+# Match the configured compiler instead of guessing the newest GCC installation.
+CompileFlags:
+  Add:
+    - "--gcc-install-dir=$gcc_install_dir"
+EOF
+    printf 'Detected GCC installation: %s\n' "$gcc_install_dir"
+fi
 if [[ -n "$openmp_header" ]]; then
     openmp_support="$(dirname -- "$database_file")/clangd-openmp/include"
     mkdir -p -- "$openmp_support"

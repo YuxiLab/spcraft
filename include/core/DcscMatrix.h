@@ -10,6 +10,8 @@ namespace spcraft
 
 /**
  * @brief Doubly compressed sparse column storage, O(nnz + nzc), independent of n.
+ * Link SPCraft for float, double, or bool values with (IT, OT) widths
+ * (32, 32), (32, 64), or (64, 64), using signed fixed-width integer types.
  * # DCSC Format
  * col_id lists the nzc nonempty columns in strictly increasing order. col_ptr
  * indexes those stored columns, not the logical columns. Rows within a column
@@ -20,9 +22,9 @@ SP_MAT_TEMP_DEFAULT
 class DcscMatrix
 {
  public:
-  /*************************************
-   *             Data Members
-   *************************************/
+  /*****************************************************************************
+   *                                Data Members                               *
+   ****************************************************************************/
   OT* col_ptr = nullptr;  //!< offsets, size `nzc+1`
   IT* col_id = nullptr;   //!< logical column IDs, size nzc
   IT* row_id = nullptr;   //!< row IDs, size nnz
@@ -33,47 +35,33 @@ class DcscMatrix
   IT nzc = 0;
   bool memowned = true;
 
-  /*************************************
-   *             constructor
-   *************************************/
-  DcscMatrix() = default;
+  /*****************************************************************************
+   *                                Constructors                               *
+   ****************************************************************************/
+  DcscMatrix() noexcept;
+
   //! non-owning view mode constructor
   DcscMatrix(OT* pointers, IT* columns, IT* rows, NT* values, OT nonzeros, IT nRows, IT nCols,
-             IT storedColumns)
-      : col_ptr(pointers),
-        col_id(columns),
-        row_id(rows),
-        val(values),
-        nnz(nonzeros),
-        m(nRows),
-        n(nCols),
-        nzc(storedColumns),
-        memowned(false)
-  {
-  }
+             IT storedColumns);
+
   //! disable copy constructor
   DcscMatrix(const DcscMatrix&) = delete;
+
   //! disable copy operator
   DcscMatrix& operator=(const DcscMatrix&) = delete;
+
   //! move constructor
-  DcscMatrix(DcscMatrix&& rhs) noexcept
-      : col_ptr(rhs.col_ptr),
-        col_id(rhs.col_id),
-        row_id(rhs.row_id),
-        val(rhs.val),
-        nnz(rhs.nnz),
-        m(rhs.m),
-        n(rhs.n),
-        nzc(rhs.nzc),
-        memowned(rhs.memowned)
-  {
-    rhs.Reset();
-  }
+  DcscMatrix(DcscMatrix&& rhs) noexcept;
+
   //! move operator
   DcscMatrix& operator=(DcscMatrix&& rhs) noexcept;
-  //! deconstructor
-  ~DcscMatrix() { SafeDelete(memowned, col_ptr, col_id, row_id, val); }
 
+  //! deconstructor
+  ~DcscMatrix();
+
+  /*****************************************************************************
+   *                              Member Functions                             *
+   ****************************************************************************/
   //! Allocate zeroed replacement storage, preserving this object on failure.
   void Allocate(OT nonzeros, IT nRows, IT nCols, IT storedColumns);
 
@@ -82,17 +70,22 @@ class DcscMatrix
   //! Release ownership without freeing. Use on moved-from objects or views.
   void Reset();
 
-  //! Copy a well-formed CSC matrix, dropping empty column headers only.
-  SPND static DcscMatrix FromCsc(const SPCSC& source);
-
   //! Copy to CSC; this explicitly allocates n+1 offsets.
   SPND SPCSC ToCsc() const;
 
+  /*****************************************************************************
+   *                               Static Members                              *
+   ****************************************************************************/
+  //! Copy a well-formed CSC matrix, dropping empty column headers only.
+  SPND static DcscMatrix FromCsc(const SPCSC& source);
+
  private:
+  /*****************************************************************************
+   *                               Static Members                              *
+   ****************************************************************************/
   SPND static std::tuple<OT*, IT*, IT*, NT*> SafeAllocate(IT nzc, OT nnz);
+
   static void SafeDelete(bool owned, OT* pointers, IT* columns, IT* rows, NT* values);
 };
 
 }  // namespace spcraft
-
-#include "core/DcscMatrix-inl.h"

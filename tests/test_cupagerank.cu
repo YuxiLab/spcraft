@@ -59,7 +59,7 @@ int CompareBackends(const char* label, Index vertices,
   Vector host_rank(vertices);
   const auto host_result = spcraft::pagerank_openmp(op, host_rank, options);
 
-  DeviceMatrix device_op = DeviceMatrix::FromHost(op);
+  DeviceMatrix device_op(op);
   Value* device_values = nullptr;
   if (!CheckCuda(cudaMalloc(&device_values, static_cast<std::size_t>(vertices) * sizeof(Value)),
                  "cudaMalloc(rank)")) {
@@ -148,11 +148,11 @@ int main()
     Value* device_values = nullptr;
     if (CheckCuda(cudaMalloc(&device_values, 3 * sizeof(Value)), "cudaMalloc(validation)")) {
       const Matrix op = spcraft::pagerank_operator(FromEdges(3, {{0, 1}, {1, 2}, {2, 0}}));
-      DeviceMatrix device_op = DeviceMatrix::FromHost(op);
+      DeviceMatrix device_op(op);
 
       Matrix rectangular;
       rectangular.Allocate(0, 2, 3);
-      DeviceMatrix device_rectangular = DeviceMatrix::FromHost(rectangular);
+      DeviceMatrix device_rectangular(rectangular);
       Vector two(device_values, 2);
       if (spcraft::PageRankCuda(device_rectangular.View(), two) != cudaErrorInvalidValue) {
         std::cerr << "PageRankCuda accepted a rectangular operator\n";

@@ -1,5 +1,3 @@
-#pragma once
-
 #include <algorithm>
 #include <cerrno>
 #include <cstddef>
@@ -16,6 +14,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/preprocessor/seq/elem.hpp>
+#include <boost/preprocessor/seq/for_each_product.hpp>
 #include <fast_matrix_market/fast_matrix_market.hpp>
 #include "utils/omp/omp_wrapper.h"
 #include "utils/MatrixInput.h"
@@ -28,10 +28,28 @@
 
 namespace spcraft
 {
-
 /*************************************
  *             constructor
  *************************************/
+
+SP_MAT_TEMP
+SPCOO::CooMatrix() noexcept = default;
+
+SP_MAT_TEMP
+SPCOO::CooMatrix(TupleEntry<IT, NT>* entries_, OT count, IT rows, IT columns)
+    : entries(entries_), nnz(count), m(rows), n(columns), memowned(false)
+{
+}
+
+SP_MAT_TEMP
+SPCOO::CooMatrix(CooMatrix&& rhs) noexcept
+    : entries(rhs.entries), nnz(rhs.nnz), m(rhs.m), n(rhs.n), memowned(rhs.memowned)
+{
+  rhs.Reset();
+}
+
+SP_MAT_TEMP
+SPCOO::~CooMatrix() { SafeDelete(memowned, entries); }
 
 SP_MAT_TEMP
 SPCOO& SPCOO::operator=(SPCOO&& rhs) noexcept
@@ -72,7 +90,7 @@ SPCOO::CooMatrix(const std::string& filename)
   SPCOO coo;
   coo.Allocate(r_vec.size(), header.nrows, header.ncols);
   OMP_PARALLEL_FOR()
-  for (auto i = 0; i < r_vec.size(); ++i) coo.entries[i] = {r_vec[i], c_vec[i], v_vec[i]};
+  for (OT i = 0; i < coo.nnz; ++i) coo.entries[i] = {r_vec[i], c_vec[i], v_vec[i]};
   *this = std::move(coo);
 }
 
@@ -99,7 +117,7 @@ SPCOO SPCOO::Clone() const
   ret.Allocate(nnz, m, n);
   if (nnz > 0) {
     OMP_PARALLEL_FOR()
-    for (auto i = 0; i < nnz; ++i) {
+    for (OT i = 0; i < nnz; ++i) {
       ret.entries[i] = entries[i];
     }
   }
@@ -236,4 +254,20 @@ void SPCOO::SafeDelete(bool owned, Entry* entries) noexcept
   if (!owned || entries == nullptr) return;
   std::free(entries);
 }
+
+#define SPCRAFT_DEFINE_COO_MATRIX(r, product)                                   \
+  template class CooMatrix<BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), \
+                           BOOST_PP_SEQ_ELEM(1, product),                       \
+                           BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(0, product))>;
+
+// Match the compiled kernels' storage pairs and retain Boolean graph storage.
+// clang-format off
+BOOST_PP_SEQ_FOR_EACH_PRODUCT(SPCRAFT_DEFINE_COO_MATRIX,
+                              (((std::int32_t)(std::int32_t))
+                               ((std::int32_t)(std::int64_t))
+                               ((std::int64_t)(std::int64_t)))
+                              ((float)(double)(bool)))
+// clang-format on
+#undef SPCRAFT_DEFINE_COO_MATRIX
+
 }  // namespace spcraft

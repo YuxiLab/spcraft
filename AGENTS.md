@@ -2,12 +2,18 @@
 
 ## SpCraft library Structure
 
-SpCraft is a header-only C++20 template library. Almost everything lives in
-`include/` and is compiled into whatever binary includes it; `src/` holds only
-the CUDA translation units, which cannot be header-only.
+SpCraft is a C++20 template library with a compiled shared library. Public
+declarations live in `include/`; container and hash SpGEMM implementations live
+in `src/` and use explicit template instantiation. Other host kernels and
+algorithms still define their templates in headers. CUDA kernels live in `.cu`
+translation units.
 
-- `include/core/` -- storage: `CooMatrix`, `CsrMatrix`, `CscMatrix`,
-  `DenseVector`, and the device-side `cuCsrMatrix`.
+- `include/core/` -- storage: `CooMatrix`, `CsrMatrix`, `CscMatrix`, `DcscMatrix`,
+  `DenseVector`, and the device-side `cuCsrMatrix`, `cuCscMatrix`, `cuCooMatrix`.
+- `src/core/`, `src/kernel/` -- compiled container and hash SpGEMM definitions.
+  Supported signed index/offset pairs are `(int32, int32)`, `(int32, int64)`, and
+  `(int64, int64)`. Containers support `float`, `double`, and `bool`; hash SpGEMM
+  supports `PlusTimesRing<float>` and `PlusTimesRing<double>`.
 - `include/kernel/` -- primitives that touch a matrix once: SpMV, SpMM, SpGEMM,
   SDDMM, and the dense-vector helpers in `mtBlas1.h`.
 - `include/semiring/` -- the algebra the kernels are templated on.
@@ -65,6 +71,28 @@ the path as input parameters.
 
 ## C++/CUDA Coding Rules
 
+### Explicit variable types
+
+Use explicit types for important objects and variables, including matrices,
+vectors, algorithm inputs and outputs, option and result objects, and numerical
+values, indices, or counts whose types explain the computation. Do not hide
+these types behind `auto`. Use meaningful type aliases when useful, and preserve
+constness, references, and the exact numerical or storage type.
+
+`auto` is appropriate for timing values and other incidental variables whose
+types are not important to understanding the algorithm.
+
+### Class definition sections
+
+Separate class definitions into `Data Members`, `Constructors`,
+`Member Functions`, and `Static Members` sections when those categories are
+present. Put constructors, assignment operators, and the destructor together in
+`Constructors`; group static data and static functions under `Static Members`.
+Introduce each section with a three-line `/* ... */` block comment. Make every
+line of the block exactly 80 columns wide, including indentation, with star
+borders and the section title approximately centered. Keep each member's own
+comment beside its declaration and keep blank lines between functions.
+
 ### Supported integer range
 
 SpCraft assumes that all integer quantities and required arithmetic intermediates
@@ -96,7 +124,8 @@ Only add those critical primitives that if not added the code is not correct.
 
 ### The container ownership contract
 
-`CooMatrix`, `CsrMatrix`, `CscMatrix`, `DenseVector`, and `cuCsrMatrix` all
+`CooMatrix`, `CsrMatrix`, `CscMatrix`, `DcscMatrix`, `DenseVector`,
+`cuCsrMatrix`, `cuCscMatrix`, and `cuCooMatrix` all
 follow one pattern. Any new container, and any edit to these, must keep it:
 
 - Raw public pointers, a `memowned` flag, and move-only semantics. The copy
@@ -208,6 +237,26 @@ bottom and learn one thing.
   `add_subdirectory` it. A folder that is not added never builds and will silently
   rot.
 
+### Library example workflow and shared options
+
+Keep `main` responsible for parsing command-line options, dispatching the chosen
+`IT`, `NT`, and `OT` types, and returning `ExampleRun`'s status. In `ExampleRun`,
+prepare inputs through tested public APIs, call the tested SpCraft API, call the
+independent Eigen reference, compare the results, and print the outcome. Keep
+reference conversion and comparison in reusable helpers; examples must not
+reimplement kernels or expose private implementation phases.
+
+Timing is optional. If an example prints timings, its output must explicitly say
+that example timing is not accurate and direct users to `benchmarks/` for more
+accurate performance measurements. Examples demonstrate API usage and correctness.
+
+Matrix examples share composable `MatrixInputOptions` registration and reading
+helpers so several main files can add the same flags to their own parsers.
+Register `--matrix`, `--it`, `--nt`, and `--ot`; parse once, then read each option
+group. Use one shared type dispatcher for the supported combinations: signed
+`int32`/`int64` indices and offsets with `float`/`double` values. Reject
+`IT=int64, OT=int32`. Default to `IT=int64`, `NT=double`, and `OT=IT`.
+
 ### Benchmarks folder layout
 
 - Shared-memory performance drivers use Google Benchmark. Keep dataset loading,
@@ -306,7 +355,7 @@ because something can break in it that no other job would notice:
 Run the equivalent locally before pushing:
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DSPCRAFT_BUILD_EXAMPLES=ON
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DSPCRAFT_BUILD_DOWNSTREAM=ON -DSPCRAFT_BUILD_EXAMPLES=ON
 cmake --build build -j && (cd build && ctest --output-on-failure)
 clang-format --dry-run --Werror $(git ls-files '*.h' '*.cpp' '*.cu' '*.cuh')
 ```
@@ -328,6 +377,12 @@ in a separate function:
 - In `benchmarks/`, use `BenchmarkRun(...)` in the same source file.
 - In `tests/`, use `TestRun(...)` to perform checks and return the result.
 - In `examples/`, use `ExampleRun(...)` for the demonstrated computation.
+
+Keep benchmark, example, and test driver code at global scope, outside all named
+and anonymous namespaces. This includes `main`, `BenchmarkRun`, `ExampleRun`,
+`TestRun`, executable-specific helpers, and explicit template instantiations.
+When a driver uses SpCraft, add `using namespace spcraft;` in its source file
+instead of repeating `spcraft::` on types and function calls.
 
 Pass parsed parameters into these functions. Do not grow `main` into the
 benchmark loop, test body, or example implementation. Exception handling at the

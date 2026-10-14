@@ -1,6 +1,9 @@
 function(find_eigen3)
     find_package(Eigen3 5.0 QUIET NO_MODULE)
     if(NOT Eigen3_FOUND)
+        if(NOT SPCRAFT_FETCH_DEPENDENCIES)
+            message(FATAL_ERROR "Eigen3 was not found; install it or enable SPCRAFT_FETCH_DEPENDENCIES")
+        endif()
         message(STATUS "Eigen3 not found, adding it via CPM")
         CPMAddPackage(
             NAME Eigen3

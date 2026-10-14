@@ -1,40 +1,33 @@
 #pragma once
 
-#include <cstdint>
+#include "utils/MatrixMacros.h"
 
 namespace spcraft
 {
 
-template <class IT, class NT, class OT>
+SP_MAT_TEMP
 class CscMatrix;
 
-template <class IT, class NT, class OT>
+SP_MAT_TEMP
 class CsrMatrix;
 
-template <class IT, class NT>
+SP_VEC_TEMP
 class DenseVector;
 
 struct EigenComparison {
-  bool matches;
-  double error;
-  // SpGEMM reference multiplication time, excluding the correctness comparison.
+  /*****************************************************************************
+   *                                Data Members                               *
+   ****************************************************************************/
+  bool matches = false;
+  double error = 0.0;
+  // Reference multiplication time, excluding conversion and comparison.
   double multiply_seconds = 0.0;
 };
 
-using EigenInterfaceIndex = std::int64_t;
-using EigenInterfaceValue = double;
-using EigenInterfaceCsc = CscMatrix<EigenInterfaceIndex, EigenInterfaceValue, EigenInterfaceIndex>;
-using EigenInterfaceCsr = CsrMatrix<EigenInterfaceIndex, EigenInterfaceValue, EigenInterfaceIndex>;
-using EigenInterfaceVector = DenseVector<EigenInterfaceIndex, EigenInterfaceValue>;
+SP_MAT_TEMP
+SPND EigenComparison CompareSpMVWithEigen(const SPCSR& a, const SPDVEC& x, const SPDVEC& y, NT tol);
 
-[[nodiscard]] EigenComparison CompareSpMVWithEigen(const EigenInterfaceCsr& matrix,
-                                                   const EigenInterfaceVector& input,
-                                                   const EigenInterfaceVector& result,
-                                                   EigenInterfaceValue tolerance);
-
-[[nodiscard]] EigenComparison CompareSpGEMMWithEigen(const EigenInterfaceCsc& lhs,
-                                                     const EigenInterfaceCsc& rhs,
-                                                     const EigenInterfaceCsc& result,
-                                                     EigenInterfaceValue tolerance);
+SP_MAT_TEMP
+SPND EigenComparison CompareSpGEMMWithEigen(const SPCSC& a, const SPCSC& b, const SPCSC& c, NT tol);
 
 }  // namespace spcraft

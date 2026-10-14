@@ -1,36 +1,123 @@
 {
+  "sync": {
+    "on_save": true,
+    "exclude": [
+      "latex/",
+      "notebook/",
+      "doxygen/"
+    ],
+    "mounts": [
+      "dataset",
+      "datasets"
+    ]
+  },
+  "preset": "openmp-examples",
   "environment": {
     "OMP_NUM_THREADS": "${threads}"
   },
-  "project": "../..",
+  "servers": {
+    "choices": [
+      {
+        "id": "local",
+        "kind": "local"
+      },
+      {
+        "id": "server1",
+        "enabled": false,
+        "host": "",
+        "project_dir": "",
+        "kind": "ssh"
+      },
+      {
+        "extends": "server1",
+        "slurm": {
+          "time": "00:15:00",
+          "cpus_per_task": 4,
+          "gpus": 1
+        },
+        "id": "server1-gpu"
+      },
+      {
+        "extends": "server1-gpu",
+        "slurm": {
+          "constraint": "h100"
+        },
+        "id": "server1-h100"
+      },
+      {
+        "extends": "server1-gpu",
+        "slurm": {
+          "constraint": "a100"
+        },
+        "id": "server1-a100"
+      },
+      {
+        "id": "server2",
+        "enabled": false,
+        "host": "",
+        "project_dir": "",
+        "kind": "ssh"
+      },
+      {
+        "id": "server3",
+        "enabled": false,
+        "host": "",
+        "project_dir": "",
+        "kind": "ssh"
+      },
+      {
+        "id": "jet",
+        "environment": {
+          "CPM_SOURCE_CACHE": "/home/exouser/.cache/CPM"
+        },
+        "host": "jet",
+        "project_dir": "/home/exouser/.local/share/omo/projects/spcraft",
+        "kind": "ssh"
+      },
+      {
+        "slurm": {
+          "partition": "general",
+          "account": "yuxilab",
+          "nodes": 1,
+          "cpus_per_task": 4,
+          "memory": "8G",
+          "time": "00:10:00",
+          "ntasks": 1,
+          "qos": "interactive"
+        },
+        "host": "lair",
+        "id": "lair",
+        "environment": {
+          "CPM_SOURCE_CACHE": "/u/yuxihong/.cache/CPM"
+        },
+        "slurm_batch": {
+          "qos": "normal"
+        },
+        "project_dir": "/u/yuxihong/workspace/omo-spcraft",
+        "kind": "ssh"
+      },
+      {
+        "extends": "lair",
+        "slurm": {
+          "constraint": "cpujobs"
+        },
+        "id": "lair-cpu"
+      },
+      {
+        "extends": "lair",
+        "slurm": {
+          "gpus_per_node": 1
+        },
+        "id": "lair-gpu"
+      }
+    ],
+    "selected": [
+      "lair-cpu"
+    ]
+  },
   "binary": "build/overseer-options/bin/bench_ompspmv",
   "output_dir": "results/overseer",
-  "build": {
-    "before_run": true,
-    "commands": [
-      [
-        "cmake",
-        "--preset",
-        "${preset}",
-        "-B",
-        "${build_dir}",
-        "-DSPCRAFT_BUILD_BENCHMARKS=ON"
-      ],
-      [
-        "cmake",
-        "--build",
-        "${build_dir}",
-        "--target",
-        "${target}",
-        "--parallel",
-        "${build_jobs}"
-      ]
-    ],
-    "directory": "build/overseer-options",
-    "jobs": 4
-  },
-  "version": 2,
-  "target": "bench_ompspmv",
+  "name": "SpMV remote development",
   "args": [
     "--matrix",
     "${dataset}",
@@ -47,114 +134,117 @@
     "--output",
     "${result}"
   ],
-  "stop_on_failure": false,
   "parameters": [
     {
-      "source": {
-        "pattern": "*.mtx",
-        "directory": "dataset/output"
-      },
+      "label": "Datasets",
+      "id": "dataset",
       "selected": [
         "gupta3",
         "pdb1HYS"
       ],
+      "source": {
+        "directory": "dataset/output",
+        "pattern": "*.mtx"
+      },
       "choices": [
         {
+          "id": "SiO2",
           "path": "dataset/output/SiO2/SiO2.mtx",
           "paths": {
             "jet": "/home/exouser/yuxispcraft/dataset/output/SiO2/SiO2.mtx"
-          },
-          "id": "SiO2"
+          }
         },
         {
+          "id": "TSOPF_FS_b300_c2",
           "path": "dataset/output/TSOPF_FS_b300_c2/TSOPF_FS_b300_c2.mtx",
           "paths": {
             "jet": "/home/exouser/yuxispcraft/dataset/output/TSOPF_FS_b300_c2/TSOPF_FS_b300_c2.mtx"
-          },
-          "id": "TSOPF_FS_b300_c2"
+          }
         },
         {
+          "id": "TSOPF_FS_b300_c2_b",
           "path": "dataset/output/TSOPF_FS_b300_c2/TSOPF_FS_b300_c2_b.mtx",
           "paths": {
             "jet": "/home/exouser/yuxispcraft/dataset/output/TSOPF_FS_b300_c2/TSOPF_FS_b300_c2_b.mtx"
-          },
-          "id": "TSOPF_FS_b300_c2_b"
+          }
         },
         {
+          "id": "af_shell10",
           "path": "dataset/output/af_shell10/af_shell10.mtx",
           "paths": {
             "jet": "/home/exouser/yuxispcraft/dataset/output/af_shell10/af_shell10.mtx"
-          },
-          "id": "af_shell10"
+          }
         },
         {
+          "id": "consph",
           "path": "dataset/output/consph/consph.mtx",
           "paths": {
             "jet": "/home/exouser/yuxispcraft/dataset/output/consph/consph.mtx"
-          },
-          "id": "consph"
+          }
         },
         {
+          "id": "gupta3",
           "path": "dataset/output/gupta3/gupta3.mtx",
           "paths": {
             "jet": "/home/exouser/yuxispcraft/dataset/output/gupta3/gupta3.mtx"
-          },
-          "id": "gupta3"
+          }
         },
         {
+          "id": "pdb1HYS",
           "path": "dataset/output/pdb1HYS/pdb1HYS.mtx",
           "paths": {
             "jet": "/home/exouser/yuxispcraft/dataset/output/pdb1HYS/pdb1HYS.mtx"
-          },
-          "id": "pdb1HYS"
+          }
         },
         {
+          "id": "rma10",
           "path": "dataset/output/rma10/rma10.mtx",
           "paths": {
             "jet": "/home/exouser/yuxispcraft/dataset/output/rma10/rma10.mtx"
-          },
-          "id": "rma10"
+          }
         },
         {
+          "id": "rma10_b",
           "path": "dataset/output/rma10/rma10_b.mtx",
           "paths": {
             "jet": "/home/exouser/yuxispcraft/dataset/output/rma10/rma10_b.mtx"
-          },
-          "id": "rma10_b"
+          }
         },
         {
+          "id": "webbase-1M",
           "path": "dataset/output/webbase-1M/webbase-1M.mtx",
           "paths": {
             "jet": "/home/exouser/yuxispcraft/dataset/output/webbase-1M/webbase-1M.mtx"
-          },
-          "id": "webbase-1M"
+          }
         }
-      ],
-      "label": "Datasets",
-      "id": "dataset"
+      ]
     },
     {
-      "template": "threads",
+      "requirements": {
+        "cpus": "${value}"
+      },
       "args": [
 
       ],
       "label": "Threads",
+      "template": "threads",
       "selected": [
         "4"
       ],
-      "requirements": {
-        "cpus": "${value}"
-      },
-      "id": "threads",
       "choices": [
         1,
         2,
         4,
         8,
         16
-      ]
+      ],
+      "id": "threads"
     },
     {
+      "label": "Methods / variants",
+      "selected": [
+        "openmp-double"
+      ],
       "choices": [
         {
           "args": [
@@ -173,125 +263,35 @@
           "id": "openmp-double"
         }
       ],
-      "id": "method",
-      "label": "Methods / variants",
-      "selected": [
-        "openmp-double"
-      ]
+      "id": "method"
     }
   ],
-  "name": "SpMV remote development",
-  "preset": "openmp-examples",
-  "servers": {
-    "choices": [
-      {
-        "kind": "local",
-        "id": "local"
-      },
-      {
-        "enabled": false,
-        "project_dir": "",
-        "id": "server1",
-        "kind": "ssh",
-        "host": ""
-      },
-      {
-        "slurm": {
-          "cpus_per_task": 4,
-          "gpus": 1,
-          "time": "00:15:00"
-        },
-        "extends": "server1",
-        "id": "server1-gpu"
-      },
-      {
-        "slurm": {
-          "constraint": "h100"
-        },
-        "extends": "server1-gpu",
-        "id": "server1-h100"
-      },
-      {
-        "slurm": {
-          "constraint": "a100"
-        },
-        "extends": "server1-gpu",
-        "id": "server1-a100"
-      },
-      {
-        "enabled": false,
-        "project_dir": "",
-        "id": "server2",
-        "kind": "ssh",
-        "host": ""
-      },
-      {
-        "enabled": false,
-        "project_dir": "",
-        "id": "server3",
-        "kind": "ssh",
-        "host": ""
-      },
-      {
-        "kind": "ssh",
-        "project_dir": "/home/exouser/.local/share/omo/projects/spcraft",
-        "id": "jet",
-        "environment": {
-          "CPM_SOURCE_CACHE": "/home/exouser/.cache/CPM"
-        },
-        "host": "jet"
-      },
-      {
-        "kind": "ssh",
-        "project_dir": "/u/yuxihong/workspace/omo-spcraft",
-        "slurm_batch": {
-          "qos": "normal"
-        },
-        "slurm": {
-          "time": "00:10:00",
-          "account": "yuxilab",
-          "partition": "general",
-          "qos": "interactive",
-          "memory": "8G",
-          "nodes": 1,
-          "ntasks": 1,
-          "cpus_per_task": 4
-        },
-        "environment": {
-          "CPM_SOURCE_CACHE": "/u/yuxihong/.cache/CPM"
-        },
-        "host": "lair",
-        "id": "lair"
-      },
-      {
-        "slurm": {
-          "constraint": "cpujobs"
-        },
-        "extends": "lair",
-        "id": "lair-cpu"
-      },
-      {
-        "slurm": {
-          "gpus_per_node": 1
-        },
-        "extends": "lair",
-        "id": "lair-gpu"
-      }
-    ],
-    "selected": [
-      "lair-cpu"
+  "project": "../..",
+  "stop_on_failure": false,
+  "target": "bench_ompspmv",
+  "build": {
+    "before_run": true,
+    "jobs": 4,
+    "directory": "build/overseer-options",
+    "commands": [
+      [
+        "cmake",
+        "--preset",
+        "${preset}",
+        "-B",
+        "${build_dir}",
+        "-DSPCRAFT_BUILD_BENCHMARKS=ON"
+      ],
+      [
+        "cmake",
+        "--build",
+        "${build_dir}",
+        "--target",
+        "${target}",
+        "--parallel",
+        "${build_jobs}"
+      ]
     ]
   },
-  "sync": {
-    "mounts": [
-      "dataset",
-      "datasets"
-    ],
-    "exclude": [
-      "latex/",
-      "notebook/",
-      "doxygen/"
-    ],
-    "on_save": true
-  }
+  "version": 2
 }

@@ -8,6 +8,59 @@ Please send email to `yuxihong@iu.edu` if you have any questions.
 
 [Yuxi Hong](https://hongyx11.github.io/)
 
+## Spack dependencies and installation
+
+The [yuxi Spack repository](https://github.com/hongyx11/spack-packages) provides
+the `yuxi.spcraft` recipe and `envs/spcraft-cpu` / `envs/spcraft-cuda` development
+environments. They include CMake, Ninja, Eigen, Boost, fmt, fast_matrix_market,
+cxxopts, GoogleTest, and Google Benchmark. CUDA, MPI, and MKL are optional recipe
+variants; NVHPC is an optional compiler choice.
+
+From a checkout of that repository, install the CPU development stack:
+
+```bash
+spack -e envs/spcraft-cpu install --test root
+spack env activate envs/spcraft-cpu
+```
+
+To build an existing SpCraft checkout, register it before installation:
+
+```bash
+spack -e envs/spcraft-cpu develop --no-clone -p "$SPCRAFT_SOURCE" yuxi.spcraft@develop
+spack -e envs/spcraft-cpu concretize --force
+spack -e envs/spcraft-cpu install --test root
+```
+
+For CUDA, use `envs/spcraft-cuda` with a site configuration that selects the GPU
+architecture and compatible compiler/toolkit versions. If a compatible toolkit
+already exists, put its `nvcc` on `PATH` and register it first:
+
+```bash
+spack external find --scope user --not-buildable cuda
+spack -C "$SPCRAFT_SITE_CONFIG" -e envs/spcraft-cuda install
+```
+
+Without an external registration, Spack installs the toolkit. An external
+registered with `--not-buildable` must satisfy the package requirements; an
+incompatible version produces a concretization error rather than a second
+installation. Machine-specific choices belong in `config/<site>/` in the Spack
+repository. Its existing `config/dell` is specific to the author's server.
+
+Spack builds use `SPCRAFT_FETCH_DEPENDENCIES=OFF`: every dependency must already
+be installed. Ordinary CMake source builds retain the default download fallback.
+To install directly through CMake using installed dependencies:
+
+```bash
+cmake -S . -B build/install -DSPCRAFT_FETCH_DEPENDENCIES=OFF \
+  -DSPCRAFT_INSTALL=ON -DBUILD_TESTING=OFF -DSPCRAFT_BUILD_EXAMPLES=OFF
+cmake --build build/install --parallel
+cmake --install build/install --prefix "$SPCRAFT_INSTALL_PREFIX"
+```
+
+Installed consumers use `find_package(SPCraft CONFIG REQUIRED)` and link
+`SPCraft::SPCraft`. `SPCraft::SPCraftInput` provides the compiled input helpers;
+CUDA-enabled installations also export `SPCraft::SPCraftCUDA`.
+
 ## Build on macOS with OpenMP
 
 Install the Xcode Command Line Tools and the build dependencies (`brew install

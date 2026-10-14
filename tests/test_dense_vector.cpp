@@ -7,6 +7,7 @@
 #include <limits>
 #include <new>
 #include <stdexcept>
+#include <tuple>
 #include <utility>
 
 #include "SpCraft.h"
@@ -194,6 +195,96 @@ TEST(DenseVector, NegativeSizesAreRejected)
     threw = true;
   }
   EXPECT_TRUE((threw)) << "a negative size must be rejected";
+}
+
+template <class Types>
+class DenseVectorTypeTest : public ::testing::Test
+{
+};
+
+using DenseVectorTypes =
+    ::testing::Types<std::tuple<std::int32_t, float>, std::tuple<std::int32_t, double>,
+                     std::tuple<std::int32_t, bool>, std::tuple<std::int64_t, float>,
+                     std::tuple<std::int64_t, double>, std::tuple<std::int64_t, bool>>;
+TYPED_TEST_SUITE(DenseVectorTypeTest, DenseVectorTypes);
+
+TYPED_TEST(DenseVectorTypeTest, CompiledConstructorsAndOwnership)
+{
+  using IT = std::tuple_element_t<0, TypeParam>;
+  using NT = std::tuple_element_t<1, TypeParam>;
+  using TypedVector = spcraft::DenseVector<IT, NT>;
+  constexpr IT kSize = 4;
+
+  TypedVector original(kSize, NT{1});
+  ASSERT_NE(original.val, nullptr);
+  EXPECT_EQ(original.size(), kSize);
+  EXPECT_TRUE(std::all_of(original.val, original.val + kSize, [](NT v) { return v == NT{1}; }));
+  const auto& const_original = original;
+  EXPECT_EQ(const_original[0], NT{1});
+
+  auto clone = original.Clone();
+  ASSERT_NE(clone.val, nullptr);
+  EXPECT_NE(clone.val, original.val);
+  clone[0] = NT{};
+  EXPECT_EQ(original[0], NT{1}) << "changing the clone must leave its source intact";
+  auto* storage = clone.val;
+  TypedVector moved(std::move(clone));
+  EXPECT_EQ(moved.val, storage);
+  EXPECT_EQ(clone.val, nullptr);
+  EXPECT_FALSE(clone.memowned);
+  TypedVector target(kSize);
+  target = std::move(moved);
+  EXPECT_EQ(target.val, storage);
+  EXPECT_EQ(moved.val, nullptr);
+  EXPECT_FALSE(moved.memowned);
+  auto& self = target;
+  target = std::move(self);
+  EXPECT_EQ(target.val, storage);
+  EXPECT_EQ(target[0], NT{});
+
+  EXPECT_THROW(target.Allocate(IT{-1}), std::invalid_argument);
+  EXPECT_EQ(target.val, storage) << "failed allocation must preserve the owned buffer";
+  target.Reset();
+  EXPECT_EQ(target.val, nullptr);
+  EXPECT_EQ(target.n, IT{0});
+  EXPECT_FALSE(target.memowned);
+  std::free(storage);
+
+  // A moved view must keep borrowing, and allocating must not free its stack buffer.
+  NT borrowed[] = {NT{}, NT{1}};
+  TypedVector view(borrowed, 2);
+  TypedVector moved_view(std::move(view));
+  EXPECT_EQ(moved_view.val, borrowed);
+  EXPECT_FALSE(moved_view.memowned);
+  moved_view.Allocate(kSize);
+  EXPECT_TRUE(moved_view.memowned);
+  EXPECT_EQ(borrowed[1], NT{1});
+
+  TypedVector empty(0);
+  auto empty_clone = empty.Clone();
+  EXPECT_EQ(empty_clone.val, nullptr);
+  EXPECT_EQ(empty_clone.n, IT{0});
+  EXPECT_TRUE(empty_clone.memowned);
+}
+
+TYPED_TEST(DenseVectorTypeTest, CompiledRandomIsDeterministicAndInRange)
+{
+  using IT = std::tuple_element_t<0, TypeParam>;
+  using NT = std::tuple_element_t<1, TypeParam>;
+  using TypedVector = spcraft::DenseVector<IT, NT>;
+  constexpr IT kSize = 64;
+  constexpr int kSeed = 1234;
+  TypedVector first(kSize), second(kSize);
+  first.Random(kSeed);
+  second.Random(kSeed);
+  EXPECT_TRUE(std::equal(first.val, first.val + kSize, second.val));
+  if constexpr (std::is_same_v<NT, bool>) {
+    EXPECT_TRUE(std::any_of(first.val, first.val + kSize, [](bool v) { return v; }));
+    EXPECT_TRUE(std::any_of(first.val, first.val + kSize, [](bool v) { return !v; }));
+  } else {
+    EXPECT_TRUE(
+        std::all_of(first.val, first.val + kSize, [](NT v) { return v >= NT{-1} && v < NT{1}; }));
+  }
 }
 
 }  // namespace spcraft::tests

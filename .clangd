@@ -23,22 +23,22 @@ CompileFlags:
     - "-isystem"
     - "../../../../spack/opt/spack/linux-skylake/cuda-13.1.1-7eh4oy34imytzlffcpoaztgllkdba7u7/include"
     - "-isystem"
-    - "../../../../spack/opt/spack/linux-skylake/intel-oneapi-mkl-2025.3.1-vav2impmvqpeky33rjpgxeis72feb3dy/mkl/2025.3/include"
+    - "/home/yuxihong/workspace/spack/opt/spack/linux-skylake/intel-oneapi-mkl-2025.3.1-h6mrhazfywblt7ijtnkwikql4jhzfxwv/mkl/2025.3/include"
     - "-isystem"
-    - "../../../software/cxxopts/include"
+    - "../../../../spack/opt/spack/linux-skylake/cxxopts-3.3.1-ixpr5mxbmphlagz4udynp7omfgiswobb/include"
     - "-isystem"
     - "_deps/fast_matrix_market-src/include"
     - "-isystem"
-    - "../../../software/benchmark/include"
+    - "../../../../spack/opt/spack/linux-skylake/benchmark-1.9.1-gl3t75nrnfs2vnmw2xja35b4dvfg5prp/include"
     - "-isystem"
-    - "../../../software/googletest/include"
+    - "../../../../spack/opt/spack/linux-skylake/googletest-1.17.0-e3vmwqimw3dl7yfhpwsclist6hnzh7h7/include"
     # GoogleTest's source checkout nests headers one level deeper than its install.
     - "-isystem"
-    - "../../../software/googletest/googletest/include"
+    - "../../../../spack/opt/spack/linux-skylake/googletest-1.17.0-e3vmwqimw3dl7yfhpwsclist6hnzh7h7/googletest/include"
     - "-isystem"
-    - "../../../../spack/opt/spack/linux-skylake/openmpi-5.0.10-fljfzeskifjgcv65bzzvbmqmd6jmiygy/include"
+    - "../../../../spack/opt/spack/linux-skylake/openmpi-5.0.10-eh2jmlykluppu2lbstr4bbay3enkxac2/include"
     - "-isystem"
-    - "../../../../../miniconda3/include"
+    - "_deps/fmt-src/include"
     - "-isystem"
     - "_deps/boost_preprocessor-src/include"
     # The headers have no compile_commands.json entry, so clangd interpolates
@@ -84,6 +84,8 @@ CompileFlags:
     - "-isystem"
     - "../clangd-openmp/include"
   Remove:
+    # Parse the serial path: clangd loses navigation inside OpenMP loop bodies.
+    - "-fopenmp"
     # strip nvcc-only arguments inherited by compdb header entries
     - "-forward-unknown-to-host-compiler"
     - "-Xfatbin*"
@@ -142,3 +144,9 @@ CompileFlags:
     - "--expt-relaxed-constexpr"
     - "-forward-unknown-to-host-compiler"
     - "-Werror=cross-execution-space-call"
+
+---
+# Match the configured compiler instead of guessing the newest GCC installation.
+CompileFlags:
+  Add:
+    - "--gcc-install-dir=../../../../../../../usr/lib/gcc/x86_64-linux-gnu/14"

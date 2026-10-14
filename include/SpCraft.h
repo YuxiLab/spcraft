@@ -30,6 +30,8 @@
 #endif
 
 #ifdef SPCRAFT_USE_CUDA
+#include "core/cuCooMatrix.cuh"
+#include "core/cuCscMatrix.cuh"
 #include "core/cuCsrMatrix.cuh"
 #include "graph/cuPageRank.cuh"
 #include "kernel/cuSpMV.cuh"

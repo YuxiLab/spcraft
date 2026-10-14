@@ -1,11 +1,13 @@
-#pragma once
-
 #include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <utility>
 #include <vector>
+#include <boost/preprocessor/seq/elem.hpp>
+#include <boost/preprocessor/seq/for_each_product.hpp>
+#include "core/AllocationGuard.h"
 #include "kernel/mtSpGEMM.h"
+#include "semiring/SemiRing.h"
 #include "utils/MatrixMacros.h"
 #include "utils/StdAliases.h"
 
@@ -83,8 +85,8 @@ class DcscColumnLookup
 }  // namespace detail
 
 SP_MAT_TEMP
-VL HashSpGEMM_Csc_EstimateFlops(const SPDCSC& A, const SPDCSC& B,
-                                const detail::DcscColumnLookup<IT, NT, OT>& lookup)
+VL HashSpGEMM_Dcsc_EstimateFlops(const SPDCSC& A, const SPDCSC& B,
+                                 const detail::DcscColumnLookup<IT, NT, OT>& lookup)
 {
   VL flops(B.nzc, 0);
   OMP_PARALLEL_FOR(schedule(dynamic))
@@ -98,8 +100,8 @@ VL HashSpGEMM_Csc_EstimateFlops(const SPDCSC& A, const SPDCSC& B,
 }
 
 SP_MAT_TEMP
-VL HashpSpGEMM_Csc_SymbolicPhase(const SPDCSC& A, const SPDCSC& B, const VL& flop_prefixsum,
-                                 const detail::DcscColumnLookup<IT, NT, OT>& lookup)
+VL HashpSpGEMM_Dcsc_SymbolicPhase(const SPDCSC& A, const SPDCSC& B, const VL& flop_prefixsum,
+                                  const detail::DcscColumnLookup<IT, NT, OT>& lookup)
 {
   VL counts(B.nzc, 0);
   constexpr std::size_t kMinCapacity = 16;
@@ -204,9 +206,9 @@ SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B)
   }
   const int threads = OMP_GET_MAX_THREADS();
   const detail::DcscColumnLookup lookup(A);
-  const auto flops = HashSpGEMM_Csc_EstimateFlops(A, B, lookup);
+  const auto flops = HashSpGEMM_Dcsc_EstimateFlops(A, B, lookup);
   const auto flop_prefixsum = OmpPrefixSum(flops, threads);
-  const auto counts = HashpSpGEMM_Csc_SymbolicPhase(A, B, flop_prefixsum, lookup);
+  const auto counts = HashpSpGEMM_Dcsc_SymbolicPhase(A, B, flop_prefixsum, lookup);
 
   const auto offsets = OmpPrefixSum(counts, threads);
   if (static_cast<std::uintmax_t>(offsets.back()) >
@@ -217,5 +219,25 @@ SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B)
   HashSpGEMM_Dcsc_NumericPhase<SemiRing>(A, B, offsets, lookup, result);
   return result;
 }
+
+#define SPCRAFT_DEFINE_HASH_SPGEMM_DCSC_TYPES(IT, NT, OT)                      \
+  template CooMatrix<IT, NT, OT> OmpHashSpGEMM<PlusTimesRing<NT>, IT, NT, OT>( \
+      const DcscMatrix<IT, NT, OT>&, const DcscMatrix<IT, NT, OT>&);
+
+#define SPCRAFT_DEFINE_HASH_SPGEMM_DCSC(r, product)                                          \
+  SPCRAFT_DEFINE_HASH_SPGEMM_DCSC_TYPES(BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), \
+                                        BOOST_PP_SEQ_ELEM(1, product),                       \
+                                        BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(0, product)))
+
+// Pair the storage types so 64-bit indices never select 32-bit offsets.
+// clang-format off
+BOOST_PP_SEQ_FOR_EACH_PRODUCT(SPCRAFT_DEFINE_HASH_SPGEMM_DCSC,
+                              (((std::int32_t)(std::int32_t))
+                               ((std::int32_t)(std::int64_t))
+                               ((std::int64_t)(std::int64_t)))
+                              ((float)(double)))
+// clang-format on
+#undef SPCRAFT_DEFINE_HASH_SPGEMM_DCSC
+#undef SPCRAFT_DEFINE_HASH_SPGEMM_DCSC_TYPES
 
 }  // namespace spcraft

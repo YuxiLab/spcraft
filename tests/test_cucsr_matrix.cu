@@ -1,5 +1,3 @@
-// Ownership and lifetime contract for cuCsrMatrix: the same pattern as
-// CsrMatrix, but over device memory, plus the host/device transfer paths.
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
@@ -9,6 +7,7 @@
 #include <vector>
 
 #include "SpCraft.h"
+#include "CudaMatrixTestCommon.h"
 
 namespace
 {
@@ -55,16 +54,10 @@ bool SameAsSample(const Host& matrix)
          std::equal(values, values + 3, matrix.val);
 }
 
-}  // namespace
-
-int main()
+int TestRun()
 {
-  int device_count = 0;
-  const cudaError_t probe = cudaGetDeviceCount(&device_count);
-  if (probe != cudaSuccess || device_count == 0) {
-    std::cerr << "No CUDA device available; skipping the cuCsrMatrix test\n";
-    return 0;
-  }
+  failures += spcraft::tests::CheckCudaContainerTypes<spcraft::CsrMatrix, spcraft::cuCsrMatrix>(
+      "cuCsrMatrix");
 
   // --- default construction owns nothing ---------------------------------
   {
@@ -101,16 +94,17 @@ int main()
   // --- host round trip ---------------------------------------------------
   {
     const Host original = SampleHost();
-    Device device = Device::FromHost(original);
-    Check(device.m == 2 && device.n == 3 && device.nnz == 3, "FromHost should preserve the shape");
-    Check(device.memowned, "FromHost should own its device storage");
+    Device device(original);
+    Check(device.m == 2 && device.n == 3 && device.nnz == 3,
+          "the host constructor should preserve the shape");
+    Check(device.memowned, "the host constructor should own its device storage");
     const Host back = device.ToHost();
     Check(SameAsSample(back), "a host round trip must preserve every entry");
   }
 
   // --- Clone is a device-to-device deep copy -----------------------------
   {
-    Device device = Device::FromHost(SampleHost());
+    Device device(SampleHost());
     Device copy = device.Clone();
     Check(copy.val != device.val, "Clone must not alias the source");
     Check(SameAsSample(copy.ToHost()), "Clone should copy every entry");
@@ -118,7 +112,7 @@ int main()
 
   // --- View borrows without owning ---------------------------------------
   {
-    Device device = Device::FromHost(SampleHost());
+    Device device(SampleHost());
     {
       const Host view = device.View();
       Check(!view.memowned, "View must not take ownership");
@@ -131,7 +125,7 @@ int main()
 
   // --- the pointer constructor is the borrow path ------------------------
   {
-    Device owner = Device::FromHost(SampleHost());
+    Device owner(SampleHost());
     {
       Device view(owner.row_ptr, owner.col_id, owner.val, owner.nnz, owner.m, owner.n);
       Check(!view.memowned, "the pointer constructor must not take ownership");
@@ -141,7 +135,7 @@ int main()
 
   // --- move construction and assignment ----------------------------------
   {
-    Device source = Device::FromHost(SampleHost());
+    Device source(SampleHost());
     const auto* buffer = source.val;
     Device moved(std::move(source));
     Check(moved.val == buffer && moved.nnz == 3, "move construction should steal the buffer");
@@ -158,7 +152,7 @@ int main()
 
   // --- self-move assignment must not destroy the object ------------------
   {
-    Device matrix = Device::FromHost(SampleHost());
+    Device matrix(SampleHost());
     Device& alias = matrix;
     matrix = std::move(alias);
     Check(matrix.nnz == 3 && matrix.val != nullptr, "self-move must leave the matrix intact");
@@ -167,7 +161,7 @@ int main()
 
   // --- Reset releases without freeing ------------------------------------
   {
-    Device matrix = Device::FromHost(SampleHost());
+    Device matrix(SampleHost());
     auto* row_ptr = matrix.row_ptr;
     auto* col_id = matrix.col_id;
     auto* values = matrix.val;
@@ -198,4 +192,24 @@ int main()
   }
   std::cout << "cuCsrMatrix checks passed\n";
   return 0;
+}
+
+}  // namespace
+
+int main()
+{
+  int device_count = 0;
+  const auto probe = cudaGetDeviceCount(&device_count);
+  if (probe != cudaSuccess || device_count == 0) {
+    std::cerr << "No CUDA device available; skipping the cuCsrMatrix test\n";
+    return 0;
+  }
+  try {
+    const int result = TestRun();
+    const auto status = cudaDeviceReset();
+    return result != 0 || status != cudaSuccess ? 1 : 0;
+  } catch (const std::exception& error) {
+    std::cerr << "cuCsrMatrix: " << error.what() << '\n';
+    return 1;
+  }
 }

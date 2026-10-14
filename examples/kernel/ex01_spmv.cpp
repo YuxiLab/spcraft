@@ -1,52 +1,64 @@
-/*******************************************************
- * OpenMP SpMV using CSR storage.
- * Author: Yuxi Hong
- * Date: 2026-09-01
- * *****************************************************/
-// Standard library headers.
-#include <cstdint>
+#include <chrono>
+#include <exception>
 #include <type_traits>
 
-// Third-party dependencies.
 #include <fmt/format.h>
 
-// SpCraft and the Eigen conversion helper used for verification.
 #include "SpCraft.h"
 #include "eigeninterface.h"
 
 using namespace spcraft;
 
-// The compiled Eigen reference helper uses 64-bit indices and double-precision values.
-using IT = std::int64_t;
-using NT = double;
+SP_MAT_TEMP
+int ExampleRun(const MatrixInputOptions& input)
+{
+  using Ring = PlusTimesRing<NT>;
+  using Clock = std::chrono::steady_clock;
+  using Seconds = std::chrono::duration<double>;
 
-using CSR = CsrMatrix<IT, NT>;
-using COO = CooMatrix<IT, NT>;
-using VEC = DenseVector<IT, NT>;
-using Ring = PlusTimesRing<NT>;
+  // Load the chosen storage types and convert through the public matrix API.
+  const auto coo = ReadMatrixInput<IT, NT, OT>(input.matrix_path);
+  const auto matrix = coo.ToCsr();
+  DenseVector<IT, NT> x(matrix.n);
+  DenseVector<IT, NT> y(matrix.m);
+  // Keep the input vector reproducible across verification runs.
+  constexpr int kSeed = 2026;
+  x.Random(kSeed);
+
+  // Call the tested kernel, then independently verify with Eigen.
+  const auto start = Clock::now();
+  OmpSpMV<Ring>(matrix, x, y);
+  const auto stop = Clock::now();
+  const Seconds elapsed = stop - start;
+  constexpr NT kTolerance = std::is_same_v<NT, float> ? NT{1e-6} : NT{1e-13};
+  const auto comparison = CompareSpMVWithEigen(matrix, x, y, kTolerance);
+
+  // These timings illustrate the calls; use benchmark drivers for performance.
+  if (comparison.matches) {
+    constexpr auto kSuccess = "SpMV verification passed: matches Eigen (tol = {})\n";
+    fmt::print(kSuccess, kTolerance);
+  } else {
+    constexpr auto kFailure = "SpMV verification failed: error = {}, tol = {}\n";
+    fmt::print(stderr, kFailure, comparison.error, kTolerance);
+  }
+  fmt::print("Example timing is not accurate; use benchmarks/ for more accurate timing.\n");
+  fmt::print("SpCraft: {:.6f} s\n", elapsed.count());
+  fmt::print("Eigen:   {:.6f} s\n", comparison.multiply_seconds);
+  return comparison.matches ? 0 : 1;
+}
 
 int main(int argc, char** argv)
 {
-  const auto input = ParseMatrixInput(argc, argv, "Verify SpCraft OpenMP SpMV against Eigen");
-  if (!input.path) return input.exit_code;
-
-  COO acoo = ReadMatrixInput(*input.path);
-  CSR acsr = acoo.ToCsr();
-  VEC x(acoo.n), y(acoo.m);
-
-  // Use a fixed seed so that verification is repeatable.
-  x.Random(2026);
-  OmpSpMV<Ring>(acsr, x, y);
-
-  constexpr NT tol = std::is_same_v<NT, float> ? 1e-6f : 1e-13;
-  const auto comparison = CompareSpMVWithEigen(acsr, x, y, tol);
-  if (comparison.matches) {
-    fmt::print("SpMV verification passed: output matches Eigen reference (tol = {})\n", tol);
-  } else {
-    fmt::print(stderr,
-               "SpMV verification failed: output differs from Eigen reference "
-               "(error = {}, tol = {})\n",
-               comparison.error, tol);
+  constexpr auto kDescription = "Verify SpCraft OpenMP SpMV against Eigen";
+  const auto input = ParseMatrixInput(argc, argv, kDescription);
+  if (!input.options) return input.exit_code;
+  try {
+    const auto run = [&]<class IT, class NT, class OT>() {
+      return ExampleRun<IT, NT, OT>(*input.options);
+    };
+    return DispatchMatrixInputTypes(*input.options, run);
+  } catch (const std::exception& error) {
+    fmt::print(stderr, "{}\n", error.what());
+    return 1;
   }
-  return comparison.matches ? 0 : 1;
 }

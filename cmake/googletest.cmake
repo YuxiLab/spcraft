@@ -1,6 +1,9 @@
 function(find_googletest)
 	find_package(GTest 1.17.0 QUIET CONFIG)
 	if(NOT GTest_FOUND)
+		if(NOT SPCRAFT_FETCH_DEPENDENCIES)
+			message(FATAL_ERROR "GTest was not found; install it or enable SPCRAFT_FETCH_DEPENDENCIES")
+		endif()
 		message(STATUS "GoogleTest not found, adding it via CPM")
 		CPMAddPackage(
 			NAME googletest

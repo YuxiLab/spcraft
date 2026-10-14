@@ -1,5 +1,3 @@
-#pragma once
-
 #include <algorithm>
 #include <cstdlib>
 #include <limits>
@@ -9,6 +7,9 @@
 #include <utility>
 
 #include "core/AllocationGuard.h"
+#include <boost/preprocessor/seq/elem.hpp>
+#include <boost/preprocessor/seq/for_each_product.hpp>
+
 #include "utils/MatrixMacros.h"
 #include "core/DcscMatrix.h"
 #include "utils/omp/omp_wrapper.h"
@@ -18,6 +19,42 @@ namespace spcraft
 /*************************************
  *             constructor
  *************************************/
+
+SP_MAT_TEMP
+SPDCSC::DcscMatrix() noexcept = default;
+
+SP_MAT_TEMP
+SPDCSC::DcscMatrix(OT* pointers, IT* columns, IT* rows, NT* values, OT nonzeros, IT nRows, IT nCols,
+                   IT storedColumns)
+    : col_ptr(pointers),
+      col_id(columns),
+      row_id(rows),
+      val(values),
+      nnz(nonzeros),
+      m(nRows),
+      n(nCols),
+      nzc(storedColumns),
+      memowned(false)
+{
+}
+
+SP_MAT_TEMP
+SPDCSC::DcscMatrix(DcscMatrix&& rhs) noexcept
+    : col_ptr(rhs.col_ptr),
+      col_id(rhs.col_id),
+      row_id(rhs.row_id),
+      val(rhs.val),
+      nnz(rhs.nnz),
+      m(rhs.m),
+      n(rhs.n),
+      nzc(rhs.nzc),
+      memowned(rhs.memowned)
+{
+  rhs.Reset();
+}
+
+SP_MAT_TEMP
+SPDCSC::~DcscMatrix() { SafeDelete(memowned, col_ptr, col_id, row_id, val); }
 
 SP_MAT_TEMP
 SPDCSC& SPDCSC::operator=(DcscMatrix&& rhs) noexcept
@@ -174,4 +211,20 @@ void SPDCSC::SafeDelete(bool owned, OT* pointers, IT* columns, IT* rows, NT* val
     std::free(values);
   }
 }
+
+#define SPCRAFT_DEFINE_DCSC_MATRIX(r, product)                                   \
+  template class DcscMatrix<BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), \
+                            BOOST_PP_SEQ_ELEM(1, product),                       \
+                            BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(0, product))>;
+
+// Match the compiled kernels' storage pairs and retain Boolean graph storage.
+// clang-format off
+BOOST_PP_SEQ_FOR_EACH_PRODUCT(SPCRAFT_DEFINE_DCSC_MATRIX,
+                              (((std::int32_t)(std::int32_t))
+                               ((std::int32_t)(std::int64_t))
+                               ((std::int64_t)(std::int64_t)))
+                              ((float)(double)(bool)))
+// clang-format on
+#undef SPCRAFT_DEFINE_DCSC_MATRIX
+
 }  // namespace spcraft

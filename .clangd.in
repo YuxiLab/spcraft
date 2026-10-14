@@ -84,6 +84,8 @@ CompileFlags:
     - "-isystem"
     - "../clangd-openmp/include"
   Remove:
+    # Parse the serial path: clangd loses navigation inside OpenMP loop bodies.
+    - "-fopenmp"
     # strip nvcc-only arguments inherited by compdb header entries
     - "-forward-unknown-to-host-compiler"
     - "-Xfatbin*"

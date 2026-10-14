@@ -1,5 +1,3 @@
-#pragma once
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
@@ -10,16 +8,28 @@
 #include <utility>
 #include <iostream>
 
+#include <boost/preprocessor/seq/elem.hpp>
+#include <boost/preprocessor/seq/for_each_product.hpp>
+
 #include "utils/MatrixMacros.h"
 #include "core/CsrMatrix.h"
 #include "core/AllocationGuard.h"
 
 namespace spcraft
 {
-
 /*************************************
  *             constructor
  *************************************/
+
+SP_MAT_TEMP
+SPCSR::CsrMatrix() noexcept = default;
+
+SP_MAT_TEMP
+SPCSR::CsrMatrix(OT* row_ptr_, IT* col_id_, NT* val_, OT nnz_, IT m_, IT n_)
+    : row_ptr(row_ptr_), col_id(col_id_), val(val_), nnz(nnz_), m(m_), n(n_), memowned(false)
+{
+}
+
 SP_MAT_TEMP
 SPCSR::CsrMatrix(OT nnz_, IT m_, IT n_) : nnz(nnz_), m(m_), n(n_) { Allocate(nnz, m, n); }
 
@@ -33,13 +43,7 @@ SPCSR::CsrMatrix(SPCSR&& rhs) noexcept
       n(rhs.n),
       memowned(rhs.memowned)
 {
-  rhs.memowned = false;
-  rhs.row_ptr = nullptr;
-  rhs.col_id = nullptr;
-  rhs.val = nullptr;
-  rhs.nnz = 0;
-  rhs.m = 0;
-  rhs.n = 0;
+  rhs.Reset();
 }
 
 SP_MAT_TEMP
@@ -168,5 +172,20 @@ void SPCSR::SafeDelete(bool owned, OT* row_ptr, IT* col_id, NT* val) noexcept
   std::free(col_id);
   std::free(val);
 }
+
+#define SPCRAFT_DEFINE_CSR_MATRIX(r, product)                                   \
+  template class CsrMatrix<BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), \
+                           BOOST_PP_SEQ_ELEM(1, product),                       \
+                           BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(0, product))>;
+
+// Match the compiled kernels' storage pairs and retain Boolean graph storage.
+// clang-format off
+BOOST_PP_SEQ_FOR_EACH_PRODUCT(SPCRAFT_DEFINE_CSR_MATRIX,
+                              (((std::int32_t)(std::int32_t))
+                               ((std::int32_t)(std::int64_t))
+                               ((std::int64_t)(std::int64_t)))
+                              ((float)(double)(bool)))
+// clang-format on
+#undef SPCRAFT_DEFINE_CSR_MATRIX
 
 }  // namespace spcraft

@@ -3,6 +3,9 @@ build/
 build-dense-course
 build_*/
 cmake-build-*/
+spack-build-*/
+# Spack links development builds back into the source checkout.
+/build-*-*
 bin/
 lib/
 

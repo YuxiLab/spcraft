@@ -1,5 +1,3 @@
-#pragma once
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -8,6 +6,9 @@
 #include <new>
 #include <random>
 #include <stdexcept>
+#include <type_traits>
+#include <boost/preprocessor/seq/enum.hpp>
+#include <boost/preprocessor/seq/for_each_product.hpp>
 
 #include "core/AllocationGuard.h"
 
@@ -20,6 +21,12 @@ namespace spcraft
 /*************************************
  *             constructor
  *************************************/
+
+SP_VEC_TEMP
+SPDVEC::DenseVector() noexcept = default;
+
+SP_VEC_TEMP
+SPDVEC::DenseVector(NT* val_, IT size) : val(val_), n(size), memowned(false) {}
 
 SP_VEC_TEMP
 SPDVEC::DenseVector(IT size)
@@ -142,5 +149,16 @@ void SPDVEC::SafeDelete(bool owned, NT* ptr) noexcept
 {
   if (owned && ptr != nullptr) free(ptr);
 }
+
+#define SPCRAFT_DEFINE_DENSE_VECTOR(r, product) \
+  template class DenseVector<BOOST_PP_SEQ_ENUM(product)>;
+
+// Retain Boolean graph storage alongside the floating-point numerical types.
+// clang-format off
+BOOST_PP_SEQ_FOR_EACH_PRODUCT(SPCRAFT_DEFINE_DENSE_VECTOR,
+                              ((std::int32_t)(std::int64_t))
+                              ((float)(double)(bool)))
+// clang-format on
+#undef SPCRAFT_DEFINE_DENSE_VECTOR
 
 }  // namespace spcraft

@@ -1,14 +1,17 @@
-#pragma once
-
 #include <cmath>
 #include <cstdint>
-#include "mtSpGEMM.h"
+#include <boost/preprocessor/seq/elem.hpp>
+#include <boost/preprocessor/seq/for_each_product.hpp>
+#include "kernel/mtSpGEMM.h"
+#include "semiring/SemiRing.h"
 #include "utils/MatrixMacros.h"
 #include "utils/omp/omp_numeric.h"
 #include "utils/Print.h"
 #include "utils/StdAliases.h"
 
 namespace spcraft
+{
+namespace
 {
 
 SP_MAT_TEMP
@@ -122,6 +125,8 @@ void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const VL& offsets
   }
 }
 
+}  // namespace
+
 SP_SR_MAT_TEMP
 SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
 {
@@ -156,5 +161,25 @@ SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
   HashSPGEMMCscNumericPhase<SemiRing>(A, B, offsets, result);
   return result;
 }
+
+#define SPCRAFT_DEFINE_HASH_SPGEMM_CSC_TYPES(IT, NT, OT)                       \
+  template CooMatrix<IT, NT, OT> OmpHashSpGEMM<PlusTimesRing<NT>, IT, NT, OT>( \
+      const CscMatrix<IT, NT, OT>&, const CscMatrix<IT, NT, OT>&);
+
+#define SPCRAFT_DEFINE_HASH_SPGEMM_CSC(r, product)                                          \
+  SPCRAFT_DEFINE_HASH_SPGEMM_CSC_TYPES(BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), \
+                                       BOOST_PP_SEQ_ELEM(1, product),                       \
+                                       BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(0, product)))
+
+// Pair the storage types so 64-bit indices never select 32-bit offsets.
+// clang-format off
+BOOST_PP_SEQ_FOR_EACH_PRODUCT(SPCRAFT_DEFINE_HASH_SPGEMM_CSC,
+                              (((std::int32_t)(std::int32_t))
+                               ((std::int32_t)(std::int64_t))
+                               ((std::int64_t)(std::int64_t)))
+                              ((float)(double)))
+// clang-format on
+#undef SPCRAFT_DEFINE_HASH_SPGEMM_CSC
+#undef SPCRAFT_DEFINE_HASH_SPGEMM_CSC_TYPES
 
 }  // namespace spcraft

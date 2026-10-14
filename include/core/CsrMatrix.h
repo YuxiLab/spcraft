@@ -10,14 +10,16 @@ namespace spcraft
 
 /**
  * @brief Compressed Sparse Row (CSR) matrix format.
+ * Link SPCraft for float, double, or bool values with (IT, OT) widths
+ * (32, 32), (32, 64), or (64, 64), using signed fixed-width integer types.
  */
 SP_MAT_TEMP_DEFAULT
 class CsrMatrix
 {
  public:
-  /***************************
-   * data member
-   * *************************/
+  /*****************************************************************************
+   *                                Data Members                               *
+   ****************************************************************************/
   OT* row_ptr = nullptr;  //!< row pointers, size m+1
   IT* col_id = nullptr;   //!< column indices, size nnz
   NT* val = nullptr;      //!< numerical values, size nnz
@@ -26,17 +28,14 @@ class CsrMatrix
   IT n = 0;               //!< number of columns
   bool memowned = true;   //!< owns the storage (views opt out)
 
-  /*************************************
-   *             constructor
-   *************************************/
+  /*****************************************************************************
+   *                                Constructors                               *
+   ****************************************************************************/
   //! Empty matrix (owns nothing yet).
-  CsrMatrix() = default;
+  CsrMatrix() noexcept;
 
   //! Wrap externally managed buffers as a non-owning view.
-  CsrMatrix(OT* row_ptr_, IT* col_id_, NT* val_, OT nnz_, IT m_, IT n_)
-      : row_ptr(row_ptr_), col_id(col_id_), val(val_), nnz(nnz_), m(m_), n(n_), memowned(false)
-  {
-  }
+  CsrMatrix(OT* row_ptr_, IT* col_id_, NT* val_, OT nnz_, IT m_, IT n_);
 
   CsrMatrix(OT nnz_, IT m_, IT n_);
 
@@ -55,9 +54,9 @@ class CsrMatrix
   //! Disable copy assignment.
   CsrMatrix& operator=(const SPCSR& rhs) = delete;
 
-  /*************************************
-   *             Data Members
-   *************************************/
+  /*****************************************************************************
+   *                              Member Functions                             *
+   ****************************************************************************/
   //! clone a new CsrMatrix explicitly.
   SPCSR Clone() const;
 
@@ -68,9 +67,9 @@ class CsrMatrix
   void Reset() noexcept;
 
  private:
-  /*************************************
-   *             Static Members
-   *************************************/
+  /*****************************************************************************
+   *                               Static Members                              *
+   ****************************************************************************/
   // tedious function with all boundary check.
   SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(OT required_nnz, IT rows, IT columns);
 
@@ -79,5 +78,3 @@ class CsrMatrix
 };
 
 }  // namespace spcraft
-
-#include "core/CsrMatrix-inl.h"
