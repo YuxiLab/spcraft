@@ -1,3 +1,9 @@
+// @bc: profiler headers start
+#ifdef SPCRAFT_USE_CALIPER
+#include <caliper/Annotation.h>
+#endif
+// @bc: profiler headers end
+#include <optional>
 #include "mpi/2dspgemm.h"
 #include <mpi.h>
 
@@ -74,8 +80,12 @@ std::vector<BlockInfo<IT, OT>> GatherLocalMatInfo(const MPI_Comm mpi_comm, IT m,
 SP_SR_MAT_TEMP
 SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
 {
+  // @bc: profiler begin dimchk start
+#ifdef SPCRAFT_USE_CALIPER
+  std::optional<cali::ScopeAnnotation> profiler_region_47a8f4284e10(std::in_place, "dimchk");
+#endif
+  // @bc: profiler begin dimchk end
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>, "Semiring and Matrix type mismatch");
-
   // Each rank owns one contiguous submatrix on the shared process grid.
   const bool same_grid = A.commgrid && B.commgrid && A.commgrid == B.commgrid;
   if (!same_grid || A.commgrid->World() == MPI_COMM_NULL) {
@@ -95,6 +105,11 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
   }
   DISTSPCOO result(A.commgrid, A.m, B.n);
   if (A.n == 0) return result;
+  // @bc: profiler finish dimchk start
+#ifdef SPCRAFT_USE_CALIPER
+  profiler_region_47a8f4284e10.reset();
+#endif
+  // @bc: profiler finish dimchk end
 
   // A metadata follows process columns; B metadata follows process rows.
   using Block = BlockInfo<IT, OT>;
@@ -104,6 +119,19 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
   const std::vector<Block> B_info = GatherLocalMatInfo(col_world, B.local.m, B.local.n, B.local.nnz);
   std::vector<SPCOO> cstages;
   for (int q = 0; q < grid.Cols(); ++q) {
+    // @bc: profiler iteration q start
+#ifdef SPCRAFT_USE_CALIPER
+    cali::Annotation::Guard profiler_iteration_2b1176efa4f5(
+        cali::Annotation("profiler.iteration", CALI_ATTR_SKIP_EVENTS)
+            .begin(cali::Variant(cali_make_variant_from_int64(q))));
+#endif
+    // @bc: profiler iteration q end
+
+    // @bc: profiler begin bcast_A start
+#ifdef SPCRAFT_USE_CALIPER
+    std::optional<cali::ScopeAnnotation> profiler_region_c0f030ec0d8e(std::in_place, "bcast_A");
+#endif
+    // @bc: profiler begin bcast_A end
     // bcast A
     const Block& a = A_info[q];
     SPCSC opA;
@@ -117,6 +145,16 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
     MPI_Bcast(opA.col_ptr, a.n + 1, MPIType<OT>(), q, row_world);
     MPI_Bcast(opA.row_id, a.nnz, MPIType<IT>(), q, row_world);
     MPI_Bcast(opA.val, a.nnz, MPIType<NT>(), q, row_world);
+    // @bc: profiler finish bcast_A start
+#ifdef SPCRAFT_USE_CALIPER
+    profiler_region_c0f030ec0d8e.reset();
+#endif
+    // @bc: profiler finish bcast_A end
+    // @bc: profiler begin bcast_B start
+#ifdef SPCRAFT_USE_CALIPER
+    std::optional<cali::ScopeAnnotation> profiler_region_8e72c0be63a4(std::in_place, "bcast_B");
+#endif
+    // @bc: profiler begin bcast_B end
     // bcast B
     const Block& b = B_info[q];
     SPCSC opB;
@@ -130,14 +168,40 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
     MPI_Bcast(opB.col_ptr, b.n + 1, MPIType<OT>(), q, col_world);
     MPI_Bcast(opB.row_id, b.nnz, MPIType<IT>(), q, col_world);
     MPI_Bcast(opB.val, b.nnz, MPIType<NT>(), q, col_world);
+    // @bc: profiler finish bcast_B start
+#ifdef SPCRAFT_USE_CALIPER
+    profiler_region_8e72c0be63a4.reset();
+#endif
+    // @bc: profiler finish bcast_B end
+    // @bc: profiler begin localspgemm start
+#ifdef SPCRAFT_USE_CALIPER
+    std::optional<cali::ScopeAnnotation> profiler_region_0b34cc99a04f(std::in_place, "localspgemm");
+#endif
+    // @bc: profiler begin localspgemm end
     SPCOO tmpc = OmpHashSpGEMM<SemiRing>(opA, opB);
     cstages.push_back(std::move(tmpc));
+    // @bc: profiler finish localspgemm start
+#ifdef SPCRAFT_USE_CALIPER
+    profiler_region_0b34cc99a04f.reset();
+#endif
+    // @bc: profiler finish localspgemm end
   }
+  // @bc: profiler begin multiwaymerge start
+#ifdef SPCRAFT_USE_CALIPER
+  std::optional<cali::ScopeAnnotation> profiler_region_3e71c9ceb984(std::in_place, "multiwaymerge");
+#endif
+  // @bc: profiler begin multiwaymerge end
   // merge stages' COO
   result.local = OmpMultiwayMerge<SemiRing>(cstages, A.local.m, B.local.n);
+  // @bc: profiler finish multiwaymerge start
+#ifdef SPCRAFT_USE_CALIPER
+  profiler_region_3e71c9ceb984.reset();
+#endif
+  // @bc: profiler finish multiwaymerge end
   return result;
 }
 
+// @bc: SUMMA instantiations start
 #define SPCRAFT_DEFINE_SUMMA_2D_TYPES(IT, NT, OT)                                 \
   template DistSpCOO<IT, NT, OT> Mpi2DSummaSpGEMM<PlusTimesRing<NT>, IT, NT, OT>( \
       const DistSpCSC<IT, NT, OT>&, const DistSpCSC<IT, NT, OT>&);
@@ -157,5 +221,6 @@ BOOST_PP_SEQ_FOR_EACH_PRODUCT(SPCRAFT_DEFINE_SUMMA_2D,
 // clang-format on
 #undef SPCRAFT_DEFINE_SUMMA_2D
 #undef SPCRAFT_DEFINE_SUMMA_2D_TYPES
+// @bc: SUMMA instantiations end
 
 }  // namespace spcraft

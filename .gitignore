@@ -11,6 +11,7 @@ bin/
 lib/
 
 # Generated files & tooling cache
+.profiler/
 compile_commands.json
 .cache/
 .lake/
