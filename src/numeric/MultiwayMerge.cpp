@@ -59,8 +59,13 @@ void VisitSplit(const std::vector<SPCOO>& inputs, const SplitOffsets<OT>& bounds
 
 }  // namespace
 
-
-//TODO: Look into details and improve the writing.
+/**
+ * @brief Merge COO matrices in parallel, combining duplicates with SemiRing::Add.
+ * @param inputs Matrices sorted by column, then row, each with shape m-by-n.
+ * @param m Number of rows in the output.
+ * @param n Number of columns in the output.
+ * @return An owning COO matrix with sorted, unique coordinates; zeros are retained.
+ */
 SP_SR_MAT_TEMP
 SPND SPCOO OmpMultiwayMerge(const std::vector<SPCOO>& inputs, IT m, IT n)
 {

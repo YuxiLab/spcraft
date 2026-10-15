@@ -1,27 +1,24 @@
 {
+  "active_experiment": ".overseer/experiments/spmv-remote-development.json",
   "experiments": {
     ".overseer/experiments/spmv-remote-development.json": {
+      "folder": "results/overseer/20261015-121536-1.0730784783638e+14",
       "progress": {
-        "mode": "run",
         "status": "FAILURE",
         "allocations": {
-          "lair-cpu": {
-            "status": "FAILURE",
-            "server": "lair-cpu",
-            "job_id": "121439",
-            "allocation_session": "0b214d7db9584a34b1e0e16212db7245",
+          "local": {
+            "server": "local",
             "stages": {
-              "configure": "SUCCESS",
-              "resources": "SUCCESS",
+              "build": "NONE",
               "run": "NONE",
-              "build": "FAILURE"
+              "resources": "NONE",
+              "configure": "NONE"
             }
           }
-        }
+        },
+        "mode": "configure"
       },
-      "mode": "run",
-      "folder": "results/overseer/20261014-013518-36302120764450"
+      "mode": "run"
     }
-  },
-  "active_experiment": ".overseer/experiments/spmv-remote-development.json"
+  }
 }

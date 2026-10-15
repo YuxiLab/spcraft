@@ -1,4 +1,5 @@
 # Build directories
+results
 build/
 build-dense-course
 build_*/
@@ -93,3 +94,4 @@ vscode-cmake-workbench/*.vsix
 # results
 benchmarks/results
 .clangd
+refernce
