@@ -59,6 +59,8 @@ void VisitSplit(const std::vector<SPCOO>& inputs, const SplitOffsets<OT>& bounds
 
 }  // namespace
 
+
+//TODO: Look into details and improve the writing.
 SP_SR_MAT_TEMP
 SPND SPCOO OmpMultiwayMerge(const std::vector<SPCOO>& inputs, IT m, IT n)
 {
