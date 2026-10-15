@@ -74,8 +74,7 @@ std::vector<BlockInfo<IT, OT>> GatherLocalMatInfo(const MPI_Comm mpi_comm, IT m,
 SP_SR_MAT_TEMP
 SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
 {
-  static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
-                "Semiring value type must match matrix value type");
+  static_assert(std::is_same_v<typename SemiRing::ValueType, NT>, "Semiring and Matrix type mismatch");
 
   // Each rank owns one contiguous submatrix on the shared process grid.
   const bool same_grid = A.commgrid && B.commgrid && A.commgrid == B.commgrid;
@@ -109,29 +108,28 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
     const Block& a = A_info[q];
     SPCSC opA;
     if (q == grid.Col()) {
+      // self, non-owning view
       opA = SPCSC(A.local.col_ptr, A.local.row_id, A.local.val, A.local.nnz, A.local.m, A.local.n);
     } else {
+      // allocate memory
       opA.Allocate(a.nnz, a.m, a.n);
     }
-    const int a_pointer_count = int64_t{1} + a.n;
-    const int a_count = a.nnz;
-    MPI_Bcast(opA.col_ptr, a_pointer_count, MPIType<OT>(), q, row_world);
-    MPI_Bcast(opA.row_id, a_count, MPIType<IT>(), q, row_world);
-    MPI_Bcast(opA.val, a_count, MPIType<NT>(), q, row_world);
+    MPI_Bcast(opA.col_ptr, a.n + 1, MPIType<OT>(), q, row_world);
+    MPI_Bcast(opA.row_id, a.nnz, MPIType<IT>(), q, row_world);
+    MPI_Bcast(opA.val, a.nnz, MPIType<NT>(), q, row_world);
     // bcast B
     const Block& b = B_info[q];
     SPCSC opB;
     if (q == grid.Row()) {
+      // self, non-owning view
       opB = SPCSC(B.local.col_ptr, B.local.row_id, B.local.val, B.local.nnz, B.local.m, B.local.n);
     } else {
+      // allocate memory
       opB.Allocate(b.nnz, b.m, b.n);
     }
-    const int b_pointer_count = int64_t{1} + b.n;
-    const int b_count = b.nnz;
-    MPI_Bcast(opB.col_ptr, b_pointer_count, MPIType<OT>(), q, col_world);
-    MPI_Bcast(opB.row_id, b_count, MPIType<IT>(), q, col_world);
-    MPI_Bcast(opB.val, b_count, MPIType<NT>(), q, col_world);
-
+    MPI_Bcast(opB.col_ptr, b.n + 1, MPIType<OT>(), q, col_world);
+    MPI_Bcast(opB.row_id, b.nnz, MPIType<IT>(), q, col_world);
+    MPI_Bcast(opB.val, b.nnz, MPIType<NT>(), q, col_world);
     SPCOO tmpc = OmpHashSpGEMM<SemiRing>(opA, opB);
     cstages.push_back(std::move(tmpc));
   }
