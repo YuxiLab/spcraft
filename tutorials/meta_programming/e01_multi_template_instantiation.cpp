@@ -34,12 +34,11 @@ constexpr std::string_view TypeName()
 template <class Index, class Number, std::size_t TileSize>
 void DescribeKernelVariant()
 {
-  std::cout << "KernelVariant<" << TypeName<Index>() << ", " << TypeName<Number>() << ", "
-            << TileSize << ">\n";
+  std::cout << "KernelVariant<" << TypeName<Index>() << ", " << TypeName<Number>() << ", " << TileSize
+            << ">\n";
 }
 
-#define SPCRAFT_EXAMPLE_PARAMETER_SEQUENCES \
-  ((std::int32_t)(std::int64_t))((float)(double))((32)(64))
+#define SPCRAFT_EXAMPLE_PARAMETER_SEQUENCES ((std::int32_t)(std::int64_t))((float)(double))((32)(64))
 
 #define SPCRAFT_EXAMPLE_INSTANTIATE(r, product) \
   template void DescribeKernelVariant<BOOST_PP_SEQ_ENUM(product)>();

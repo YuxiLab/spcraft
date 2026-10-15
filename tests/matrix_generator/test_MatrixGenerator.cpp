@@ -26,8 +26,8 @@ bool IsValidUndirectedGraph(const Matrix& graph)
       if (column == row || graph.val[position] != 1.0) {
         return false;
       }
-      if (!std::binary_search(graph.col_id + graph.row_ptr[column],
-                              graph.col_id + graph.row_ptr[column + 1], row)) {
+      if (!std::binary_search(graph.col_id + graph.row_ptr[column], graph.col_id + graph.row_ptr[column + 1],
+                              row)) {
         return false;
       }
     }

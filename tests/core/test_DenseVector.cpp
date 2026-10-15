@@ -102,10 +102,8 @@ TEST(DenseVector, MoveConstructionAndAssignment)
 
   Vector target(10);
   target = std::move(moved);
-  EXPECT_TRUE((target.val == buffer && target.n == 4))
-      << "move assignment should take the new storage";
-  EXPECT_TRUE((moved.val == nullptr && !moved.memowned))
-      << "move assignment should empty the source";
+  EXPECT_TRUE((target.val == buffer && target.n == 4)) << "move assignment should take the new storage";
+  EXPECT_TRUE((moved.val == nullptr && !moved.memowned)) << "move assignment should empty the source";
 }
 
 TEST(DenseVector, SelfMoveAssignmentMustNotDestroyTheObject)
@@ -127,8 +125,7 @@ TEST(DenseVector, CloneIsADeepCopy)
   Vector copy = original.Clone();
   EXPECT_TRUE((copy.val != original.val)) << "Clone must not alias the source";
   EXPECT_TRUE((copy.n == original.n)) << "Clone should preserve the length";
-  EXPECT_TRUE((std::equal(original.val, original.val + 4, copy.val)))
-      << "Clone should copy the values";
+  EXPECT_TRUE((std::equal(original.val, original.val + 4, copy.val))) << "Clone should copy the values";
   copy.val[0] = 99.0;
   EXPECT_TRUE((original.val[0] == 1.0)) << "writing to a clone must not touch the original";
 }
@@ -155,9 +152,8 @@ TEST(DenseVector, RandomIsReproducibleAndStaysInRange)
   second.Random(1234);
   EXPECT_TRUE((std::equal(first.val, first.val + 64, second.val)))
       << "the same seed must produce the same values";
-  EXPECT_TRUE((std::all_of(first.val, first.val + 64, [](double v) {
-    return v >= -1.0 && v < 1.0;
-  }))) << "real values must land in [-1, 1)";
+  EXPECT_TRUE((std::all_of(first.val, first.val + 64, [](double v) { return v >= -1.0 && v < 1.0; })))
+      << "real values must land in [-1, 1)";
 
   Vector third(64);
   third.Random(4321);
@@ -202,10 +198,9 @@ class DenseVectorTypeTest : public ::testing::Test
 {
 };
 
-using DenseVectorTypes =
-    ::testing::Types<std::tuple<std::int32_t, float>, std::tuple<std::int32_t, double>,
-                     std::tuple<std::int32_t, bool>, std::tuple<std::int64_t, float>,
-                     std::tuple<std::int64_t, double>, std::tuple<std::int64_t, bool>>;
+using DenseVectorTypes = ::testing::Types<std::tuple<std::int32_t, float>, std::tuple<std::int32_t, double>,
+                                          std::tuple<std::int32_t, bool>, std::tuple<std::int64_t, float>,
+                                          std::tuple<std::int64_t, double>, std::tuple<std::int64_t, bool>>;
 TYPED_TEST_SUITE(DenseVectorTypeTest, DenseVectorTypes);
 
 TYPED_TEST(DenseVectorTypeTest, CompiledConstructorsAndOwnership)
@@ -282,8 +277,7 @@ TYPED_TEST(DenseVectorTypeTest, CompiledRandomIsDeterministicAndInRange)
     EXPECT_TRUE(std::any_of(first.val, first.val + kSize, [](bool v) { return v; }));
     EXPECT_TRUE(std::any_of(first.val, first.val + kSize, [](bool v) { return !v; }));
   } else {
-    EXPECT_TRUE(
-        std::all_of(first.val, first.val + kSize, [](NT v) { return v >= NT{-1} && v < NT{1}; }));
+    EXPECT_TRUE(std::all_of(first.val, first.val + kSize, [](NT v) { return v >= NT{-1} && v < NT{1}; }));
   }
 }
 

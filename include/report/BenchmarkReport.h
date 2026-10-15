@@ -67,10 +67,8 @@ struct TimingStats {
     stats.minimum = sorted.front();
     stats.maximum = sorted.back();
     const std::size_t middle = sorted.size() / 2;
-    stats.median =
-        sorted.size() % 2 == 0 ? 0.5 * (sorted[middle - 1] + sorted[middle]) : sorted[middle];
-    stats.mean =
-        std::accumulate(sorted.begin(), sorted.end(), 0.0) / static_cast<double>(sorted.size());
+    stats.median = sorted.size() % 2 == 0 ? 0.5 * (sorted[middle - 1] + sorted[middle]) : sorted[middle];
+    stats.mean = std::accumulate(sorted.begin(), sorted.end(), 0.0) / static_cast<double>(sorted.size());
 
     if (sorted.size() > 1) {
       double sum_squares = 0.0;
@@ -134,8 +132,7 @@ struct GaugeSeries {
   std::vector<double> samples{};
 };
 
-using MetricSeries =
-    std::variant<SecondsSeries, BytesSeries, CountSeries, RatioSeries, GaugeSeries>;
+using MetricSeries = std::variant<SecondsSeries, BytesSeries, CountSeries, RatioSeries, GaugeSeries>;
 
 namespace metric
 {
@@ -174,10 +171,8 @@ SPND inline GaugeSeries EffectiveCpuCores(const std::vector<double>& wall_second
   }
   const double wall = std::accumulate(wall_seconds.begin(), wall_seconds.end(), 0.0);
   const double cpu = std::accumulate(cpu_seconds.begin(), cpu_seconds.end(), 0.0);
-  GaugeSeries result{std::string(kEffectiveCpuCores),
-                     "cores",
-                     MetricSummary::Mean,
-                     {wall > 0.0 ? cpu / wall : 0.0}};
+  GaugeSeries result{
+      std::string(kEffectiveCpuCores), "cores", MetricSummary::Mean, {wall > 0.0 ? cpu / wall : 0.0}};
   return result;
 }
 
@@ -238,8 +233,7 @@ struct RankAggregateScope {
   RankAggregation aggregation{};
 };
 
-using ProfileScope =
-    std::variant<RunScope, RankScope, ThreadScope, CpuScope, GpuScope, RankAggregateScope>;
+using ProfileScope = std::variant<RunScope, RankScope, ThreadScope, CpuScope, GpuScope, RankAggregateScope>;
 
 struct ResourceProfile {
   /*****************************************************************************
@@ -330,8 +324,7 @@ SPND inline const char* SummaryName(MetricSummary summary)
 }
 
 template <class T>
-SPND inline double Headline(const std::vector<T>& samples, MetricSummary summary,
-                            bool allow_negative = false)
+SPND inline double Headline(const std::vector<T>& samples, MetricSummary summary, bool allow_negative = false)
 {
   if (samples.empty()) {
     throw std::invalid_argument("metric series requires at least one sample");
@@ -391,8 +384,7 @@ inline void ValidateScope(const ProfileScope& scope)
 {
   std::visit(
       []<class Scope>(const Scope& value) {
-        if constexpr (!std::is_same_v<Scope, RunScope> &&
-                      !std::is_same_v<Scope, RankAggregateScope>) {
+        if constexpr (!std::is_same_v<Scope, RunScope> && !std::is_same_v<Scope, RankAggregateScope>) {
           if (value.rank < 0) throw std::invalid_argument("profile rank cannot be negative");
         }
         if constexpr (std::is_same_v<Scope, ThreadScope>) {
@@ -483,8 +475,7 @@ struct BenchmarkRun {
   SPND std::string TypeTag() const
   {
     constexpr std::size_t kPrefixLength = 3;  // Skip the "int" prefix in storage type names.
-    if (info.index_type.size() <= kPrefixLength || info.offset_type.size() <= kPrefixLength)
-      return "-";
+    if (info.index_type.size() <= kPrefixLength || info.offset_type.size() <= kPrefixLength) return "-";
     const std::string index = info.index_type.substr(kPrefixLength);
     const std::string offset = info.offset_type.substr(kPrefixLength);
     return "i" + index + "/o" + offset;
@@ -536,8 +527,7 @@ inline void ValidateProfiles(const std::vector<ResourceProfile>& profiles)
     for (const MetricSeries& metric : profile.metrics) {
       detail::ValidateMetric(metric);
       const std::string& name = std::visit(
-          []<class Series>(const Series& series) -> const std::string& { return series.name; },
-          metric);
+          []<class Series>(const Series& series) -> const std::string& { return series.name; }, metric);
       if (std::find(metric_names.begin(), metric_names.end(), name) != metric_names.end()) {
         throw std::invalid_argument("a profile cannot contain duplicate metric names");
       }
@@ -691,24 +681,21 @@ class TextReportRenderer
     report.Validate();
     constexpr int kWidth = 145;
     std::string output;
-    output += fmt::format("{:=^{}}\n{:^{}}\n{:=^{}}\n", "", kWidth, report.info().title, kWidth, "",
-                          kWidth);
+    output += fmt::format("{:=^{}}\n{:^{}}\n{:=^{}}\n", "", kWidth, report.info().title, kWidth, "", kWidth);
     for (const auto& [key, value] : report.info().metadata) {
       output += fmt::format("{:<20}: {}\n", key, value);
     }
 
     output += fmt::format("{:-^{}}\n", "", kWidth);
-    output +=
-        fmt::format("{:<18}{:<10}{:<24}{:>10}{:>6}{:>8}{:>7}{:>12}{:>12}{:>7}{:>10}{:>10}{:>10}\n",
-                    "backend", "kernel", "dataset", "idx/off", "prec", "threads", "iters",
-                    "median_ms", "min_ms", "cv_%", "GFLOP/s", "GB/s", "max_err");
+    output += fmt::format("{:<18}{:<10}{:<24}{:>10}{:>6}{:>8}{:>7}{:>12}{:>12}{:>7}{:>10}{:>10}{:>10}\n",
+                          "backend", "kernel", "dataset", "idx/off", "prec", "threads", "iters", "median_ms",
+                          "min_ms", "cv_%", "GFLOP/s", "GB/s", "max_err");
     output += fmt::format("{:-^{}}\n", "", kWidth);
 
     for (const BenchmarkRun& run : report.runs()) {
       const TimingStats stats = run.Stats();
-      const std::string error = run.verification.has_value()
-                                    ? fmt::format("{:.1e}", run.verification->maximum_error)
-                                    : "-";
+      const std::string error =
+          run.verification.has_value() ? fmt::format("{:.1e}", run.verification->maximum_error) : "-";
       output += fmt::format(
           "{:<18}{:<10}{:<24}{:>10}{:>6}{:>8}{:>7}{:>12.4f}{:>12.4f}{:>7.2f}{:>10.2f}{:>10.2f}{:>"
           "10}\n",
@@ -727,8 +714,7 @@ class TextReportRenderer
     report.Validate();
     std::string output = "PROFILE DETAILS\n";
     for (const BenchmarkRun& run : report.runs()) {
-      output +=
-          fmt::format("\n{} / {} / {}\n", run.info.backend, run.info.kernel, run.info.dataset);
+      output += fmt::format("\n{} / {} / {}\n", run.info.backend, run.info.kernel, run.info.dataset);
       for (const auto& [key, value] : run.info.parameters) {
         output += fmt::format("  parameter {}={}\n", key, value);
       }
@@ -761,8 +747,8 @@ class TextReportRenderer
                              std::string_view label)
   {
     output += fmt::format("  {}\n", label);
-    output += fmt::format("  {:<28}{:<30}{:>8}{:>10}{:>14}{:>14}{:>14}{:>10}\n", "scope", "metric",
-                          "samples", "summary", "headline", "minimum", "maximum", "unit");
+    output += fmt::format("  {:<28}{:<30}{:>8}{:>10}{:>14}{:>14}{:>14}{:>10}\n", "scope", "metric", "samples",
+                          "summary", "headline", "minimum", "maximum", "unit");
     for (const ResourceProfile& profile : profiles) {
       const std::string scope = detail::ScopeKey(profile.scope);
       if (!profile.attributes.empty()) {
@@ -791,9 +777,8 @@ class JsonReportRenderer
   SPND std::string Render(const BenchmarkReport& report) const
   {
     report.Validate();
-    std::string output =
-        fmt::format("{{\n  \"schema_version\": 3,\n  \"title\": \"{}\",\n  \"info\": {{",
-                    detail::EscapeJson(report.info().title));
+    std::string output = fmt::format("{{\n  \"schema_version\": 3,\n  \"title\": \"{}\",\n  \"info\": {{",
+                                     detail::EscapeJson(report.info().title));
     for (std::size_t i = 0; i < report.info().metadata.size(); ++i) {
       const auto& [key, value] = report.info().metadata[i];
       output += fmt::format("{}\n    \"{}\": \"{}\"", i == 0 ? "" : ",", detail::EscapeJson(key),
@@ -805,8 +790,7 @@ class JsonReportRenderer
     for (std::size_t i = 0; i < report.runs().size(); ++i) {
       const BenchmarkRun& run = report.runs()[i];
       const TimingStats stats = run.Stats();
-      const double verification_error =
-          run.verification.has_value() ? run.verification->maximum_error : -1.0;
+      const double verification_error = run.verification.has_value() ? run.verification->maximum_error : -1.0;
       output += fmt::format(
           "{}\n    {{\n"
           "      \"kernel\": \"{}\",\n      \"backend\": \"{}\",\n"
@@ -819,14 +803,13 @@ class JsonReportRenderer
           "      \"min_seconds\": {},\n      \"mean_seconds\": {},\n"
           "      \"stddev_seconds\": {},\n      \"gflops\": {},\n"
           "      \"gbytes_per_second\": {},\n      \"seconds\": [",
-          i == 0 ? "" : ",", detail::EscapeJson(run.info.kernel),
-          detail::EscapeJson(run.info.backend), detail::EscapeJson(run.info.dataset),
-          detail::EscapeJson(run.info.precision), detail::EscapeJson(run.info.index_type),
-          detail::EscapeJson(run.info.offset_type), run.info.thread_count.value_or(0),
-          run.workload.rows, run.workload.columns, run.workload.input_nonzeros,
-          run.workload.flops_per_iteration, run.workload.bytes_per_iteration, verification_error,
-          run.WallTime().samples.size(), stats.median, stats.minimum, stats.mean, stats.stddev,
-          run.Gflops(), run.GbytesPerSecond());
+          i == 0 ? "" : ",", detail::EscapeJson(run.info.kernel), detail::EscapeJson(run.info.backend),
+          detail::EscapeJson(run.info.dataset), detail::EscapeJson(run.info.precision),
+          detail::EscapeJson(run.info.index_type), detail::EscapeJson(run.info.offset_type),
+          run.info.thread_count.value_or(0), run.workload.rows, run.workload.columns,
+          run.workload.input_nonzeros, run.workload.flops_per_iteration, run.workload.bytes_per_iteration,
+          verification_error, run.WallTime().samples.size(), stats.median, stats.minimum, stats.mean,
+          stats.stddev, run.Gflops(), run.GbytesPerSecond());
       for (std::size_t sample = 0; sample < run.WallTime().samples.size(); ++sample) {
         output += fmt::format("{}{}", sample == 0 ? "" : ", ", run.WallTime().samples[sample]);
       }
@@ -839,8 +822,8 @@ class JsonReportRenderer
                               stage_index == 0 ? "" : ",", detail::EscapeJson(stage.name));
         for (std::size_t attribute = 0; attribute < stage.attributes.size(); ++attribute) {
           const auto& [key, value] = stage.attributes[attribute];
-          output += fmt::format("{}\"{}\": \"{}\"", attribute == 0 ? "" : ", ",
-                                detail::EscapeJson(key), detail::EscapeJson(value));
+          output += fmt::format("{}\"{}\": \"{}\"", attribute == 0 ? "" : ", ", detail::EscapeJson(key),
+                                detail::EscapeJson(value));
         }
         output += "}, \"profiles\": ";
         AppendProfiles(output, stage.profiles, 8);
@@ -856,8 +839,7 @@ class JsonReportRenderer
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
-  static void AppendProfiles(std::string& output, const std::vector<ResourceProfile>& profiles,
-                             int indent)
+  static void AppendProfiles(std::string& output, const std::vector<ResourceProfile>& profiles, int indent)
   {
     output += "[";
     const std::string profile_indent(static_cast<std::size_t>(indent), ' ');
@@ -865,13 +847,12 @@ class JsonReportRenderer
     const std::string metric_indent(static_cast<std::size_t>(indent + 4), ' ');
     for (std::size_t profile_index = 0; profile_index < profiles.size(); ++profile_index) {
       const ResourceProfile& profile = profiles[profile_index];
-      output += fmt::format("{}\n{}{{\"scope\": \"{}\", \"attributes\": {{",
-                            profile_index == 0 ? "" : ",", profile_indent,
-                            detail::EscapeJson(detail::ScopeKey(profile.scope)));
+      output += fmt::format("{}\n{}{{\"scope\": \"{}\", \"attributes\": {{", profile_index == 0 ? "" : ",",
+                            profile_indent, detail::EscapeJson(detail::ScopeKey(profile.scope)));
       for (std::size_t attribute = 0; attribute < profile.attributes.size(); ++attribute) {
         const auto& [key, value] = profile.attributes[attribute];
-        output += fmt::format("{}\"{}\": \"{}\"", attribute == 0 ? "" : ", ",
-                              detail::EscapeJson(key), detail::EscapeJson(value));
+        output += fmt::format("{}\"{}\": \"{}\"", attribute == 0 ? "" : ", ", detail::EscapeJson(key),
+                              detail::EscapeJson(value));
       }
       output += "}, \"metrics\": [";
       for (std::size_t metric_index = 0; metric_index < profile.metrics.size(); ++metric_index) {
@@ -933,10 +914,10 @@ SPND inline double ProcessCpuSeconds()
   if (getrusage(RUSAGE_SELF, &usage) != 0) {
     throw std::runtime_error("getrusage could not read process CPU time");
   }
-  const double user = static_cast<double>(usage.ru_utime.tv_sec) +
-                      static_cast<double>(usage.ru_utime.tv_usec) * 1.0e-6;
-  const double system = static_cast<double>(usage.ru_stime.tv_sec) +
-                        static_cast<double>(usage.ru_stime.tv_usec) * 1.0e-6;
+  const double user =
+      static_cast<double>(usage.ru_utime.tv_sec) + static_cast<double>(usage.ru_utime.tv_usec) * 1.0e-6;
+  const double system =
+      static_cast<double>(usage.ru_stime.tv_sec) + static_cast<double>(usage.ru_stime.tv_usec) * 1.0e-6;
   return user + system;
 }
 

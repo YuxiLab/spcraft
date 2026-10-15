@@ -56,8 +56,7 @@ TEST(CscMatrix, AllocateZeroesTheStorageAndRecordsTheShape)
 
   Matrix matrix;
   matrix.Allocate(4, 5, 3);
-  EXPECT_TRUE((matrix.nnz == 4 && matrix.m == 5 && matrix.n == 3))
-      << "Allocate should record the shape";
+  EXPECT_TRUE((matrix.nnz == 4 && matrix.m == 5 && matrix.n == 3)) << "Allocate should record the shape";
   EXPECT_TRUE((matrix.memowned)) << "Allocate should take ownership";
   EXPECT_TRUE((std::all_of(matrix.col_ptr, matrix.col_ptr + 4, [](auto v) { return v == 0; })))
       << "Allocate should zero col_ptr";
@@ -118,18 +117,15 @@ TEST(CscMatrix, MoveConstructionAndAssignment)
   Matrix source = Sample();
   const auto* buffer = source.val;
   Matrix moved(std::move(source));
-  EXPECT_TRUE((moved.val == buffer && moved.nnz == 3))
-      << "move construction should steal the buffer";
+  EXPECT_TRUE((moved.val == buffer && moved.nnz == 3)) << "move construction should steal the buffer";
   EXPECT_TRUE((source.val == nullptr && source.nnz == 0 && !source.memowned))
       << "a moved-from matrix must release ownership";
 
   Matrix target;
   target.Allocate(8, 4, 4);
   target = std::move(moved);
-  EXPECT_TRUE((target.val == buffer && target.nnz == 3))
-      << "move assignment should take the new storage";
-  EXPECT_TRUE((moved.val == nullptr && !moved.memowned))
-      << "move assignment should empty the source";
+  EXPECT_TRUE((target.val == buffer && target.nnz == 3)) << "move assignment should take the new storage";
+  EXPECT_TRUE((moved.val == nullptr && !moved.memowned)) << "move assignment should empty the source";
 }
 
 TEST(CscMatrix, SelfMoveAssignmentMustNotDestroyTheObject)
@@ -139,8 +135,7 @@ TEST(CscMatrix, SelfMoveAssignmentMustNotDestroyTheObject)
   Matrix matrix = Sample();
   Matrix& alias = matrix;
   matrix = std::move(alias);
-  EXPECT_TRUE((matrix.nnz == 3 && matrix.val != nullptr))
-      << "self-move must leave the matrix intact";
+  EXPECT_TRUE((matrix.nnz == 3 && matrix.val != nullptr)) << "self-move must leave the matrix intact";
 }
 
 TEST(CscMatrix, CloneIsADeepCopy)
@@ -152,8 +147,7 @@ TEST(CscMatrix, CloneIsADeepCopy)
   EXPECT_TRUE((copy.val != original.val)) << "Clone must not alias the source";
   EXPECT_TRUE((copy.nnz == original.nnz && copy.m == original.m && copy.n == original.n))
       << "Clone should preserve the shape";
-  EXPECT_TRUE((std::equal(original.val, original.val + 3, copy.val)))
-      << "Clone should copy the values";
+  EXPECT_TRUE((std::equal(original.val, original.val + 3, copy.val))) << "Clone should copy the values";
   EXPECT_TRUE((std::equal(original.col_ptr, original.col_ptr + 3, copy.col_ptr)))
       << "Clone should copy the column pointers";
   copy.val[0] = 99.0;

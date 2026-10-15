@@ -137,10 +137,8 @@ std::tuple<OT*, IT*, NT*> SPCSC::SafeAllocate(IT n, OT nnz)
   // Size every array before allocating any of them, so a request that cannot be
   // sized throws while there is still nothing to free.
   const std::size_t pointer_count = detail::CheckedElementCount<OT>(n) + 1;
-  const std::size_t index_count =
-      nnz != OT{0} ? detail::CheckedElementCount<IT>(nnz) : std::size_t{0};
-  const std::size_t value_count =
-      nnz != OT{0} ? detail::CheckedElementCount<NT>(nnz) : std::size_t{0};
+  const std::size_t index_count = nnz != OT{0} ? detail::CheckedElementCount<IT>(nnz) : std::size_t{0};
+  const std::size_t value_count = nnz != OT{0} ? detail::CheckedElementCount<NT>(nnz) : std::size_t{0};
 
   OT* c = static_cast<OT*>(std::calloc(pointer_count, sizeof(OT)));
   IT* r = nullptr;

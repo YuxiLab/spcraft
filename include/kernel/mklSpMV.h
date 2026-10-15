@@ -29,8 +29,8 @@ sparse_status_t CreateMklCsr(sparse_matrix_t*, MKL_INT, MKL_INT, MKL_INT*, MKL_I
 
 template <>
 inline sparse_status_t CreateMklCsr<float>(sparse_matrix_t* handle, MKL_INT rows, MKL_INT columns,
-                                           MKL_INT* row_start, MKL_INT* row_end,
-                                           MKL_INT* column_ids, float* values)
+                                           MKL_INT* row_start, MKL_INT* row_end, MKL_INT* column_ids,
+                                           float* values)
 {
   return mkl_sparse_s_create_csr(handle, SPARSE_INDEX_BASE_ZERO, rows, columns, row_start, row_end,
                                  column_ids, values);
@@ -38,8 +38,8 @@ inline sparse_status_t CreateMklCsr<float>(sparse_matrix_t* handle, MKL_INT rows
 
 template <>
 inline sparse_status_t CreateMklCsr<double>(sparse_matrix_t* handle, MKL_INT rows, MKL_INT columns,
-                                            MKL_INT* row_start, MKL_INT* row_end,
-                                            MKL_INT* column_ids, double* values)
+                                            MKL_INT* row_start, MKL_INT* row_end, MKL_INT* column_ids,
+                                            double* values)
 {
   return mkl_sparse_d_create_csr(handle, SPARSE_INDEX_BASE_ZERO, rows, columns, row_start, row_end,
                                  column_ids, values);
@@ -49,15 +49,15 @@ template <class NT>
 sparse_status_t MklSparseMv(sparse_matrix_t, matrix_descr, const NT*, NT*);
 
 template <>
-inline sparse_status_t MklSparseMv<float>(sparse_matrix_t handle, matrix_descr descriptor,
-                                          const float* x, float* y)
+inline sparse_status_t MklSparseMv<float>(sparse_matrix_t handle, matrix_descr descriptor, const float* x,
+                                          float* y)
 {
   return mkl_sparse_s_mv(SPARSE_OPERATION_NON_TRANSPOSE, 1.0F, handle, descriptor, x, 0.0F, y);
 }
 
 template <>
-inline sparse_status_t MklSparseMv<double>(sparse_matrix_t handle, matrix_descr descriptor,
-                                           const double* x, double* y)
+inline sparse_status_t MklSparseMv<double>(sparse_matrix_t handle, matrix_descr descriptor, const double* x,
+                                           double* y)
 {
   return mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE, 1.0, handle, descriptor, x, 0.0, y);
 }
@@ -85,15 +85,14 @@ class MklCsrSpmv
    ****************************************************************************/
   explicit MklCsrSpmv(const SPCSR& matrix, MKL_INT expected_calls = 1000)
   {
-    detail::CheckMklSparseStatus(
-        detail::CreateMklCsr<NT>(&handle_, matrix.m, matrix.n, matrix.row_ptr, matrix.row_ptr + 1,
-                                 matrix.col_id, matrix.val),
-        "mkl_sparse_create_csr");
+    detail::CheckMklSparseStatus(detail::CreateMklCsr<NT>(&handle_, matrix.m, matrix.n, matrix.row_ptr,
+                                                          matrix.row_ptr + 1, matrix.col_id, matrix.val),
+                                 "mkl_sparse_create_csr");
 
     try {
-      detail::CheckMklSparseStatus(mkl_sparse_set_mv_hint(handle_, SPARSE_OPERATION_NON_TRANSPOSE,
-                                                          descriptor_, expected_calls),
-                                   "mkl_sparse_set_mv_hint");
+      detail::CheckMklSparseStatus(
+          mkl_sparse_set_mv_hint(handle_, SPARSE_OPERATION_NON_TRANSPOSE, descriptor_, expected_calls),
+          "mkl_sparse_set_mv_hint");
       detail::CheckMklSparseStatus(mkl_sparse_optimize(handle_), "mkl_sparse_optimize");
     } catch (...) {
       mkl_sparse_destroy(handle_);
@@ -132,8 +131,7 @@ class MklCsrSpmv
    ****************************************************************************/
   void Multiply(const NT* x, NT* y) const
   {
-    detail::CheckMklSparseStatus(detail::MklSparseMv<NT>(handle_, descriptor_, x, y),
-                                 "mkl_sparse_mv");
+    detail::CheckMklSparseStatus(detail::MklSparseMv<NT>(handle_, descriptor_, x, y), "mkl_sparse_mv");
   }
 
  private:

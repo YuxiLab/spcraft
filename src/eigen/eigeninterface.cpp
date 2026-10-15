@@ -116,9 +116,8 @@ EigenComparison CompareSpGEMMWithEigen(const SPCSC& a, const SPCSC& b, const SPC
 #define SPCRAFT_DEFINE_EIGEN_REFERENCE_TYPES(IT, NT, OT)                                         \
   template EigenComparison CompareSpMVWithEigen<IT, NT, OT>(                                     \
       const CsrMatrix<IT, NT, OT>&, const DenseVector<IT, NT>&, const DenseVector<IT, NT>&, NT); \
-  template EigenComparison CompareSpGEMMWithEigen<IT, NT, OT>(const CscMatrix<IT, NT, OT>&,      \
-                                                              const CscMatrix<IT, NT, OT>&,      \
-                                                              const CscMatrix<IT, NT, OT>&, NT);
+  template EigenComparison CompareSpGEMMWithEigen<IT, NT, OT>(                                   \
+      const CscMatrix<IT, NT, OT>&, const CscMatrix<IT, NT, OT>&, const CscMatrix<IT, NT, OT>&, NT);
 
 #define SPCRAFT_DEFINE_EIGEN_REFERENCE(r, product)                                          \
   SPCRAFT_DEFINE_EIGEN_REFERENCE_TYPES(BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), \

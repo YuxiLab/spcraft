@@ -11,8 +11,8 @@ int main(int argc, char** argv)
   cxxopts::Options options(argv[0], "Solve a rank-deficient least-squares problem with SVD");
   options.add_options()("e,epsilon", "Perturb the dependent column",
                         cxxopts::value<double>()->default_value("0"))(
-      "t,threshold", "Relative singular-value threshold",
-      cxxopts::value<double>()->default_value("1e-12"))("h,help", "Show usage");
+      "t,threshold", "Relative singular-value threshold", cxxopts::value<double>()->default_value("1e-12"))(
+      "h,help", "Show usage");
   const auto arguments = options.parse(argc, argv);
   if (arguments.count("help") != 0) {
     std::cout << options.help();

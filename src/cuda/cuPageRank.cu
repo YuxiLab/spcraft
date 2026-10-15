@@ -37,8 +37,7 @@ template <typename IT, typename NT, int kBlockSize>
 __global__ __launch_bounds__(kBlockSize) void PageRankFillKernel(NT* values, IT n, NT value)
 {
   const IT stride = static_cast<IT>(gridDim.x) * static_cast<IT>(kBlockSize);
-  for (IT index =
-           static_cast<IT>(blockIdx.x) * static_cast<IT>(kBlockSize) + static_cast<IT>(threadIdx.x);
+  for (IT index = static_cast<IT>(blockIdx.x) * static_cast<IT>(kBlockSize) + static_cast<IT>(threadIdx.x);
        index < n; index += stride) {
     values[index] = value;
   }
@@ -50,8 +49,7 @@ __global__ __launch_bounds__(kBlockSize) void PageRankSumKernel(const NT* input,
 {
   const IT stride = static_cast<IT>(gridDim.x) * static_cast<IT>(kBlockSize);
   NT sum = NT{0};
-  for (IT index =
-           static_cast<IT>(blockIdx.x) * static_cast<IT>(kBlockSize) + static_cast<IT>(threadIdx.x);
+  for (IT index = static_cast<IT>(blockIdx.x) * static_cast<IT>(kBlockSize) + static_cast<IT>(threadIdx.x);
        index < n; index += stride) {
     sum += input[index];
   }
@@ -68,15 +66,14 @@ __global__ __launch_bounds__(kBlockSize) void PageRankSumKernel(const NT* input,
  */
 template <typename IT, typename NT, int kBlockSize>
 __global__ __launch_bounds__(kBlockSize) void PageRankUpdateKernel(IT n, const NT* y, NT* rank,
-                                                                   const NT* total, NT damping,
-                                                                   NT uniform, NT* partials)
+                                                                   const NT* total, NT damping, NT uniform,
+                                                                   NT* partials)
 {
   const NT base = ((NT{1} - damping) + damping * (NT{1} - *total)) * uniform;
 
   const IT stride = static_cast<IT>(gridDim.x) * static_cast<IT>(kBlockSize);
   NT residual = NT{0};
-  for (IT index =
-           static_cast<IT>(blockIdx.x) * static_cast<IT>(kBlockSize) + static_cast<IT>(threadIdx.x);
+  for (IT index = static_cast<IT>(blockIdx.x) * static_cast<IT>(kBlockSize) + static_cast<IT>(threadIdx.x);
        index < n; index += stride) {
     const NT updated = base + damping * y[index];
     const NT difference = updated - rank[index];
@@ -92,12 +89,10 @@ template <typename IT, typename NT, typename OT, int kBlockSize>
 cudaError_t PageRankCudaImpl<IT, NT, OT, kBlockSize>::Run(const CsrMatrix<IT, NT, OT>& op,
                                                           DenseVector<IT, NT>& rank,
                                                           const PageRankOptions<NT>& options,
-                                                          PageRankResult<NT>* result,
-                                                          cudaStream_t stream)
+                                                          PageRankResult<NT>* result, cudaStream_t stream)
 {
   constexpr int block_size = kBlockSize;
-  static_assert(block_size >= 32 && block_size <= 1024,
-                "BLOCK_SIZE must be in the range [32, 1024]");
+  static_assert(block_size >= 32 && block_size <= 1024, "BLOCK_SIZE must be in the range [32, 1024]");
   static_assert((block_size & (block_size - 1)) == 0, "BLOCK_SIZE must be a power of two");
 
   const IT n = op.m;
@@ -105,16 +100,14 @@ cudaError_t PageRankCudaImpl<IT, NT, OT, kBlockSize>::Run(const CsrMatrix<IT, NT
   // Cap the grid so the per-block partials always fit in one block, and the
   // second reduction stage is a single launch rather than a loop.
   const IT chunks = (n + static_cast<IT>(block_size) - 1) / static_cast<IT>(block_size);
-  const unsigned int grid = chunks > static_cast<IT>(block_size)
-                                ? static_cast<unsigned int>(block_size)
-                                : static_cast<unsigned int>(chunks);
+  const unsigned int grid = chunks > static_cast<IT>(block_size) ? static_cast<unsigned int>(block_size)
+                                                                 : static_cast<unsigned int>(chunks);
 
   // One allocation for the SpMV output, the block partials, and the two scalars.
   NT* workspace = nullptr;
   constexpr std::size_t kScalarCount = 2;  // Total mass and convergence residual.
   const std::size_t workspace_count = static_cast<std::size_t>(n) + grid + kScalarCount;
-  cudaError_t status =
-      cudaMalloc(reinterpret_cast<void**>(&workspace), workspace_count * sizeof(NT));
+  cudaError_t status = cudaMalloc(reinterpret_cast<void**>(&workspace), workspace_count * sizeof(NT));
   if (status != cudaSuccess) return status;
 
   NT* y = workspace;
@@ -132,12 +125,10 @@ cudaError_t PageRankCudaImpl<IT, NT, OT, kBlockSize>::Run(const CsrMatrix<IT, NT
   // without DenseVector taking ownership of device memory it must not free.
   DenseVector<IT, NT> y_output(y, n);
 
-  for (int iteration = 1; status == cudaSuccess && iteration <= options.max_iterations;
-       ++iteration) {
+  for (int iteration = 1; status == cudaSuccess && iteration <= options.max_iterations; ++iteration) {
     if (op.nnz != OT{0}) {
       // The one place the algorithm touches the graph: y = P^T . rank.
-      status = SpmvCudaBlockPerRow<PlusTimesRing<NT>, IT, NT, OT, kBlockSize>(op, rank, y_output,
-                                                                              stream);
+      status = SpmvCudaBlockPerRow<PlusTimesRing<NT>, IT, NT, OT, kBlockSize>(op, rank, y_output, stream);
     } else {
       // No edges survived normalization; every vertex is dangling.
       PageRankFillKernel<IT, NT, kBlockSize><<<grid, block_size, 0, stream>>>(y, n, NT{0});
@@ -175,8 +166,7 @@ cudaError_t PageRankCudaImpl<IT, NT, OT, kBlockSize>::Run(const CsrMatrix<IT, NT
   return status != cudaSuccess ? status : free_status;
 }
 
-#define SPCRAFT_DEFINE_PAGERANK_CUDA(r, product) \
-  template struct PageRankCudaImpl<BOOST_PP_SEQ_ENUM(product)>;
+#define SPCRAFT_DEFINE_PAGERANK_CUDA(r, product) template struct PageRankCudaImpl<BOOST_PP_SEQ_ENUM(product)>;
 // clang-format off
 BOOST_PP_SEQ_FOR_EACH_PRODUCT(SPCRAFT_DEFINE_PAGERANK_CUDA,
                               ((std::int32_t)(std::int64_t))

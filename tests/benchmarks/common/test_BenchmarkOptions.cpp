@@ -47,8 +47,8 @@ TEST(BenchmarkOptions, Correctness)
   const auto defaults = ReadBenchmarkOptions(Parse({}));
   EXPECT_TRUE((defaults.max_iterations == 1000 && defaults.max_time_seconds == 10.0))
       << "existing measurement defaults";
-  const auto result = Parse({"-i", "7", "--max-time", "0.25", "-o", "raw.json", "--text-report",
-                             "report.txt", "-m", "example.mtx", "--precision", "both"});
+  const auto result = Parse({"-i", "7", "--max-time", "0.25", "-o", "raw.json", "--text-report", "report.txt",
+                             "-m", "example.mtx", "--precision", "both"});
   const auto benchmark = ReadBenchmarkOptions(result);
   const auto input = ReadMatrixSourceOptions(result);
   const auto types = ReadTypeSelection(result);
@@ -57,12 +57,10 @@ TEST(BenchmarkOptions, Correctness)
                input.matrix_path == "example.mtx" && types.precision == "both"))
       << "shared and input flags compose in one parser, including short aliases";
   for (const auto& value : {"0", "-1"}) {
-    Reject([&] { ReadBenchmarkOptions(Parse({"--iterations", value})); },
-           "nonpositive iterations rejected");
+    Reject([&] { ReadBenchmarkOptions(Parse({"--iterations", value})); }, "nonpositive iterations rejected");
   }
   for (const auto& value : {"0", "-1", "nan", "inf"}) {
-    Reject([&] { ReadBenchmarkOptions(Parse({"--max-time", value})); },
-           "invalid time budget rejected");
+    Reject([&] { ReadBenchmarkOptions(Parse({"--max-time", value})); }, "invalid time budget rejected");
   }
   EXPECT_TRUE((ParseThreadCounts(" 1, 4,8 ", 6) == std::vector<int>({1, 4, 8})))
       << "explicit thread list retains order and trims whitespace";
@@ -75,8 +73,7 @@ TEST(BenchmarkOptions, Correctness)
   for (const auto& value : {"0", "-1", "2oops", "1 2", "99999999999999999999"}) {
     Reject([&] { ParseThreadCounts(value, 8); }, "invalid thread token rejected");
   }
-  Reject([] { ReadMatrixSourceOptions(Parse({"--generator", "invalid"})); },
-         "unknown generator rejected");
+  Reject([] { ReadMatrixSourceOptions(Parse({"--generator", "invalid"})); }, "unknown generator rejected");
   Reject([] { ReadMatrixSourceOptions(Parse({"--generator", "rmat", "--edge-factor", "-1"})); },
          "negative edge factor rejected before unsigned conversion");
   Reject([] { ReadTypeSelection(Parse({"--precision", "half"})); }, "unknown precision rejected");

@@ -124,13 +124,12 @@ cuCsrMatrix<IT, NT, OT> cuCsrMatrix<IT, NT, OT>::Clone() const
             "cuCsrMatrix::Clone row_ptr");
   }
   if (col_id) {
-    CUDACHK(cudaMemcpy(res.col_id, col_id, static_cast<std::size_t>(nnz) * sizeof(IT),
-                       cudaMemcpyDeviceToDevice),
-            "cuCsrMatrix::Clone col_id");
+    CUDACHK(
+        cudaMemcpy(res.col_id, col_id, static_cast<std::size_t>(nnz) * sizeof(IT), cudaMemcpyDeviceToDevice),
+        "cuCsrMatrix::Clone col_id");
   }
   if (val) {
-    CUDACHK(cudaMemcpy(res.val, val, static_cast<std::size_t>(nnz) * sizeof(NT),
-                       cudaMemcpyDeviceToDevice),
+    CUDACHK(cudaMemcpy(res.val, val, static_cast<std::size_t>(nnz) * sizeof(NT), cudaMemcpyDeviceToDevice),
             "cuCsrMatrix::Clone val");
   }
   return res;
@@ -160,13 +159,12 @@ SPCSR cuCsrMatrix<IT, NT, OT>::ToHost() const
             "cuCsrMatrix::ToHost row_ptr");
   }
   if (col_id) {
-    CUDACHK(cudaMemcpy(res.col_id, col_id, static_cast<std::size_t>(nnz) * sizeof(IT),
-                       cudaMemcpyDeviceToHost),
-            "cuCsrMatrix::ToHost col_id");
+    CUDACHK(
+        cudaMemcpy(res.col_id, col_id, static_cast<std::size_t>(nnz) * sizeof(IT), cudaMemcpyDeviceToHost),
+        "cuCsrMatrix::ToHost col_id");
   }
   if (val) {
-    CUDACHK(cudaMemcpy(res.val, val, static_cast<std::size_t>(nnz) * sizeof(NT),
-                       cudaMemcpyDeviceToHost),
+    CUDACHK(cudaMemcpy(res.val, val, static_cast<std::size_t>(nnz) * sizeof(NT), cudaMemcpyDeviceToHost),
             "cuCsrMatrix::ToHost val");
   }
   return res;

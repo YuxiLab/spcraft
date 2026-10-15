@@ -11,8 +11,7 @@
 
 namespace spcraft::benchmarks
 {
-void AddBenchmarkInputOptions(cxxopts::Options& parser, const char* default_index,
-                              const char* default_offset)
+void AddBenchmarkInputOptions(cxxopts::Options& parser, const char* default_index, const char* default_offset)
 {
   const MatrixSourceOptions defaults;
   // clang-format off
@@ -32,8 +31,7 @@ void AddBenchmarkInputOptions(cxxopts::Options& parser, const char* default_inde
   // clang-format on
 }
 
-void AddCommonOptions(cxxopts::Options& parser, const char* default_index,
-                      const char* default_offset)
+void AddCommonOptions(cxxopts::Options& parser, const char* default_index, const char* default_offset)
 {
   AddBenchmarkOptions(parser);
   AddBenchmarkInputOptions(parser, default_index, default_offset);
@@ -58,8 +56,7 @@ MatrixSourceOptions ReadMatrixSourceOptions(const cxxopts::ParseResult& result)
   if (!options.matrix_path) {
     if (options.generator == "er") {
       if (options.vertices <= 0 || !std::isfinite(options.degree) || options.degree < 0.0) {
-        throw std::invalid_argument(
-            "ER vertices must be positive and degree finite and nonnegative");
+        throw std::invalid_argument("ER vertices must be positive and degree finite and nonnegative");
       }
     } else if (options.generator == "rmat") {
       if (options.scale <= 0 || options.edge_factor <= 0) {
@@ -78,8 +75,7 @@ TypeSelection ReadTypeSelection(const cxxopts::ParseResult& result)
   options.precision = result["precision"].as<std::string>();
   options.index = result["index"].as<std::string>();
   options.offset = result["offset"].as<std::string>();
-  if (options.precision != "float" && options.precision != "double" &&
-      options.precision != "both") {
+  if (options.precision != "float" && options.precision != "double" && options.precision != "both") {
     throw std::invalid_argument("precision must be 'float', 'double', or 'both'");
   }
   for (const auto* choice : {&options.index, &options.offset}) {

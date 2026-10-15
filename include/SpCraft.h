@@ -21,6 +21,7 @@
 #include "kernel/mtSpMV.h"
 #include "linear_algebra/mtConjugateGradient.h"
 #include "linear_algebra/mtPowerIteration.h"
+#include "numeric/mtMultiwayMerge.h"
 
 #include "matrix_generator/MatrixGenerator.h"
 #include "report/BenchmarkReport.h"
@@ -39,5 +40,13 @@
 #endif
 
 #ifdef SPCRAFT_USE_MPI
+#include "mpi/mpiutil.h"
+#include "mpi/CommGrid2D.h"
+#include "mpi/CommGrid3D.h"
+#include "mpi/3dspgemm.h"
+#include "mpi/DistSpCOO.h"
+#include "mpi/DistSpCSR.h"
+#include "mpi/DistSpCSC.h"
+#include "mpi/DistSpDCSC.h"
 #include "mpi/2dspgemm.h"
 #endif

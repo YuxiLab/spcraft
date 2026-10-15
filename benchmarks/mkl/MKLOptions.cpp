@@ -29,13 +29,11 @@ std::optional<MKLSpMVOptions> ParseMKLSpMVOptions(int argc, char** argv)
   options.benchmark = ReadBenchmarkOptions(result);
   options.input.matrix = ReadMatrixSourceOptions(result);
   options.input.types = ReadTypeSelection(result);
-  options.input.thread_counts =
-      ParseThreadCounts(result["threads"].as<std::string>(), OMP_GET_MAX_THREADS());
+  options.input.thread_counts = ParseThreadCounts(result["threads"].as<std::string>(), OMP_GET_MAX_THREADS());
   if ((options.input.types.index != "both" && options.input.types.index != integer_type) ||
       (options.input.types.offset != "both" && options.input.types.offset != integer_type)) {
-    throw std::invalid_argument(
-        std::string("this oneMKL build requires --index and --offset to select ") + integer_type +
-        " (MKL_INT)");
+    throw std::invalid_argument(std::string("this oneMKL build requires --index and --offset to select ") +
+                                integer_type + " (MKL_INT)");
   }
   const auto& matrix = options.input.matrix;
   if (!matrix.matrix_path) {

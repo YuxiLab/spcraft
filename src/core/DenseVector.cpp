@@ -49,10 +49,7 @@ SPDVEC::DenseVector(IT size, NT initval)
 }
 
 SP_VEC_TEMP
-SPDVEC::DenseVector(SPDVEC&& rhs) noexcept : val(rhs.val), n(rhs.n), memowned(rhs.memowned)
-{
-  rhs.Reset();
-}
+SPDVEC::DenseVector(SPDVEC&& rhs) noexcept : val(rhs.val), n(rhs.n), memowned(rhs.memowned) { rhs.Reset(); }
 
 SP_VEC_TEMP
 SPDVEC& SPDVEC::operator=(SPDVEC&& rhs) noexcept
@@ -150,8 +147,7 @@ void SPDVEC::SafeDelete(bool owned, NT* ptr) noexcept
   if (owned && ptr != nullptr) std::free(ptr);
 }
 
-#define SPCRAFT_DEFINE_DENSE_VECTOR(r, product) \
-  template class DenseVector<BOOST_PP_SEQ_ENUM(product)>;
+#define SPCRAFT_DEFINE_DENSE_VECTOR(r, product) template class DenseVector<BOOST_PP_SEQ_ENUM(product)>;
 
 // Retain Boolean graph storage alongside the floating-point numerical types.
 // clang-format off

@@ -10,10 +10,8 @@
 int main(int argc, char** argv)
 {
   cxxopts::Options options(argv[0], "Fit a polynomial by normal equations and QR");
-  options.add_options()("n,points", "Number of sample points",
-                        cxxopts::value<int>()->default_value("30"))(
-      "d,degree", "Polynomial degree", cxxopts::value<int>()->default_value("10"))("h,help",
-                                                                                   "Show usage");
+  options.add_options()("n,points", "Number of sample points", cxxopts::value<int>()->default_value("30"))(
+      "d,degree", "Polynomial degree", cxxopts::value<int>()->default_value("10"))("h,help", "Show usage");
   const auto arguments = options.parse(argc, argv);
   if (arguments.count("help") != 0) {
     std::cout << options.help();
@@ -47,6 +45,5 @@ int main(int argc, char** argv)
   std::cout << "normal-equation residual: " << (design * normal - observations).norm() << '\n';
   std::cout << "QR residual:              " << (design * qr - observations).norm() << '\n';
   std::cout << "coefficient disagreement: " << (normal - qr).norm() << '\n';
-  std::cout << "QR numerical rank: " << design.colPivHouseholderQr().rank() << " / "
-            << design.cols() << '\n';
+  std::cout << "QR numerical rank: " << design.colPivHouseholderQr().rank() << " / " << design.cols() << '\n';
 }

@@ -48,12 +48,11 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
   if (!options.count("matrix") && options["generator"].as<std::string>() == "rmat") {
     const auto scale = options["scale"].as<std::int64_t>();
     const auto edges = options["edge-factor"].as<std::size_t>();
-    input = {std::make_shared<spcraft::CsrMatrix<IT, NT>>(spcraft::GenRMAT<NT, IT>(
-                 static_cast<IT>(scale), edges, options["seed"].as<int>())),
+    input = {std::make_shared<spcraft::CsrMatrix<IT, NT>>(
+                 spcraft::GenRMAT<NT, IT>(static_cast<IT>(scale), edges, options["seed"].as<int>())),
              fmt::format("RMAT_S{}_E{}", scale, edges)};
   } else {
-    if (!options.count("matrix") &&
-        options["vertices"].as<std::int64_t>() > std::numeric_limits<IT>::max()) {
+    if (!options.count("matrix") && options["vertices"].as<std::int64_t>() > std::numeric_limits<IT>::max()) {
       throw std::overflow_error("vertex count exceeds index type");
     }
     input = LoadMatrix<IT, NT, IT>(options);
@@ -111,11 +110,10 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
   const auto expected_csc = FromEigenColumns<IT>(expected);
   const auto expected_dcsc = DCSC::FromCsc(expected_csc);
   auto native_combblas = [&] {
-    return std::unique_ptr<Tuples>(
-        combblas::LocalSpGEMMHash<CombRing, NT>(ca, cb, false, false, true));
+    return std::unique_ptr<Tuples>(combblas::LocalSpGEMMHash<CombRing, NT>(ca, cb, false, false, true));
   };
-  fmt::print("{}: A {}x{}, {} nnz/{} nonempty columns; B {}x{}, {} nnz/{} nonempty columns\n",
-             dataset, a.m, a.n, a.nnz, da.nzc, b.m, b.n, b.nnz, db.nzc);
+  fmt::print("{}: A {}x{}, {} nnz/{} nonempty columns; B {}x{}, {} nnz/{} nonempty columns\n", dataset, a.m,
+             a.n, a.nnz, da.nzc, b.m, b.n, b.nnz, db.nzc);
 
   for (const int threads : ParseThreadCounts(options["threads"].as<std::string>())) {
     OMP_SET_NUM_THREADS(threads);
@@ -127,15 +125,12 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
         throw std::runtime_error("output nnz disagrees with Eigen");
       for (IT col = 0; col < expected_dcsc.nzc; ++col) {
         for (IT p = expected_dcsc.col_ptr[col]; p < expected_dcsc.col_ptr[col + 1]; ++p) {
-          if (u.entries[p].row != expected_dcsc.row_id[p] ||
-              u.entries[p].col != expected_dcsc.col_id[col] ||
-              t->rowindex(p) != expected_dcsc.row_id[p] ||
-              t->colindex(p) != expected_dcsc.col_id[col])
+          if (u.entries[p].row != expected_dcsc.row_id[p] || u.entries[p].col != expected_dcsc.col_id[col] ||
+              t->rowindex(p) != expected_dcsc.row_id[p] || t->colindex(p) != expected_dcsc.col_id[col])
             throw std::runtime_error("output coordinate mismatch");
         }
       }
-      errors[0] =
-          Verify(expected, [&](Eigen::Index p) { return u.entries[p].val; }, "OmpHashSpGEMM");
+      errors[0] = Verify(expected, [&](Eigen::Index p) { return u.entries[p].val; }, "OmpHashSpGEMM");
       errors[1] = Verify(expected, [&](Eigen::Index p) { return t->numvalue(p); }, "CombBLAS");
     }
     auto native = [&] {
@@ -156,8 +151,7 @@ void Run(const cxxopts::ParseResult& options, spcraft::BenchmarkReport& report)
       for (std::size_t backend = 0; backend < kBackends; ++backend) sample(backend);
     std::array<spcraft::BenchmarkRun, kBackends> runs;
     std::array<std::vector<double>, kBackends> wall_seconds;
-    const std::array<const char*, kBackends> names = {"SPCraft-Hash-Tuples",
-                                                      "CombBLAS-Hash-Tuples"};
+    const std::array<const char*, kBackends> names = {"SPCraft-Hash-Tuples", "CombBLAS-Hash-Tuples"};
     for (std::size_t i = 0; i < kBackends; ++i) {
       DescribeRun(runs[i], csr_a, dataset, names[i]);
       runs[i].info.kernel = "SpGEMM";
@@ -203,8 +197,7 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &processes);
     if (processes != 1 || provided < MPI_THREAD_FUNNELED)
       throw std::runtime_error("requires one MPI rank with FUNNELED support");
-    cxxopts::Options options("spgemm_combblas_benchmark",
-                             "DCSC-to-COO OmpHashSpGEMM / CombBLAS comparison");
+    cxxopts::Options options("spgemm_combblas_benchmark", "DCSC-to-COO OmpHashSpGEMM / CombBLAS comparison");
     AddCommonOptions(options, "int32", "int32");
     // clang-format off
     options.add_options()
@@ -217,8 +210,7 @@ int main(int argc, char** argv)
     else {
       if (result["iterations"].as<int>() < 1 || result["max-time"].as<double>() <= 0)
         throw std::invalid_argument("iterations and max-time must be positive");
-      if (result["generator"].as<std::string>() != "er" &&
-          result["generator"].as<std::string>() != "rmat")
+      if (result["generator"].as<std::string>() != "er" && result["generator"].as<std::string>() != "rmat")
         throw std::invalid_argument("generator must be er or rmat");
       OMP_SET_DYNAMIC(0);
       spcraft::ReportInfo report_info;

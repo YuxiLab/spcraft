@@ -94,8 +94,8 @@ int main(int argc, char** argv)
 
   fmt::print("damping {}, tolerance {:.3e}\n", options.damping, options.tolerance);
   fmt::print("{} after {} iteration(s), final L1 change {:.3e}\n",
-             rank_result.converged ? "converged" : "stopped at the iteration cap",
-             rank_result.iterations, rank_result.residual);
+             rank_result.converged ? "converged" : "stopped at the iteration cap", rank_result.iterations,
+             rank_result.residual);
 
   // Step 4: report. Ranks always sum to one, so they read as percentages.
   std::vector<Index> order(static_cast<std::size_t>(pages));

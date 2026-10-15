@@ -47,14 +47,10 @@ Matrix FromEdges(Index vertices, const std::vector<std::pair<Index, Index>>& edg
   return matrix;
 }
 
-bool Close(Value left, Value right, Value tolerance = 1e-9)
-{
-  return std::abs(left - right) <= tolerance;
-}
+bool Close(Value left, Value right, Value tolerance = 1e-9) { return std::abs(left - right) <= tolerance; }
 
 //! Reference power iteration written straight from the definition, no SpMV.
-std::vector<Value> ReferencePageRank(Index vertices,
-                                     const std::vector<std::pair<Index, Index>>& edges,
+std::vector<Value> ReferencePageRank(Index vertices, const std::vector<std::pair<Index, Index>>& edges,
                                      Value damping, int iterations)
 {
   std::vector<Value> out_degree(static_cast<std::size_t>(vertices), 0.0);
@@ -79,8 +75,7 @@ std::vector<Value> ReferencePageRank(Index vertices,
     }
     for (Index vertex = 0; vertex < vertices; ++vertex) {
       next[static_cast<std::size_t>(vertex)] =
-          (1.0 - damping) * uniform +
-          damping * (next[static_cast<std::size_t>(vertex)] + dangling * uniform);
+          (1.0 - damping) * uniform + damping * (next[static_cast<std::size_t>(vertex)] + dangling * uniform);
     }
     rank = next;
   }
@@ -142,9 +137,8 @@ TEST(Pagerank, DanglingVertexClosedForm)
   const std::array<Value, 3> expected{a, a, 1.0 - 2.0 * a};
   for (Index vertex = 0; vertex < 3; ++vertex) {
     if (!Close(rank.val[vertex], expected[static_cast<std::size_t>(vertex)], 1e-10)) {
-      ADD_FAILURE() << "PageRank with a dangling vertex: rank[" << vertex
-                    << "] = " << rank.val[vertex] << ", expected "
-                    << expected[static_cast<std::size_t>(vertex)] << "\n";
+      ADD_FAILURE() << "PageRank with a dangling vertex: rank[" << vertex << "] = " << rank.val[vertex]
+                    << ", expected " << expected[static_cast<std::size_t>(vertex)] << "\n";
     }
   }
 }
@@ -172,8 +166,7 @@ TEST(Pagerank, AsymmetricGraphReference)
   for (Index vertex = 0; vertex < vertices; ++vertex) {
     if (!Close(rank.val[vertex], expected[static_cast<std::size_t>(vertex)], 1e-9)) {
       ADD_FAILURE() << "PageRank disagrees with the reference at vertex " << vertex << ": "
-                    << rank.val[vertex] << " vs " << expected[static_cast<std::size_t>(vertex)]
-                    << "\n";
+                    << rank.val[vertex] << " vs " << expected[static_cast<std::size_t>(vertex)] << "\n";
     }
   }
 
@@ -208,8 +201,8 @@ TEST(Pagerank, GraphWithoutEdges)
   }
   for (Index vertex = 0; vertex < 4; ++vertex) {
     if (!Close(rank.val[vertex], 0.25)) {
-      ADD_FAILURE() << "PageRank on an edgeless graph: rank[" << vertex
-                    << "] = " << rank.val[vertex] << ", expected 0.25\n";
+      ADD_FAILURE() << "PageRank on an edgeless graph: rank[" << vertex << "] = " << rank.val[vertex]
+                    << ", expected 0.25\n";
     }
   }
 }

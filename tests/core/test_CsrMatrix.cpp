@@ -72,8 +72,7 @@ TYPED_TEST(CsrMatrixTest, AllocateRecordsShapeAndOwnsStorage)
 
   Matrix matrix;
   matrix.Allocate(4, 3, 5);
-  EXPECT_TRUE((matrix.nnz == 4 && matrix.m == 3 && matrix.n == 5))
-      << "Allocate should record the shape";
+  EXPECT_TRUE((matrix.nnz == 4 && matrix.m == 3 && matrix.n == 5)) << "Allocate should record the shape";
   EXPECT_TRUE((matrix.memowned)) << "Allocate should take ownership";
   EXPECT_NE(matrix.row_ptr, nullptr);
   EXPECT_NE(matrix.col_id, nullptr);
@@ -156,10 +155,8 @@ TYPED_TEST(CsrMatrixTest, MoveAssignmentFreesTheTargetSOldStorage)
   Matrix source = Sample<Matrix>();
   const auto* buffer = source.val;
   target = std::move(source);
-  EXPECT_TRUE((target.val == buffer && target.nnz == 3))
-      << "move assignment should take the new storage";
-  EXPECT_TRUE((source.val == nullptr && !source.memowned))
-      << "move assignment should empty the source";
+  EXPECT_TRUE((target.val == buffer && target.nnz == 3)) << "move assignment should take the new storage";
+  EXPECT_TRUE((source.val == nullptr && !source.memowned)) << "move assignment should empty the source";
 }
 
 TYPED_TEST(CsrMatrixTest, SelfMoveAssignmentMustNotDestroyTheObject)
@@ -171,8 +168,7 @@ TYPED_TEST(CsrMatrixTest, SelfMoveAssignmentMustNotDestroyTheObject)
   Matrix matrix = Sample<Matrix>();
   Matrix& alias = matrix;
   matrix = std::move(alias);
-  EXPECT_TRUE((matrix.nnz == 3 && matrix.val != nullptr))
-      << "self-move must leave the matrix intact";
+  EXPECT_TRUE((matrix.nnz == 3 && matrix.val != nullptr)) << "self-move must leave the matrix intact";
   EXPECT_TRUE((matrix.val[0] == 1.0)) << "self-move must not corrupt the values";
 }
 
@@ -187,8 +183,7 @@ TYPED_TEST(CsrMatrixTest, CloneIsADeepCopy)
   EXPECT_TRUE((copy.val != original.val)) << "Clone must not alias the source";
   EXPECT_TRUE((copy.nnz == original.nnz && copy.m == original.m && copy.n == original.n))
       << "Clone should preserve the shape";
-  EXPECT_TRUE((std::equal(original.val, original.val + 3, copy.val)))
-      << "Clone should copy the values";
+  EXPECT_TRUE((std::equal(original.val, original.val + 3, copy.val))) << "Clone should copy the values";
   EXPECT_TRUE((std::equal(original.col_id, original.col_id + 3, copy.col_id)))
       << "Clone should copy the column indices";
   copy.val[0] = 99.0;
@@ -206,8 +201,7 @@ TYPED_TEST(CsrMatrixTest, ResetReleasesWithoutFreeing)
   auto* col_id = matrix.col_id;
   auto* values = matrix.val;
   matrix.Reset();
-  EXPECT_TRUE(
-      (matrix.row_ptr == nullptr && matrix.val == nullptr && matrix.nnz == 0 && !matrix.memowned))
+  EXPECT_TRUE((matrix.row_ptr == nullptr && matrix.val == nullptr && matrix.nnz == 0 && !matrix.memowned))
       << "Reset should null every member and drop ownership";
   // Reset releases ownership without freeing, so the buffers are ours now.
   std::free(row_ptr);

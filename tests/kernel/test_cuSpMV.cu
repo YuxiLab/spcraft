@@ -32,25 +32,21 @@ bool test_bfs_semiring()
   bool* device_frontier = nullptr;
   bool* device_result = nullptr;
 
-  bool ok =
-      check_cuda(cudaMalloc(&device_row_ptr, sizeof(row_ptr)), "cudaMalloc(BFS row_ptr)") &&
-      check_cuda(cudaMalloc(&device_col_id, sizeof(col_id)), "cudaMalloc(BFS col_id)") &&
-      check_cuda(cudaMalloc(&device_values, sizeof(values)), "cudaMalloc(BFS values)") &&
-      check_cuda(cudaMalloc(&device_frontier, sizeof(frontier)), "cudaMalloc(BFS frontier)") &&
-      check_cuda(cudaMalloc(&device_result, sizeof(result)), "cudaMalloc(BFS result)");
+  bool ok = check_cuda(cudaMalloc(&device_row_ptr, sizeof(row_ptr)), "cudaMalloc(BFS row_ptr)") &&
+            check_cuda(cudaMalloc(&device_col_id, sizeof(col_id)), "cudaMalloc(BFS col_id)") &&
+            check_cuda(cudaMalloc(&device_values, sizeof(values)), "cudaMalloc(BFS values)") &&
+            check_cuda(cudaMalloc(&device_frontier, sizeof(frontier)), "cudaMalloc(BFS frontier)") &&
+            check_cuda(cudaMalloc(&device_result, sizeof(result)), "cudaMalloc(BFS result)");
 
   if (ok) {
-    ok =
-        check_cuda(
-            cudaMemcpy(device_row_ptr, row_ptr.data(), sizeof(row_ptr), cudaMemcpyHostToDevice),
-            "cudaMemcpy(BFS row_ptr)") &&
-        check_cuda(cudaMemcpy(device_col_id, col_id.data(), sizeof(col_id), cudaMemcpyHostToDevice),
-                   "cudaMemcpy(BFS col_id)") &&
-        check_cuda(cudaMemcpy(device_values, values.data(), sizeof(values), cudaMemcpyHostToDevice),
-                   "cudaMemcpy(BFS values)") &&
-        check_cuda(
-            cudaMemcpy(device_frontier, frontier.data(), sizeof(frontier), cudaMemcpyHostToDevice),
-            "cudaMemcpy(BFS frontier)");
+    ok = check_cuda(cudaMemcpy(device_row_ptr, row_ptr.data(), sizeof(row_ptr), cudaMemcpyHostToDevice),
+                    "cudaMemcpy(BFS row_ptr)") &&
+         check_cuda(cudaMemcpy(device_col_id, col_id.data(), sizeof(col_id), cudaMemcpyHostToDevice),
+                    "cudaMemcpy(BFS col_id)") &&
+         check_cuda(cudaMemcpy(device_values, values.data(), sizeof(values), cudaMemcpyHostToDevice),
+                    "cudaMemcpy(BFS values)") &&
+         check_cuda(cudaMemcpy(device_frontier, frontier.data(), sizeof(frontier), cudaMemcpyHostToDevice),
+                    "cudaMemcpy(BFS frontier)");
   }
 
   if (ok) {
@@ -58,12 +54,11 @@ bool test_bfs_semiring()
                                                 static_cast<int>(values.size()), rows, rows);
     spcraft::DenseVector<int, bool> input(device_frontier, rows);
     spcraft::DenseVector<int, bool> output(device_result, rows);
-    ok =
-        check_cuda(spcraft::SpmvCudaBlockPerRow<spcraft::PlusTimesRing<bool>, int, bool, int, 32>(
-                       device_matrix, input, output),
-                   "SpmvCudaBlockPerRow(BFS)") &&
-        check_cuda(cudaMemcpy(result.data(), device_result, sizeof(result), cudaMemcpyDeviceToHost),
-                   "cudaMemcpy(BFS result)");
+    ok = check_cuda(spcraft::SpmvCudaBlockPerRow<spcraft::PlusTimesRing<bool>, int, bool, int, 32>(
+                        device_matrix, input, output),
+                    "SpmvCudaBlockPerRow(BFS)") &&
+         check_cuda(cudaMemcpy(result.data(), device_result, sizeof(result), cudaMemcpyDeviceToHost),
+                    "cudaMemcpy(BFS result)");
   }
 
   cudaFree(device_result);
@@ -105,21 +100,18 @@ int main()
             check_cuda(cudaMalloc(&device_y, sizeof(result)), "cudaMalloc(y)");
 
   if (ok) {
-    ok =
-        check_cuda(
-            cudaMemcpy(device_row_ptr, row_ptr.data(), sizeof(row_ptr), cudaMemcpyHostToDevice),
-            "cudaMemcpy(row_ptr)") &&
-        check_cuda(cudaMemcpy(device_col_id, col_id.data(), sizeof(col_id), cudaMemcpyHostToDevice),
-                   "cudaMemcpy(col_id)") &&
-        check_cuda(cudaMemcpy(device_values, values.data(), sizeof(values), cudaMemcpyHostToDevice),
-                   "cudaMemcpy(values)") &&
-        check_cuda(cudaMemcpy(device_x, x.data(), sizeof(x), cudaMemcpyHostToDevice),
-                   "cudaMemcpy(x)");
+    ok = check_cuda(cudaMemcpy(device_row_ptr, row_ptr.data(), sizeof(row_ptr), cudaMemcpyHostToDevice),
+                    "cudaMemcpy(row_ptr)") &&
+         check_cuda(cudaMemcpy(device_col_id, col_id.data(), sizeof(col_id), cudaMemcpyHostToDevice),
+                    "cudaMemcpy(col_id)") &&
+         check_cuda(cudaMemcpy(device_values, values.data(), sizeof(values), cudaMemcpyHostToDevice),
+                    "cudaMemcpy(values)") &&
+         check_cuda(cudaMemcpy(device_x, x.data(), sizeof(x), cudaMemcpyHostToDevice), "cudaMemcpy(x)");
   }
 
   if (ok) {
-    spcraft::CsrMatrix<int, float> device_matrix(device_row_ptr, device_col_id, device_values,
-                                                 values.size(), rows, x.size());
+    spcraft::CsrMatrix<int, float> device_matrix(device_row_ptr, device_col_id, device_values, values.size(),
+                                                 rows, x.size());
     spcraft::DenseVector<int, float> device_input(device_x, static_cast<int>(x.size()));
     spcraft::DenseVector<int, float> device_output(device_y, rows);
     spcraft::DenseVector<int, float> wrong_size_input(device_x, static_cast<int>(x.size()) - 1);
@@ -131,16 +123,15 @@ int main()
   }
 
   if (ok) {
-    spcraft::CsrMatrix<int, float> device_matrix(device_row_ptr, device_col_id, device_values,
-                                                 values.size(), rows, x.size());
+    spcraft::CsrMatrix<int, float> device_matrix(device_row_ptr, device_col_id, device_values, values.size(),
+                                                 rows, x.size());
     spcraft::DenseVector<int, float> device_input(device_x, static_cast<int>(x.size()));
     spcraft::DenseVector<int, float> device_output(device_y, rows);
-    ok =
-        check_cuda(spcraft::SpmvCudaBlockPerRow<spcraft::PlusTimesRing<float>, int, float, int, 32>(
-                       device_matrix, device_input, device_output),
-                   "SpmvCudaBlockPerRow") &&
-        check_cuda(cudaMemcpy(result.data(), device_y, sizeof(result), cudaMemcpyDeviceToHost),
-                   "cudaMemcpy(y)");
+    ok = check_cuda(spcraft::SpmvCudaBlockPerRow<spcraft::PlusTimesRing<float>, int, float, int, 32>(
+                        device_matrix, device_input, device_output),
+                    "SpmvCudaBlockPerRow") &&
+         check_cuda(cudaMemcpy(result.data(), device_y, sizeof(result), cudaMemcpyDeviceToHost),
+                    "cudaMemcpy(y)");
   }
 
   cudaFree(device_y);

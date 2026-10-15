@@ -256,3 +256,59 @@ rmat = spcraft.gen_rmat(scale=9, edge_factor=6, seed=2026)
 
 Inputs and returned NumPy arrays are copied in this first implementation. This keeps ownership
 unambiguous: modifying a Python array cannot invalidate or modify an SPCraft matrix.
+
+## MPI sparse SUMMA
+
+Build with `-DSPCRAFT_USE_MPI=ON`. `Mpi2DSummaSpGEMM<SemiRing>(A, B)` takes
+`DistSpCSC` or `DistSpDCSC` inputs on the same `CommGrid2D`. The grid
+owns its row and column communicators; distributed matrices share the grid
+and own their native local storage. Each matrix stores global `m` and `n`;
+the process grid determines its contiguous local dimensions. Construction does
+not redistribute entries.
+
+The synchronous algorithm broadcasts sparse inner-block panels along rows and
+columns, calls local hash SpGEMM, and merges sorted COO partial products using
+the semiring. Inner dimensions must match. The CSC implementation uses one
+contiguous submatrix per rank, with dimensions derived from the chosen process
+grid. It gathers each submatrix's `m`, `n`, and `nnz` along the process rows
+and columns, then broadcasts matching A and B blocks at each stage. Roots use
+borrowed views, and receivers allocate stage buffers. Both CSC and DCSC currently
+require a square process grid; smaller edge submatrices are supported. The result is
+`DistSpCOO`, with structural zeros retained and entries sorted by column then row.
+Compiled kernels support `PlusTimesRing<float>` and `PlusTimesRing<double>` with
+signed index/offset widths `(32,32)`, `(32,64)`, and `(64,64)`.
+
+`CommGrid3D(world, layers)` creates `layers` square planes. Ranks are ordered
+by layer, then row, then column; the communicator size must be
+`layers * side * side`. Inner block `k` is stored only on layer `k % layers`.
+`AOwner(i,k)` and `BOwner(k,j)` return the source rank responsible for each
+input block. Each input uses `grid.Plane()` and the plane's full 2D packed
+indices, leaving other layers' inner blocks empty. Inputs and shapes must agree
+across participating ranks.
+
+`Mpi3DSummaSpGEMM<SemiRing>(A, B, grid)` runs the assigned stages within each
+plane and reduces sparse partial products along fibers using `SemiRing::Add`.
+It returns `DistSpCOO<IT, NT, OT>` directly: layer zero receives the reduced
+product and other layers receive a default-constructed empty matrix with no
+grid ownership. Check `grid.Layer() == 0` to identify result owners, since a
+valid product can also be empty. The reduced result shares its plane grid and
+can outlive the 3D grid. Release all communicator owners before `MPI_Finalize`.
+Calls are collective, with no communication/computation overlap; invoke them
+from the MPI main thread when using `MPI_THREAD_FUNNELED`.
+
+For a square Matrix Market input, these examples verify `A*A` against Eigen.
+The 2D example takes the process grid dimensions and derives row and column block
+extents from the matrix dimensions using ceiling division. A zero grid dimension
+lets MPI choose it to match the participating rank count.
+
+```bash
+mpiexec -n 4 build/bin/e08_summa_2d --matrix A.mtx --grid-rows 2 --grid-cols 2
+mpiexec -n 16 build/bin/e08_summa_2d --matrix A.mtx --grid-rows 4 --grid-cols 4
+mpiexec -n 8 build/bin/e09_summa_3d --matrix A.mtx --layers 2
+ctest --test-dir build -R 'test_mpi_(2dspgemm|3dspgemm|CommGrid3D)' --output-on-failure
+```
+
+`bench_summa_2d` and `bench_summa_3d --layers 2` benchmark a verified diagonal
+problem. They use fixed collective iteration counts and report the maximum
+elapsed time across ranks. Launch with a square rank count for 2D, or a square
+rank count per layer for 3D. The benchmarks currently use one OpenMP thread.

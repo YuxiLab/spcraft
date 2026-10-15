@@ -41,12 +41,10 @@ CooMatrix<IT, NT, OT> ReadMatrixInput(const std::string& path)
   return matrix;
 }
 
-#define SPCRAFT_DEFINE_MATRIX_INPUT(r, product)                           \
-  template CooMatrix<BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), \
-                     BOOST_PP_SEQ_ELEM(1, product),                       \
-                     BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(0, product))> \
-  ReadMatrixInput<BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)),    \
-                  BOOST_PP_SEQ_ELEM(1, product),                          \
+#define SPCRAFT_DEFINE_MATRIX_INPUT(r, product)                                                          \
+  template CooMatrix<BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), BOOST_PP_SEQ_ELEM(1, product), \
+                     BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(0, product))>                                \
+  ReadMatrixInput<BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), BOOST_PP_SEQ_ELEM(1, product),    \
                   BOOST_PP_SEQ_ELEM(1, BOOST_PP_SEQ_ELEM(0, product))>(const std::string&);
 
 // clang-format off

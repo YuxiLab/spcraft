@@ -11,8 +11,7 @@ int main(int argc, char** argv)
 {
   cxxopts::Options options(argv[0], "Compare dense Cholesky and pivoted LU");
   options.add_options()("n,size", "Matrix dimension", cxxopts::value<int>()->default_value("600"))(
-      "s,seed", "Random seed", cxxopts::value<unsigned>()->default_value("7"))("h,help",
-                                                                               "Show usage");
+      "s,seed", "Random seed", cxxopts::value<unsigned>()->default_value("7"))("h,help", "Show usage");
   const auto arguments = options.parse(argc, argv);
   if (arguments.count("help") != 0) {
     std::cout << options.help();
@@ -28,8 +27,7 @@ int main(int argc, char** argv)
   std::normal_distribution<double> distribution;
   Eigen::MatrixXd random(size, size);
   for (double& value : random.reshaped()) value = distribution(generator);
-  const Eigen::MatrixXd matrix =
-      random.transpose() * random + size * Eigen::MatrixXd::Identity(size, size);
+  const Eigen::MatrixXd matrix = random.transpose() * random + size * Eigen::MatrixXd::Identity(size, size);
   const Eigen::VectorXd expected = Eigen::VectorXd::Ones(size);
   const Eigen::VectorXd rhs = matrix * expected;
 

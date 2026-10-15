@@ -117,8 +117,7 @@ SP_MAT_TEMP
 SPCOO cuCooMatrix<IT, NT, OT>::View() const { return SPCOO(entries, nnz, m, n); }
 
 SP_MAT_TEMP
-typename cuCooMatrix<IT, NT, OT>::Entry* cuCooMatrix<IT, NT, OT>::SafeAllocate(OT count, IT rows,
-                                                                               IT columns)
+typename cuCooMatrix<IT, NT, OT>::Entry* cuCooMatrix<IT, NT, OT>::SafeAllocate(OT count, IT rows, IT columns)
 {
   static_assert(std::is_trivially_copyable_v<Entry>);
   if constexpr (std::is_signed_v<IT>) {

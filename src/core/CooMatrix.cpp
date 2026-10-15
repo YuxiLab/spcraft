@@ -219,10 +219,8 @@ SPCSR SPCOO::ToCsr() const
 SP_MAT_TEMP
 typename SPCOO::Entry* SPCOO::SafeAllocate(OT count, IT rows, IT columns)
 {
-  static_assert(std::is_trivially_copyable_v<Entry>,
-                "CooMatrix entries must be trivially copyable");
-  static_assert(std::is_trivially_destructible_v<Entry>,
-                "CooMatrix entries must be trivially destructible");
+  static_assert(std::is_trivially_copyable_v<Entry>, "CooMatrix entries must be trivially copyable");
+  static_assert(std::is_trivially_destructible_v<Entry>, "CooMatrix entries must be trivially destructible");
   static_assert(alignof(Entry) <= alignof(std::max_align_t),
                 "CooMatrix malloc storage does not support over-aligned entries");
 

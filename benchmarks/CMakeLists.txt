@@ -42,7 +42,3 @@ endif()
 if(SPCRAFT_USE_CUDA)
 	add_subdirectory(cusparse)
 endif()
-
-# BEGIN scaffold: directory mpi
-add_subdirectory(mpi)
-# END scaffold: directory mpi

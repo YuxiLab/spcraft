@@ -53,16 +53,14 @@ constexpr cusparseIndexType_t IndexType()
 void CheckCuda(cudaError_t status, std::string_view api)
 {
   if (status != cudaSuccess) {
-    throw std::runtime_error("CUDA error in " + std::string(api) + ": " +
-                             cudaGetErrorString(status));
+    throw std::runtime_error("CUDA error in " + std::string(api) + ": " + cudaGetErrorString(status));
   }
 }
 
 void CheckCusparse(cusparseStatus_t status, std::string_view api)
 {
   if (status != CUSPARSE_STATUS_SUCCESS) {
-    throw std::runtime_error("cuSPARSE error in " + std::string(api) + ": " +
-                             cusparseGetErrorString(status));
+    throw std::runtime_error("cuSPARSE error in " + std::string(api) + ": " + cusparseGetErrorString(status));
   }
 }
 
@@ -83,9 +81,8 @@ class CusparseSpmvState
     CheckCuda(cudaMalloc(&d_col_id_, matrix.nnz * sizeof(IT)), "cudaMalloc(d_col_id)");
     CheckCuda(cudaMalloc(&d_val_, matrix.nnz * sizeof(NT)), "cudaMalloc(d_val)");
 
-    CheckCuda(
-        cudaMemcpy(d_row_ptr_, matrix.row_ptr, (matrix.m + 1) * sizeof(OT), cudaMemcpyHostToDevice),
-        "cudaMemcpy(row_ptr)");
+    CheckCuda(cudaMemcpy(d_row_ptr_, matrix.row_ptr, (matrix.m + 1) * sizeof(OT), cudaMemcpyHostToDevice),
+              "cudaMemcpy(row_ptr)");
     CheckCuda(cudaMemcpy(d_col_id_, matrix.col_id, matrix.nnz * sizeof(IT), cudaMemcpyHostToDevice),
               "cudaMemcpy(col_id)");
     CheckCuda(cudaMemcpy(d_val_, matrix.val, matrix.nnz * sizeof(NT), cudaMemcpyHostToDevice),
@@ -99,32 +96,30 @@ class CusparseSpmvState
     d_y_.resize(matrix.m, NT{0});
 
     CheckCusparse(cusparseCreate(&handle_), "cusparseCreate");
-    CheckCusparse(cusparseSetPointerMode(handle_, CUSPARSE_POINTER_MODE_HOST),
-                  "cusparseSetPointerMode");
-    CheckCusparse(cusparseCreateCsr(&matA_, matrix.m, matrix.n, matrix.nnz, d_row_ptr_, d_col_id_,
-                                    d_val_, IndexType<OT>(), IndexType<IT>(),
-                                    CUSPARSE_INDEX_BASE_ZERO, DataType<NT>()),
-                  "cusparseCreateCsr");
-    CheckCusparse(cusparseCreateDnVec(&vec_x_, matrix.n, thrust::raw_pointer_cast(d_x_.data()),
-                                      DataType<NT>()),
-                  "cusparseCreateDnVec(vec_x)");
-    CheckCusparse(cusparseCreateDnVec(&vec_y_, matrix.m, thrust::raw_pointer_cast(d_y_.data()),
-                                      DataType<NT>()),
-                  "cusparseCreateDnVec(vec_y)");
+    CheckCusparse(cusparseSetPointerMode(handle_, CUSPARSE_POINTER_MODE_HOST), "cusparseSetPointerMode");
+    CheckCusparse(
+        cusparseCreateCsr(&matA_, matrix.m, matrix.n, matrix.nnz, d_row_ptr_, d_col_id_, d_val_,
+                          IndexType<OT>(), IndexType<IT>(), CUSPARSE_INDEX_BASE_ZERO, DataType<NT>()),
+        "cusparseCreateCsr");
+    CheckCusparse(
+        cusparseCreateDnVec(&vec_x_, matrix.n, thrust::raw_pointer_cast(d_x_.data()), DataType<NT>()),
+        "cusparseCreateDnVec(vec_x)");
+    CheckCusparse(
+        cusparseCreateDnVec(&vec_y_, matrix.m, thrust::raw_pointer_cast(d_y_.data()), DataType<NT>()),
+        "cusparseCreateDnVec(vec_y)");
 
-    CheckCusparse(cusparseSpMV_bufferSize(handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha_, matA_,
-                                          vec_x_, &beta_, vec_y_, DataType<NT>(),
-                                          CUSPARSE_SPMV_ALG_DEFAULT, &d_buffer_size_),
-                  "cusparseSpMV_bufferSize");
+    CheckCusparse(
+        cusparseSpMV_bufferSize(handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha_, matA_, vec_x_, &beta_,
+                                vec_y_, DataType<NT>(), CUSPARSE_SPMV_ALG_DEFAULT, &d_buffer_size_),
+        "cusparseSpMV_bufferSize");
     if (d_buffer_size_ > 0) {
       CheckCuda(cudaMalloc(&d_buffer_, d_buffer_size_), "cudaMalloc(d_buffer)");
     }
 
     // Warmup run to ensure descriptors and buffers are ready before timing.
-    CheckCusparse(
-        cusparseSpMV(handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha_, matA_, vec_x_, &beta_,
-                     vec_y_, DataType<NT>(), CUSPARSE_SPMV_ALG_DEFAULT, d_buffer_),
-        "cusparseSpMV warmup");
+    CheckCusparse(cusparseSpMV(handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha_, matA_, vec_x_, &beta_,
+                               vec_y_, DataType<NT>(), CUSPARSE_SPMV_ALG_DEFAULT, d_buffer_),
+                  "cusparseSpMV warmup");
     CheckCuda(cudaDeviceSynchronize(), "cudaDeviceSynchronize warmup");
   }
 
@@ -161,16 +156,14 @@ class CusparseSpmvState
 
   void Run()
   {
-    CheckCusparse(
-        cusparseSpMV(handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha_, matA_, vec_x_, &beta_,
-                     vec_y_, DataType<NT>(), CUSPARSE_SPMV_ALG_DEFAULT, d_buffer_),
-        "cusparseSpMV");
+    CheckCusparse(cusparseSpMV(handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha_, matA_, vec_x_, &beta_,
+                               vec_y_, DataType<NT>(), CUSPARSE_SPMV_ALG_DEFAULT, d_buffer_),
+                  "cusparseSpMV");
   }
 
   std::size_t bytes_per_run() const
   {
-    return static_cast<std::size_t>(matrix_size_bytes()) +
-           static_cast<std::size_t>(m_ + n_) * sizeof(NT);
+    return static_cast<std::size_t>(matrix_size_bytes()) + static_cast<std::size_t>(m_ + n_) * sizeof(NT);
   }
 
   //! Host copy of the input vector, for the Eigen cross-check.
@@ -235,8 +228,7 @@ struct Settings {
 
 //! Load, upload, verify and time one <IT, NT, OT> combination on the GPU.
 template <class IT, class NT, class OT>
-void RunVariant(const cxxopts::ParseResult& result, Settings& settings,
-                spcraft::BenchmarkReport& report)
+void RunVariant(const cxxopts::ParseResult& result, Settings& settings, spcraft::BenchmarkReport& report)
 {
   if constexpr (kCusparseRepresentable<IT, OT>) {
     if (!VariantSelected<IT, NT, OT>(result)) return;
@@ -255,19 +247,18 @@ void RunVariant(const cxxopts::ParseResult& result, Settings& settings,
       state.Run();
       CheckCuda(cudaDeviceSynchronize(), "cudaDeviceSynchronize");
     };
-    const std::string label = fmt::format("SpMV/cuSPARSE/{}/{}/{}", input.name,
-                                          IndexOffsetName<IT, OT>(), PrecisionName<NT>());
+    const std::string label =
+        fmt::format("SpMV/cuSPARSE/{}/{}/{}", input.name, IndexOffsetName<IT, OT>(), PrecisionName<NT>());
     const double per_iteration = WarmUp(once);
-    const int iterations =
-        PlanIterations(per_iteration, settings.max_iterations, settings.budget, label);
+    const int iterations = PlanIterations(per_iteration, settings.max_iterations, settings.budget, label);
 
     spcraft::BenchmarkRun run;
     DescribeRun(run, A, input.name, "cuSPARSE");
     run.info.parameters.emplace_back("rank count", "1");
     run.verification = spcraft::VerificationResult{"Eigen sparse product", error, true};
     std::vector<double> wall_seconds = spcraft::TimeIterations(once, iterations);
-    run.profiles.push_back(spcraft::ResourceProfile{
-        spcraft::RunScope{}, {}, {spcraft::metric::WallTime(wall_seconds)}});
+    run.profiles.push_back(
+        spcraft::ResourceProfile{spcraft::RunScope{}, {}, {spcraft::metric::WallTime(wall_seconds)}});
     run.profiles.push_back(spcraft::ResourceProfile{
         spcraft::GpuScope{0, 0},
         {{"runtime", "cuSPARSE"}},
@@ -282,8 +273,7 @@ void RunVariant(const cxxopts::ParseResult& result, Settings& settings,
 int main(int argc, char** argv)
 {
   try {
-    cxxopts::Options options("spmv_cusparse_benchmark",
-                             "cuSPARSE SpMV benchmark, verified against Eigen");
+    cxxopts::Options options("spmv_cusparse_benchmark", "cuSPARSE SpMV benchmark, verified against Eigen");
     // cuSPARSE requires one width for both index arrays, so the shared 64-bit
     // offset default would pair with a 32-bit index and select nothing.
     AddCommonOptions(options, "int32", "int32");

@@ -61,27 +61,22 @@ TEST(CooMatrix, Correctness)
   a.entries[0] = {2, 1, 7};
   a.entries[1] = {0, 3, -5};
   const auto clone = a.Clone();
-  EXPECT_TRUE((clone.entries != a.entries && EntriesEqual(clone.entries[1], a.entries[1])))
-      << "deep clone";
+  EXPECT_TRUE((clone.entries != a.entries && EntriesEqual(clone.entries[1], a.entries[1]))) << "deep clone";
   auto* storage = a.entries;
   Matrix view(storage, a.nnz, a.m, a.n);
   EXPECT_TRUE((!view.memowned && view.entries == storage)) << "borrow";
   Matrix moved_view(std::move(view));
-  EXPECT_TRUE((!view.entries && !moved_view.memowned && moved_view.entries == storage))
-      << "move view";
+  EXPECT_TRUE((!view.entries && !moved_view.memowned && moved_view.entries == storage)) << "move view";
   moved_view.Reset();
-  EXPECT_TRUE((!moved_view.entries && EntriesEqual(a.entries[0], clone.entries[0])))
-      << "reset view";
+  EXPECT_TRUE((!moved_view.entries && EntriesEqual(a.entries[0], clone.entries[0]))) << "reset view";
   Matrix moved(std::move(a));
-  EXPECT_TRUE((!a.entries && !a.memowned && moved.entries == storage && moved.memowned))
-      << "move owner";
+  EXPECT_TRUE((!a.entries && !a.memowned && moved.entries == storage && moved.memowned)) << "move owner";
   a.Allocate(1, 1, 1);
   a = std::move(moved);
   EXPECT_TRUE((!moved.entries && a.entries == storage && a.memowned)) << "move assignment";
   auto& alias = a;
   a = std::move(alias);
-  EXPECT_TRUE((a.entries == storage && EntriesEqual(a.entries[0], clone.entries[0])))
-      << "self move";
+  EXPECT_TRUE((a.entries == storage && EntriesEqual(a.entries[0], clone.entries[0]))) << "self move";
   bool threw = false;
   try {
     a.Allocate(std::numeric_limits<std::int64_t>::max(), 3, 4);
@@ -98,8 +93,7 @@ TEST(CooMatrix, Correctness)
   EXPECT_TRUE((threw && a.entries == storage)) << "negative shape";
   a.Allocate(0, 3, 4);
   const auto empty = a.Clone();
-  EXPECT_TRUE(
-      (!a.entries && a.nnz == 0 && a.memowned && empty.m == 3 && empty.n == 4 && !empty.entries))
+  EXPECT_TRUE((!a.entries && a.nnz == 0 && a.memowned && empty.m == 3 && empty.n == 4 && !empty.entries))
       << "shaped empty allocation and clone";
   spcraft::CooMatrix<std::int32_t, bool> boolean;
   boolean.Allocate(1, 1, 1);
@@ -115,8 +109,7 @@ TEST(CooMatrix, Correctness)
   }
   EXPECT_TRUE((threw)) << "negative count";
   const auto default_clone = Matrix{}.Clone();
-  EXPECT_TRUE((!default_clone.entries && default_clone.m == 0 && default_clone.n == 0))
-      << "default clone";
+  EXPECT_TRUE((!default_clone.entries && default_clone.m == 0 && default_clone.n == 0)) << "default clone";
   {
     // COO now stores only trivial entries; deterministic sizing failure tests cleanup.
     Matrix owned = Sample();
@@ -133,8 +126,7 @@ TEST(CooMatrix, Correctness)
   {
     const Matrix coo = Sample();
     const spcraft::CsrMatrix<std::int32_t, double, std::int64_t> csr = coo.ToCsr();
-    EXPECT_TRUE((csr.m == 3 && csr.n == 3 && csr.nnz == 4))
-        << "ToCsr should preserve the shape and nnz";
+    EXPECT_TRUE((csr.m == 3 && csr.n == 3 && csr.nnz == 4)) << "ToCsr should preserve the shape and nnz";
 
     const std::int64_t expected_row_ptr[4] = {0, 2, 3, 4};
     EXPECT_TRUE((std::equal(expected_row_ptr, expected_row_ptr + 4, csr.row_ptr)))
@@ -153,8 +145,7 @@ TEST(CooMatrix, Correctness)
     bool threw = false;
     try {
       const auto csr = coo.ToCsr();
-      EXPECT_TRUE((csr.m == 4 && csr.nnz == 0))
-          << "converting an empty matrix should give an empty CSR";
+      EXPECT_TRUE((csr.m == 4 && csr.nnz == 0)) << "converting an empty matrix should give an empty CSR";
     } catch (const std::exception&) {
       threw = true;
     }
@@ -191,8 +182,7 @@ TEST(CooMatrix, Correctness)
         "2 3 20.0\n"
         "3 2 30.0\n");
     const Matrix coo = Matrix(path);
-    EXPECT_TRUE((coo.m == 3 && coo.n == 3 && coo.nnz == 3))
-        << "Matrix Market input should read the header";
+    EXPECT_TRUE((coo.m == 3 && coo.n == 3 && coo.nnz == 3)) << "Matrix Market input should read the header";
     EXPECT_TRUE((coo.entries[0].row == 0 && coo.entries[0].col == 0 && coo.entries[0].val == 10.0))
         << "Matrix Market input should convert to zero-based indices";
     std::remove(path.c_str());
@@ -237,14 +227,13 @@ TEST(CooMatrix, Correctness)
     EXPECT_TRUE((csr.nnz == 4 && csr.col_id[0] == 2 && csr.col_id[1] == 2 && csr.val[0] == 4.0 &&
                  csr.val[1] == -4.0 && csr.val[2] == 0.0 && csr.val[3] == 7.0))
         << "ToCsr preserves duplicates, zeros and within-row order";
-    EXPECT_TRUE((EntriesEqual(entries[0], Matrix::Entry{2, 1, 0.0})))
-        << "ToCsr leaves borrowed input intact";
+    EXPECT_TRUE((EntriesEqual(entries[0], Matrix::Entry{2, 1, 0.0}))) << "ToCsr leaves borrowed input intact";
     const auto copy = view.Clone();
     EXPECT_TRUE((std::equal(entries, entries + 4, copy.entries, EntriesEqual<Matrix::Entry>)))
         << "Clone copies every component";
     view.Allocate(1, 1, 1);
-    EXPECT_TRUE((view.memowned && view.entries != entries &&
-                 EntriesEqual(entries[3], Matrix::Entry{2, 0, 7.0})))
+    EXPECT_TRUE(
+        (view.memowned && view.entries != entries && EntriesEqual(entries[3], Matrix::Entry{2, 0, 7.0})))
         << "Allocate replaces a view without freeing borrowed entries";
   }
   {
@@ -284,8 +273,8 @@ TEST(CooMatrix, Correctness)
     }
   }
   {
-    const auto path = WriteTemporaryMatrixMarket(
-        "%%MatrixMarket matrix coordinate real general\n2147483648 1 0\n");
+    const auto path =
+        WriteTemporaryMatrixMarket("%%MatrixMarket matrix coordinate real general\n2147483648 1 0\n");
     bool overflow = false;
     try {
       const auto coo = Matrix(path);
@@ -296,8 +285,8 @@ TEST(CooMatrix, Correctness)
     std::remove(path.c_str());
   }
   {
-    const auto path = WriteTemporaryMatrixMarket(
-        "%%MatrixMarket matrix coordinate pattern symmetric\n3 3 2\n1 1\n3 1\n");
+    const auto path =
+        WriteTemporaryMatrixMarket("%%MatrixMarket matrix coordinate pattern symmetric\n3 3 2\n1 1\n3 1\n");
     const auto coo = Matrix(path);
     const auto csr = coo.ToCsr();
     EXPECT_TRUE((coo.nnz == 3 && csr.row_ptr[1] == 2 && csr.row_ptr[2] == 2 && csr.row_ptr[3] == 3))
@@ -384,8 +373,8 @@ TYPED_TEST(CooMatrixTypeTest, CompiledMatrixMarketConstructor)
   using NT = std::tuple_element_t<1, TypeParam>;
   using OT = std::tuple_element_t<2, TypeParam>;
   using TypedMatrix = spcraft::CooMatrix<IT, NT, OT>;
-  const auto path = WriteTemporaryMatrixMarket(
-      "%%MatrixMarket matrix coordinate pattern symmetric\n3 3 2\n1 1\n3 1\n");
+  const auto path =
+      WriteTemporaryMatrixMarket("%%MatrixMarket matrix coordinate pattern symmetric\n3 3 2\n1 1\n3 1\n");
   const TypedMatrix matrix(path);
   std::remove(path.c_str());
   EXPECT_EQ(matrix.m, IT{3});

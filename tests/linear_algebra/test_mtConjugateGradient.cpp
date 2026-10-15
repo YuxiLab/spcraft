@@ -101,8 +101,7 @@ TEST(Cg, KnownTwoByTwoSolution)
   }
   // CG terminates in at most n iterations in exact arithmetic.
   if (result.iterations > 2) {
-    ADD_FAILURE() << "CG on the 2x2 system took " << result.iterations
-                  << " iterations, expected at most 2\n";
+    ADD_FAILURE() << "CG on the 2x2 system took " << result.iterations << " iterations, expected at most 2\n";
   }
 }
 
@@ -121,8 +120,7 @@ TEST(Cg, ScaledIdentityConvergesInOneIteration)
 
   const auto result = spcraft::cg_openmp(A, b, x);
   if (!result.converged || result.iterations != 1) {
-    ADD_FAILURE() << "CG on a scaled identity took " << result.iterations
-                  << " iterations, expected 1\n";
+    ADD_FAILURE() << "CG on a scaled identity took " << result.iterations << " iterations, expected 1\n";
   }
   for (Index index = 0; index < 8; ++index) {
     if (std::abs(x.val[index] - b.val[index] / 3.0) > 1e-14) {
@@ -159,8 +157,7 @@ TEST(Cg, LaplacianEigenReferenceAndConvergenceRate)
   const auto result = spcraft::cg_openmp(A, b, x, options);
 
   if (!result.converged || result.breakdown) {
-    ADD_FAILURE() << "CG on the 2D Laplacian did not converge, residual " << result.residual
-                  << "\n";
+    ADD_FAILURE() << "CG on the 2D Laplacian did not converge, residual " << result.residual << "\n";
   }
   if (result.iterations > n) {
     ADD_FAILURE() << "CG on the 2D Laplacian took " << result.iterations
@@ -186,8 +183,8 @@ TEST(Cg, LaplacianEigenReferenceAndConvergenceRate)
   }
   const Value relative = std::sqrt(residual_norm) / std::sqrt(rhs_norm);
   if (std::abs(relative - result.residual) > 1e-8) {
-    ADD_FAILURE() << "CG reported residual " << result.residual << " but recomputation gives "
-                  << relative << "\n";
+    ADD_FAILURE() << "CG reported residual " << result.residual << " but recomputation gives " << relative
+                  << "\n";
   }
 }
 
@@ -209,8 +206,7 @@ TEST(Cg, ExactWarmStart)
 
   const auto result = spcraft::cg_openmp(A, b, x);
   if (!result.converged || result.iterations != 0) {
-    ADD_FAILURE() << "CG started at the solution took " << result.iterations
-                  << " iterations, expected 0\n";
+    ADD_FAILURE() << "CG started at the solution took " << result.iterations << " iterations, expected 0\n";
   }
 }
 

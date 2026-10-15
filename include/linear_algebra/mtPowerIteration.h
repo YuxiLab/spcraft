@@ -61,8 +61,7 @@ namespace spcraft
  */
 SP_MAT_TEMP
 PowerIterationResult<NT> power_iteration_openmp(
-    const SPCSR& A, SPDVEC& x,
-    const PowerIterationOptions<NT>& options = PowerIterationOptions<NT>{})
+    const SPCSR& A, SPDVEC& x, const PowerIterationOptions<NT>& options = PowerIterationOptions<NT>{})
 {
   static_assert(std::is_floating_point_v<NT>, "Power iteration requires a floating-point type");
 

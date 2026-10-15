@@ -100,9 +100,8 @@ HostSamples TimeHostBenchmark(const std::string& name, Body body, const Benchmar
 
   // Preserve the existing iteration cap and estimated wall-time budget per configuration.
   const double affordable = opts.max_time_seconds / per_call;
-  const int repetitions = affordable >= opts.max_iterations
-                              ? opts.max_iterations
-                              : std::max(1, static_cast<int>(affordable));
+  const int repetitions =
+      affordable >= opts.max_iterations ? opts.max_iterations : std::max(1, static_cast<int>(affordable));
   auto samples = CollectHostSamples(name, body, repetitions);
   return samples;
 }

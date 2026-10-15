@@ -42,10 +42,8 @@ void Run(const cxxopts::ParseResult& options)
   for (int threads : ParseThreadCounts(options["threads"].as<std::string>())) {
     OMP_SET_NUM_THREADS(threads);
     {
-      const std::unique_ptr<Tuples> t(
-          combblas::LocalSpGEMMHash<Ring, double>(a, a, false, false, true));
-      const Comb serial(*t, false),
-          parallel(csc.m, csc.n, static_cast<int>(t->getnnz()), t->tuples, false);
+      const std::unique_ptr<Tuples> t(combblas::LocalSpGEMMHash<Ring, double>(a, a, false, false, true));
+      const Comb serial(*t, false), parallel(csc.m, csc.n, static_cast<int>(t->getnnz()), t->tuples, false);
       if (serial.getnnz() != parallel.getnnz()) throw std::runtime_error("conversion nnz mismatch");
       if (serial.getnnz()) {
         const auto* s = serial.GetDCSC();
@@ -62,22 +60,19 @@ void Run(const cxxopts::ParseResult& options)
     }
     auto sample = [&](bool parallel, int iteration) {
       const auto start = std::chrono::steady_clock::now();
-      const std::unique_ptr<Tuples> t(
-          combblas::LocalSpGEMMHash<Ring, double>(a, a, false, false, true));
+      const std::unique_ptr<Tuples> t(combblas::LocalSpGEMMHash<Ring, double>(a, a, false, false, true));
       const auto multiplied = std::chrono::steady_clock::now();
       auto convert_end = multiplied;
       {
         const Comb result =
-            parallel ? Comb(csc.m, csc.n, static_cast<int>(t->getnnz()), t->tuples, false)
-                     : Comb(*t, false);
+            parallel ? Comb(csc.m, csc.n, static_cast<int>(t->getnnz()), t->tuples, false) : Comb(*t, false);
         convert_end = std::chrono::steady_clock::now();
         if (result.getnnz() != t->getnnz()) std::abort();
       }
       const auto freed = std::chrono::steady_clock::now();
       if (iteration >= 0) {
-        out << input.name << ',' << threads << ',' << iteration << ','
-            << (parallel ? "parallel" : "serial") << ','
-            << std::chrono::duration<double>(multiplied - start).count() << ','
+        out << input.name << ',' << threads << ',' << iteration << ',' << (parallel ? "parallel" : "serial")
+            << ',' << std::chrono::duration<double>(multiplied - start).count() << ','
             << std::chrono::duration<double>(convert_end - multiplied).count() << ','
             << std::chrono::duration<double>(freed - convert_end).count() << ','
             << std::chrono::duration<double>(freed - start).count() << '\n';
@@ -93,8 +88,7 @@ void Run(const cxxopts::ParseResult& options)
       sample(i % 2 == 0, i);
     }
     out.flush();
-    fmt::print("{} {} threads: serial/parallel conversion matched every entry\n", input.name,
-               threads);
+    fmt::print("{} {} threads: serial/parallel conversion matched every entry\n", input.name, threads);
     std::fflush(stdout);
   }
 }

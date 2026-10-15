@@ -55,14 +55,12 @@ TEST(DcscMatrix, Correctness)
     std::int32_t col[] = {4}, row[] = {1};
     double val[] = {7};
     Matrix view(ptr, col, row, val, 1, 2, 10, 1);
-    EXPECT_TRUE((!view.memowned && view.col_id == col && view.val == val))
-        << "borrowed view aliases";
+    EXPECT_TRUE((!view.memowned && view.col_id == col && view.val == val)) << "borrowed view aliases";
     Matrix moved(std::move(view));
     EXPECT_TRUE((!moved.memowned && moved.val == val && !view.val && !view.memowned))
         << "moving a view preserves borrowing";
     moved.Allocate(0, 2, 10, 0);
-    EXPECT_TRUE((val[0] == 7 && col[0] == 4 && moved.memowned))
-        << "Allocate on view leaves buffers alone";
+    EXPECT_TRUE((val[0] == 7 && col[0] == 4 && moved.memowned)) << "Allocate on view leaves buffers alone";
   }
   {
     Matrix x = Sample();
@@ -72,8 +70,7 @@ TEST(DcscMatrix, Correctness)
         << "move construction transfers all buffers";
     Matrix target = Sample();
     target = std::move(moved);
-    EXPECT_TRUE((target.val == values && !moved.val && moved.nzc == 0))
-        << "move assignment transfers";
+    EXPECT_TRUE((target.val == values && !moved.val && moved.nzc == 0)) << "move assignment transfers";
     Matrix& alias = target;
     target = std::move(alias);
     EXPECT_TRUE((target.val == values && target.nnz == 3)) << "self-move retains data";
@@ -91,9 +88,8 @@ TEST(DcscMatrix, Correctness)
     auto* r = clone.row_id;
     auto* v = clone.val;
     clone.Reset();
-    EXPECT_TRUE((!clone.col_ptr && !clone.col_id && !clone.row_id && !clone.val &&
-                 !clone.memowned && clone.m == 0 && clone.n == 0 && clone.nzc == 0 &&
-                 clone.nnz == 0))
+    EXPECT_TRUE((!clone.col_ptr && !clone.col_id && !clone.row_id && !clone.val && !clone.memowned &&
+                 clone.m == 0 && clone.n == 0 && clone.nzc == 0 && clone.nnz == 0))
         << "Reset releases all members";
     std::free(p);
     std::free(c);

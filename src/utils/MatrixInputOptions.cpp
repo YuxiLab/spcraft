@@ -12,10 +12,8 @@ namespace spcraft
 
 void AddMatrixInputOptions(cxxopts::Options& parser)
 {
-  const std::shared_ptr<cxxopts::Value> index =
-      cxxopts::value<std::string>()->default_value("int64");
-  const std::shared_ptr<cxxopts::Value> value =
-      cxxopts::value<std::string>()->default_value("double");
+  const std::shared_ptr<cxxopts::Value> index = cxxopts::value<std::string>()->default_value("int64");
+  const std::shared_ptr<cxxopts::Value> value = cxxopts::value<std::string>()->default_value("double");
   const std::shared_ptr<cxxopts::Value> offset = cxxopts::value<std::string>();
   cxxopts::OptionAdder options = parser.add_options("Matrix input");
   options("matrix", "Matrix Market input file", cxxopts::value<std::string>());
@@ -54,8 +52,7 @@ MatrixInputOptions ReadMatrixInputOptions(const cxxopts::ParseResult& result)
   else
     throw std::invalid_argument("--ot must be int32 or int64");
 
-  if (input.index_type == MatrixIntegerType::kInt64 &&
-      input.offset_type == MatrixIntegerType::kInt32) {
+  if (input.index_type == MatrixIntegerType::kInt64 && input.offset_type == MatrixIntegerType::kInt32) {
     throw std::invalid_argument("--it int64 requires --ot int64");
   }
   if (!std::filesystem::is_regular_file(input.matrix_path)) {

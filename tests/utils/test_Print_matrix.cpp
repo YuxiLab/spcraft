@@ -34,8 +34,7 @@ void CheckSparse(const Matrix& matrix, std::string_view format)
 {
   std::ostringstream out;
   spcraft::PrintMatrix(matrix, 1, 1, 2, 3, "A", out);
-  EXPECT_EQ((out.str()), ("A (4 x 5), rows [1, 3), cols [1, 4):\n  1 2 3\n1 0 5 .\n2 . . 8\n"))
-      << format;
+  EXPECT_EQ((out.str()), ("A (4 x 5), rows [1, 3), cols [1, 4):\n  1 2 3\n1 0 5 .\n2 . . 8\n")) << format;
 
   out.str("");
   spcraft::PrintMatrix(matrix, 2, 3, std::numeric_limits<std::int64_t>::max(), 10, "edge", out);

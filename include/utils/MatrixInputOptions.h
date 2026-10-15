@@ -58,8 +58,7 @@ decltype(auto) DispatchMatrixInputTypes(const MatrixInputOptions& input, Functio
       return dispatch_values.template operator()<std::int32_t, std::int64_t>();
     }
   }
-  if (input.index_type == MatrixIntegerType::kInt64 &&
-      input.offset_type == MatrixIntegerType::kInt64) {
+  if (input.index_type == MatrixIntegerType::kInt64 && input.offset_type == MatrixIntegerType::kInt64) {
     return dispatch_values.template operator()<std::int64_t, std::int64_t>();
   }
   throw std::invalid_argument("Unsupported IT/OT combination: int64 indices require int64 offsets");

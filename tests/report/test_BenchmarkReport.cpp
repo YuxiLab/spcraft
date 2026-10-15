@@ -44,24 +44,22 @@ spcraft::BenchmarkRun SampleRun()
       {spcraft::CpuScope{0},
        {{"runtime", "oneMKL"}},
        {spcraft::SecondsSeries{"process_cpu_time", spcraft::MetricSummary::Median, {0.3, 0.4}},
-        spcraft::GaugeSeries{
-            "effective_cpu_cores", "cores", spcraft::MetricSummary::Median, {3.0, 4.0}}}},
+        spcraft::GaugeSeries{"effective_cpu_cores", "cores", spcraft::MetricSummary::Median, {3.0, 4.0}}}},
       {spcraft::GpuScope{0, 1},
        {{"name", "test GPU"}},
        {spcraft::BytesSeries{"device_memory", spcraft::MetricSummary::Maximum, {4096, 8192}}}},
       {spcraft::RankAggregateScope{spcraft::RankAggregation::MaxToMean},
        {},
        {spcraft::GaugeSeries{"rank_imbalance", "max/mean", spcraft::MetricSummary::Mean, {1.25}}}}};
-  run.stages = {{"thread_profile",
-                 {{"timing", "separate pass"}},
-                 {{spcraft::RunScope{},
-                   {},
-                   {spcraft::GaugeSeries{
-                       "wall_time_imbalance", "max/mean", spcraft::MetricSummary::Mean, {1.1}}}},
-                  {spcraft::ThreadScope{0, 3},
-                   {{"cpu_start", "2"}, {"cpu_end", "4"}},
-                   {spcraft::SecondsSeries{
-                       "thread_wall_time", spcraft::MetricSummary::Mean, {0.04, 0.05}}}}}}};
+  run.stages = {
+      {"thread_profile",
+       {{"timing", "separate pass"}},
+       {{spcraft::RunScope{},
+         {},
+         {spcraft::GaugeSeries{"wall_time_imbalance", "max/mean", spcraft::MetricSummary::Mean, {1.1}}}},
+        {spcraft::ThreadScope{0, 3},
+         {{"cpu_start", "2"}, {"cpu_end", "4"}},
+         {spcraft::SecondsSeries{"thread_wall_time", spcraft::MetricSummary::Mean, {0.04, 0.05}}}}}}};
   return run;
 }
 
@@ -82,25 +80,21 @@ TEST(BenchmarkReport, Correctness)
 {
   {
     const spcraft::TimingStats stats = spcraft::TimingStats::From({0.3, 0.1, 0.2});
-    EXPECT_TRUE((std::abs(stats.minimum - 0.1) < 1.0e-12))
-        << "statistics should record the minimum";
-    EXPECT_TRUE((std::abs(stats.maximum - 0.3) < 1.0e-12))
-        << "statistics should record the maximum";
+    EXPECT_TRUE((std::abs(stats.minimum - 0.1) < 1.0e-12)) << "statistics should record the minimum";
+    EXPECT_TRUE((std::abs(stats.maximum - 0.3) < 1.0e-12)) << "statistics should record the maximum";
     EXPECT_TRUE((std::abs(stats.median - 0.2) < 1.0e-12)) << "statistics should compute the median";
     EXPECT_TRUE((std::abs(stats.mean - 0.2) < 1.0e-12)) << "statistics should compute the mean";
     EXPECT_TRUE((std::abs(stats.stddev - 0.1) < 1.0e-12))
         << "statistics should use sample standard deviation";
   }
 
-  spcraft::BenchmarkReport report(
-      spcraft::ReportInfo{"Scoped benchmark report", {{"machine", "test-node"}}});
+  spcraft::BenchmarkReport report(spcraft::ReportInfo{"Scoped benchmark report", {{"machine", "test-node"}}});
   report.AddRun(SampleRun());
   EXPECT_TRUE((report.runs().size() == 1)) << "AddRun should retain a validated run";
 
   const std::string text = spcraft::TextReportRenderer{}.Render(report);
   EXPECT_TRUE((text.find("oneMKL") != std::string::npos)) << "text should identify the backend";
-  EXPECT_TRUE((text.find("rank:0/thread:3") != std::string::npos))
-      << "text should render a thread scope";
+  EXPECT_TRUE((text.find("rank:0/thread:3") != std::string::npos)) << "text should render a thread scope";
   EXPECT_TRUE((text.find("rank:0/cpu") != std::string::npos)) << "text should render a CPU scope";
   EXPECT_TRUE((text.find("rank:0/gpu:1") != std::string::npos)) << "text should render a GPU scope";
   EXPECT_TRUE((text.find("algorithm_storage") != std::string::npos))
@@ -116,8 +110,8 @@ TEST(BenchmarkReport, Correctness)
         spcraft::GaugeSeries{"temperature_delta", "K", spcraft::MetricSummary::Mean, {-2.0, 1.0}});
     spcraft::BenchmarkReport gauge_report(spcraft::ReportInfo{"signed gauge", {}});
     gauge_report.AddRun(std::move(signed_gauge));
-    EXPECT_TRUE((spcraft::TextReportRenderer{}.Render(gauge_report).find("temperature_delta") !=
-                 std::string::npos))
+    EXPECT_TRUE(
+        (spcraft::TextReportRenderer{}.Render(gauge_report).find("temperature_delta") != std::string::npos))
         << "unconstrained gauges should render finite negative values";
   }
 
@@ -139,8 +133,7 @@ TEST(BenchmarkReport, Correctness)
     const std::string path = "benchmark_report_test.txt";
     spcraft::WriteReportFile(path, text);
     std::ifstream input(path);
-    const std::string saved{std::istreambuf_iterator<char>(input),
-                            std::istreambuf_iterator<char>()};
+    const std::string saved{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
     EXPECT_TRUE((saved == text)) << "the text file should exactly match the rendered report";
     std::remove(path.c_str());
   }
@@ -179,16 +172,13 @@ TEST(BenchmarkReport, Correctness)
   {
     int calls = 0;
     const spcraft::HostTimingSamples samples = spcraft::TimeHostIterations([&] { ++calls; }, 3);
-    EXPECT_TRUE(
-        (calls == 3 && samples.wall_seconds.size() == 3 && samples.process_cpu_seconds.size() == 3))
+    EXPECT_TRUE((calls == 3 && samples.wall_seconds.size() == 3 && samples.process_cpu_seconds.size() == 3))
         << "host timing should return paired wall and process CPU samples";
-    const auto cores =
-        spcraft::metric::EffectiveCpuCores(samples.wall_seconds, samples.process_cpu_seconds);
+    const auto cores = spcraft::metric::EffectiveCpuCores(samples.wall_seconds, samples.process_cpu_seconds);
     EXPECT_TRUE((cores.samples.size() == 1))
         << "effective CPU cores should aggregate paired samples without accounting spikes";
-    EXPECT_TRUE((ThrowsInvalidArgument([&] {
-      (void)spcraft::metric::EffectiveCpuCores({0.1}, {0.1, 0.2});
-    }))) << "derived paired metrics should reject mismatched sample counts";
+    EXPECT_TRUE((ThrowsInvalidArgument([&] { (void)spcraft::metric::EffectiveCpuCores({0.1}, {0.1, 0.2}); })))
+        << "derived paired metrics should reject mismatched sample counts";
   }
 }
 

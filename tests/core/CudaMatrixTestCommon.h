@@ -38,14 +38,12 @@ bool SameMatrix(const Matrix& actual, const Matrix& expected)
     }
   } else {
     if constexpr (requires { actual.row_ptr; }) {
-      if (!std::equal(actual.row_ptr, actual.row_ptr + actual.m + 1, expected.row_ptr))
-        return false;
+      if (!std::equal(actual.row_ptr, actual.row_ptr + actual.m + 1, expected.row_ptr)) return false;
       if (actual.nnz && !std::equal(actual.col_id, actual.col_id + actual.nnz, expected.col_id)) {
         return false;
       }
     } else {
-      if (!std::equal(actual.col_ptr, actual.col_ptr + actual.n + 1, expected.col_ptr))
-        return false;
+      if (!std::equal(actual.col_ptr, actual.col_ptr + actual.n + 1, expected.col_ptr)) return false;
       if (actual.nnz && !std::equal(actual.row_id, actual.row_id + actual.nnz, expected.row_id)) {
         return false;
       }
@@ -176,8 +174,7 @@ int CheckCudaContainer(const char* name)
   const auto zeroed = device.ToHost();
   if constexpr (requires { zeroed.entries; }) {
     for (OT p = 0; p < count; ++p) {
-      check(zeroed.entries[p].row == 0 && zeroed.entries[p].col == 0 &&
-                zeroed.entries[p].val == NT{0},
+      check(zeroed.entries[p].row == 0 && zeroed.entries[p].col == 0 && zeroed.entries[p].val == NT{0},
             "Allocate must zero every entry");
     }
   } else {
@@ -232,8 +229,7 @@ int CheckCudaContainer(const char* name)
   // Reset deliberately releases storage without freeing it; the caller frees it.
   auto released = copied.View();
   copied.Reset();
-  check(!copied.memowned && copied.nnz == 0 && copied.m == 0 && copied.n == 0 &&
-            !CudaMatrixData(copied),
+  check(!copied.memowned && copied.nnz == 0 && copied.m == 0 && copied.n == 0 && !CudaMatrixData(copied),
         "Reset must empty the object and release ownership");
   cudaPointerAttributes released_attributes{};
   check(cudaPointerGetAttributes(&released_attributes, CudaMatrixData(released)) == cudaSuccess,
@@ -259,8 +255,7 @@ int CheckCudaContainerTypes(const char* name)
   int failures = 0;
   const auto check_values = [&]<class IT, class OT>() {
     failures += CheckCudaContainer<IT, float, OT, Host<IT, float, OT>, Device<IT, float, OT>>(name);
-    failures +=
-        CheckCudaContainer<IT, double, OT, Host<IT, double, OT>, Device<IT, double, OT>>(name);
+    failures += CheckCudaContainer<IT, double, OT, Host<IT, double, OT>, Device<IT, double, OT>>(name);
     failures += CheckCudaContainer<IT, bool, OT, Host<IT, bool, OT>, Device<IT, bool, OT>>(name);
   };
   check_values.template operator()<std::int32_t, std::int32_t>();

@@ -80,8 +80,7 @@ void LocalChecks()
   EXPECT_EQ((c.nnz), (3)) << "hand product nnz";
   const std::tuple<int, int, double> expected[] = {{0, 0, 16}, {0, 1, 14}, {1, 1, 15}};
   for (int i = 0; i < std::min(c.nnz, 3); ++i)
-    EXPECT_EQ((std::tie(c.entries[i].row, c.entries[i].col, c.entries[i].val) == expected[i]),
-              (true))
+    EXPECT_EQ((std::tie(c.entries[i].row, c.entries[i].col, c.entries[i].val) == expected[i]), (true))
         << "hand product tuple";
   static_assert(std::is_same_v<std::remove_cv_t<decltype(c)>, spcraft::CooMatrix<int, double>>);
   const auto csr = c.ToCsr();
@@ -156,8 +155,7 @@ void CompressedColumnChecks()
 
   std::vector<std::tuple<int, int, double>> entries;
   for (int i = 15; i >= 0; --i) entries.emplace_back(16 * i, 2, i + 1);
-  const auto collision =
-      spcraft::OmpHashSpGEMM<Ring>(Make(256, 20, entries), Make(20, 100, {{2, 91, 5}}));
+  const auto collision = spcraft::OmpHashSpGEMM<Ring>(Make(256, 20, entries), Make(20, 100, {{2, 91, 5}}));
   EXPECT_EQ((collision.nnz), (16)) << "DCSC collision count";
   for (int i = 0; i < std::min(collision.nnz, 16); ++i) {
     EXPECT_EQ((collision.entries[i].row), (16 * i)) << "DCSC collision sorted row";
@@ -182,13 +180,12 @@ void SparseLookupChecks()
     a.row_id[col] = col % 3;
     a.val[col] = col + 1;
   }
-  const std::vector<std::vector<IT>> requests = {
-      {0},
-      {width - 1},
-      {width / 3},
-      {width / 2 - 1},
-      {0, 0, 1, 2, width / 3, width / 2, width - 2, width - 1},
-      {width - 1, 0, width / 3, width - 2, 0, width / 2, 1, 2}};
+  const std::vector<std::vector<IT>> requests = {{0},
+                                                 {width - 1},
+                                                 {width / 3},
+                                                 {width / 2 - 1},
+                                                 {0, 0, 1, 2, width / 3, width / 2, width - 2, width - 1},
+                                                 {width - 1, 0, width / 3, width - 2, 0, width / 2, 1, 2}};
   for (const auto& rows : requests) {
     WideMatrix b;
     b.Allocate(rows.size(), width, width, 1);
@@ -276,8 +273,7 @@ void IndependentChecks()
             bp[k][c] = true;
             be.emplace_back(k, c, b[k][c]);
           }
-      const auto result =
-          spcraft::OmpHashSpGEMM<Ring>(Make(rows, inner, ae), Make(inner, columns, be));
+      const auto result = spcraft::OmpHashSpGEMM<Ring>(Make(rows, inner, ae), Make(inner, columns, be));
       int p = 0;
       for (int c = 0; c < columns; ++c)
         for (int r = 0; r < rows; ++r) {
@@ -312,8 +308,7 @@ struct RelationRing {
     for (int r = 0; r < order; ++r)
       for (int c = 0; c < order; ++c)
         for (int k = 0; k < order; ++k)
-          if ((a & (1U << (r * order + k))) && (b & (1U << (k * order + c))))
-            result |= 1U << (r * order + c);
+          if ((a & (1U << (r * order + k))) && (b & (1U << (k * order + c)))) result |= 1U << (r * order + c);
     return result;
   }
 };
@@ -421,8 +416,7 @@ void ReferenceChecks()
       std::vector<std::tuple<int, int, double>> ae, be;
       for (int col = 0; col < 32; ++col)
         for (int row = 0; row < 9; ++row)
-          if ((row * 7 + col * 3 + seed) % 5 == 0)
-            ae.emplace_back(row, col, double((row + col) % 7 - 3));
+          if ((row * 7 + col * 3 + seed) % 5 == 0) ae.emplace_back(row, col, double((row + col) % 7 - 3));
       for (int col = 0; col < 19; ++col)
         for (int row = 0; row < 32; ++row)
           if ((row + seed) % ((col % 3 == 0) ? 2 : 17) == 0)
@@ -436,8 +430,7 @@ void ReferenceChecks()
       be.emplace_back(col, 0, 1);
     }
     Compare(Make(2, 32, ae), Make(32, 1, be));
-    Compare(Make(2, 100, {{0, 1, 2}, {1, 99, 3}}),
-            Make(100, 3, {{50, 0, 4}, {1, 2, 5}, {99, 2, 6}}));
+    Compare(Make(2, 100, {{0, 1, 2}, {1, 99, 3}}), Make(100, 3, {{50, 0, 4}, {1, 2, 5}, {99, 2, 6}}));
     ae.clear();
     for (int i = 1; i < 10; ++i) ae.emplace_back(i % 2, i, i);
     ae.emplace_back(1, 99, 3);

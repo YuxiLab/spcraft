@@ -134,8 +134,8 @@ TEST(PowerIteration, NegativeDominantEigenvalue)
   const auto result = spcraft::power_iteration_openmp(A, x);
 
   if (!result.converged || std::abs(result.eigenvalue + 5.0) > 1e-9) {
-    ADD_FAILURE() << "Power iteration with a negative dominant eigenvalue gave "
-                  << result.eigenvalue << ", expected -5\n";
+    ADD_FAILURE() << "Power iteration with a negative dominant eigenvalue gave " << result.eigenvalue
+                  << ", expected -5\n";
   }
 }
 
@@ -183,12 +183,12 @@ TEST(PowerIteration, SymmetricEigenReference)
   const auto result = spcraft::power_iteration_openmp(A, x, options);
 
   if (!result.converged) {
-    ADD_FAILURE() << "Power iteration did not converge on the reference matrix, residual "
-                  << result.residual << "\n";
+    ADD_FAILURE() << "Power iteration did not converge on the reference matrix, residual " << result.residual
+                  << "\n";
   }
   if (std::abs(result.eigenvalue - expected_value) > 1e-8) {
-    ADD_FAILURE() << "Power iteration gave " << result.eigenvalue << ", Eigen gives "
-                  << expected_value << "\n";
+    ADD_FAILURE() << "Power iteration gave " << result.eigenvalue << ", Eigen gives " << expected_value
+                  << "\n";
   }
   if (!SameDirection(x, expected_vector, 1e-6)) {
     ADD_FAILURE() << "Power iteration eigenvector disagrees with Eigen\n";
@@ -216,8 +216,7 @@ TEST(PowerIteration, ZeroStartingVector)
   Fill(x, 0.0);
   const auto result = spcraft::power_iteration_openmp(A, x);
   if (!result.converged || std::abs(result.eigenvalue - 4.0) > 1e-9) {
-    ADD_FAILURE() << "Power iteration from a zero vector gave " << result.eigenvalue
-                  << ", expected 4\n";
+    ADD_FAILURE() << "Power iteration from a zero vector gave " << result.eigenvalue << ", expected 4\n";
   }
 }
 

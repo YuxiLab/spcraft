@@ -44,18 +44,15 @@ TEST(MklOptions, Correctness)
   EXPECT_TRUE((defaults && defaults->input.types.index == defaults->input.types.offset &&
                !defaults->input.thread_counts.empty() && defaults->input.matrix.seed == 42))
       << "MKL defaults select its interface width and initialize the thread sweep";
-  const auto file =
-      Parse({"--matrix",   "A.mtx",    "--generator",   "unused",     "--iterations", "12",
-             "--max-time", "0.5",      "--threads",     "1,3",        "--precision",  "both",
-             "--index",    "both",     "--offset",      "both",       "--seed",       "9",
-             "--output",   "raw.json", "--text-report", "summary.txt"});
-  EXPECT_TRUE((file && file->benchmark.max_iterations == 12 &&
-               file->benchmark.max_time_seconds == 0.5 &&
-               file->benchmark.output_path == "raw.json" &&
-               file->benchmark.text_report_path == "summary.txt" &&
-               file->input.matrix.matrix_path == "A.mtx" && file->input.matrix.seed == 9 &&
-               file->input.types.precision == "both" &&
-               file->input.thread_counts == std::vector<int>({1, 3})))
+  const auto file = Parse({"--matrix",   "A.mtx",    "--generator",   "unused",     "--iterations", "12",
+                           "--max-time", "0.5",      "--threads",     "1,3",        "--precision",  "both",
+                           "--index",    "both",     "--offset",      "both",       "--seed",       "9",
+                           "--output",   "raw.json", "--text-report", "summary.txt"});
+  EXPECT_TRUE(
+      (file && file->benchmark.max_iterations == 12 && file->benchmark.max_time_seconds == 0.5 &&
+       file->benchmark.output_path == "raw.json" && file->benchmark.text_report_path == "summary.txt" &&
+       file->input.matrix.matrix_path == "A.mtx" && file->input.matrix.seed == 9 &&
+       file->input.types.precision == "both" && file->input.thread_counts == std::vector<int>({1, 3})))
       << "one parse composes both groups and file input overrides generator selection";
   const auto graph = Parse({"--generator", "rmat", "--scale", "8", "--edge-factor", "4"});
   EXPECT_TRUE((graph && !graph->input.matrix.matrix_path && graph->input.matrix.scale == 8 &&

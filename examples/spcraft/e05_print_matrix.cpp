@@ -16,8 +16,8 @@ int main(int argc, char** argv)
                           cxxopts::value<std::int64_t>()->default_value("1"))(
         "col", "First column (zero-based)", cxxopts::value<std::int64_t>()->default_value("1"))(
         "rows", "Number of rows", cxxopts::value<std::int64_t>()->default_value("2"))(
-        "cols", "Number of columns", cxxopts::value<std::int64_t>()->default_value("3"))(
-        "h,help", "Show usage");
+        "cols", "Number of columns", cxxopts::value<std::int64_t>()->default_value("3"))("h,help",
+                                                                                         "Show usage");
     const auto args = options.parse(argc, argv);
     if (args.count("help")) {
       std::cout << options.help() << '\n';

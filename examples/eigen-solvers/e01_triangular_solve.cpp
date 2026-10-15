@@ -31,6 +31,5 @@ int main(int argc, char** argv)
   std::cout << "L =\n" << lower << "\n\nU =\n" << upper << "\n\n";
   std::cout << "b = " << rhs.transpose() << '\n';
   std::cout << "x = " << solution.transpose() << '\n';
-  std::cout << "relative residual = " << (lower * upper * solution - rhs).norm() / rhs.norm()
-            << '\n';
+  std::cout << "relative residual = " << (lower * upper * solution - rhs).norm() / rhs.norm() << '\n';
 }

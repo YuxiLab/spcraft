@@ -64,8 +64,7 @@ TEST_F(MatrixInputOptionsTest, DefaultsUseInt64DoubleAndMatchingOffsets)
 
 TEST_F(MatrixInputOptionsTest, IndexSelectionChangesDefaultOffsetType)
 {
-  const auto input =
-      ReadMatrixInputOptions(Parse({"--matrix", matrix_path.string(), "--it", "int32"}));
+  const auto input = ReadMatrixInputOptions(Parse({"--matrix", matrix_path.string(), "--it", "int32"}));
   EXPECT_EQ(input.index_type, MatrixIntegerType::kInt32);
   EXPECT_EQ(input.offset_type, MatrixIntegerType::kInt32);
 }
@@ -91,8 +90,7 @@ TEST_F(MatrixInputOptionsTest, EverySupportedCombinationDispatchesOnceAndLoadsTy
   for (const auto& [index, offset] : storage_pairs) {
     for (const std::string value : {"float", "double"}) {
       SCOPED_TRACE(index + "/" + value + "/" + offset);
-      const auto arguments =
-          Parse({matrix_path.string(), "--it", index, "--nt", value, "--ot", offset});
+      const auto arguments = Parse({matrix_path.string(), "--it", index, "--nt", value, "--ot", offset});
       const auto input = ReadMatrixInputOptions(arguments);
       int calls = 0;
       const auto read = [&]<class IT, class NT, class OT>() {
@@ -122,9 +120,9 @@ TEST_F(MatrixInputOptionsTest, EverySupportedCombinationDispatchesOnceAndLoadsTy
 
 TEST_F(MatrixInputOptionsTest, RejectsUnknownIntegerAndValueTypes)
 {
-  const std::pair<std::string, std::string> invalid_types[] = {
-      {"--it", "uint32"}, {"--it", "int16"},  {"--nt", "bool"},
-      {"--nt", "int32"},  {"--ot", "uint64"}, {"--ot", "int16"}};
+  const std::pair<std::string, std::string> invalid_types[] = {{"--it", "uint32"}, {"--it", "int16"},
+                                                               {"--nt", "bool"},   {"--nt", "int32"},
+                                                               {"--ot", "uint64"}, {"--ot", "int16"}};
   for (const auto& [flag, value] : invalid_types) {
     SCOPED_TRACE(flag + " " + value);
     const auto arguments = Parse({matrix_path.string(), flag, value});

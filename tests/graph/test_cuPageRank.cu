@@ -49,8 +49,7 @@ Matrix FromEdges(Index vertices, const std::vector<std::pair<Index, Index>>& edg
 }
 
 //! Run both backends on the same operator and compare vertex by vertex.
-int CompareBackends(const char* label, Index vertices,
-                    const std::vector<std::pair<Index, Index>>& edges,
+int CompareBackends(const char* label, Index vertices, const std::vector<std::pair<Index, Index>>& edges,
                     const spcraft::PageRankOptions<Value>& options)
 {
   int failures = 0;
@@ -68,15 +67,14 @@ int CompareBackends(const char* label, Index vertices,
   Vector device_rank(device_values, vertices);
 
   spcraft::PageRankResult<Value> device_result;
-  const cudaError_t status = spcraft::PageRankCuda<Index, Value, Offset, 128>(
-      device_op.View(), device_rank, options, &device_result);
+  const cudaError_t status = spcraft::PageRankCuda<Index, Value, Offset, 128>(device_op.View(), device_rank,
+                                                                              options, &device_result);
   if (!CheckCuda(status, "PageRankCuda")) ++failures;
 
   std::vector<Value> downloaded(static_cast<std::size_t>(vertices), 0.0);
-  if (!CheckCuda(
-          cudaMemcpy(downloaded.data(), device_values,
-                     static_cast<std::size_t>(vertices) * sizeof(Value), cudaMemcpyDeviceToHost),
-          "cudaMemcpy(rank)")) {
+  if (!CheckCuda(cudaMemcpy(downloaded.data(), device_values,
+                            static_cast<std::size_t>(vertices) * sizeof(Value), cudaMemcpyDeviceToHost),
+                 "cudaMemcpy(rank)")) {
     ++failures;
   }
   cudaFree(device_values);
@@ -86,12 +84,10 @@ int CompareBackends(const char* label, Index vertices,
     ++failures;
   }
   for (Index vertex = 0; vertex < vertices; ++vertex) {
-    const Value difference =
-        std::abs(downloaded[static_cast<std::size_t>(vertex)] - host_rank.val[vertex]);
+    const Value difference = std::abs(downloaded[static_cast<std::size_t>(vertex)] - host_rank.val[vertex]);
     if (difference > 1e-9) {
-      std::cerr << label << ": rank[" << vertex << "] CUDA "
-                << downloaded[static_cast<std::size_t>(vertex)] << " vs OpenMP "
-                << host_rank.val[vertex] << "\n";
+      std::cerr << label << ": rank[" << vertex << "] CUDA " << downloaded[static_cast<std::size_t>(vertex)]
+                << " vs OpenMP " << host_rank.val[vertex] << "\n";
       ++failures;
     }
   }
@@ -124,8 +120,8 @@ int main()
   // A symmetric cycle, an asymmetric graph, and a graph with a dangling sink.
   failures += CompareBackends("3-cycle", 3, {{0, 1}, {1, 2}, {2, 0}}, options);
   failures += CompareBackends(
-      "asymmetric", 6,
-      {{0, 1}, {0, 2}, {1, 2}, {2, 0}, {3, 0}, {3, 1}, {3, 4}, {4, 5}, {5, 4}, {5, 0}}, options);
+      "asymmetric", 6, {{0, 1}, {0, 2}, {1, 2}, {2, 0}, {3, 0}, {3, 1}, {3, 4}, {4, 5}, {5, 4}, {5, 0}},
+      options);
   failures += CompareBackends("dangling sink", 3, {{0, 2}, {1, 2}}, options);
 
   // More vertices than one grid of blocks covers, so the grid-stride loops and

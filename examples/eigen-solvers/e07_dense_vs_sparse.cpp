@@ -37,8 +37,8 @@ Eigen::SparseMatrix<double> Laplacian2D(int grid)
 int main(int argc, char** argv)
 {
   cxxopts::Options options(argv[0], "Compare dense and sparse direct solution of a grid problem");
-  options.add_options()("g,grid", "Grid points per dimension",
-                        cxxopts::value<int>()->default_value("35"))("h,help", "Show usage");
+  options.add_options()("g,grid", "Grid points per dimension", cxxopts::value<int>()->default_value("35"))(
+      "h,help", "Show usage");
   const auto arguments = options.parse(argc, argv);
   if (arguments.count("help") != 0) {
     std::cout << options.help();
@@ -66,14 +66,13 @@ int main(int argc, char** argv)
     return std::chrono::duration<double, std::milli>(end - begin).count();
   };
   const auto dense_bytes = static_cast<double>(dense.size() * sizeof(double));
-  const auto sparse_bytes =
-      static_cast<double>(sparse.nonZeros() * (sizeof(double) + sizeof(Eigen::Index)) +
-                          (sparse.outerSize() + 1) * sizeof(Eigen::Index));
+  const auto sparse_bytes = static_cast<double>(sparse.nonZeros() * (sizeof(double) + sizeof(Eigen::Index)) +
+                                                (sparse.outerSize() + 1) * sizeof(Eigen::Index));
   std::cout << "unknowns: " << sparse.rows() << ", nonzeros: " << sparse.nonZeros() << '\n';
   std::cout << "estimated input storage: dense " << dense_bytes / 1.0e6 << " MB, sparse "
             << sparse_bytes / 1.0e6 << " MB\n";
   std::cout << "dense LDLT: " << milliseconds(dense_start, dense_stop) << " ms\n";
   std::cout << "sparse LDLT: " << milliseconds(sparse_start, sparse_stop) << " ms\n";
-  std::cout << "relative disagreement: "
-            << (dense_solution - sparse_solution).norm() / dense_solution.norm() << '\n';
+  std::cout << "relative disagreement: " << (dense_solution - sparse_solution).norm() / dense_solution.norm()
+            << '\n';
 }

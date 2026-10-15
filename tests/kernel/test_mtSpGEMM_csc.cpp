@@ -50,8 +50,8 @@ void SmallChecks()
   EXPECT_EQ((empty.m), (2)) << "empty product rows";
   EXPECT_EQ((empty.n), (4)) << "empty product columns";
   // Nonempty inputs can also have no structural paths through the inner dimension.
-  const auto disjoint = spcraft::OmpHashSpGEMM<Ring>(Make<double>(1, 2, {{0, 0, 2}}),
-                                                     Make<double>(2, 1, {{1, 0, 3}}));
+  const auto disjoint =
+      spcraft::OmpHashSpGEMM<Ring>(Make<double>(1, 2, {{0, 0, 2}}), Make<double>(2, 1, {{1, 0, 3}}));
   EXPECT_EQ((disjoint.nnz), (0)) << "disjoint product nnz";
   bool threw = false;
   try {
@@ -85,9 +85,8 @@ void CollisionChecks()
   // Sixteen keys with the same initial slot fill a sixteen-slot numeric table.
   std::vector<spcraft::TupleEntry<IT, double>> entries;
   for (IT i = 15; i >= 0; --i) entries.push_back({static_cast<IT>(i * 16), 0, double(i + 1)});
-  const auto c =
-      spcraft::OmpHashSpGEMM<Ring>(Make<double, int64_t, IT>(256, 1, entries),
-                                   Make<double, int64_t, IT>(1, 1, {{0, 0, 2}, {0, 0, 3}}));
+  const auto c = spcraft::OmpHashSpGEMM<Ring>(Make<double, int64_t, IT>(256, 1, entries),
+                                              Make<double, int64_t, IT>(1, 1, {{0, 0, 2}, {0, 0, 3}}));
   EXPECT_EQ((c.nnz), (16)) << "collision product nnz";
   for (IT i = 0; i < std::min<int64_t>(c.nnz, 16); ++i) {
     EXPECT_EQ((c.entries[i].row), (i * 16)) << "collision product sorted row";
@@ -117,8 +116,7 @@ void ReferenceChecks()
           bp[k][col] = true;
           be.push_back({k, col, b[k][col]});
         }
-    const auto c =
-        spcraft::OmpHashSpGEMM<Ring>(Make<double>(rows, inner, ae), Make<double>(inner, cols, be));
+    const auto c = spcraft::OmpHashSpGEMM<Ring>(Make<double>(rows, inner, ae), Make<double>(inner, cols, be));
     int pos = 0;
     for (int col = 0; col < cols; ++col)
       for (int row = 0; row < rows; ++row) {
@@ -149,8 +147,8 @@ void OverflowCheck()
   }
   bool threw = false;
   try {
-    const auto c = spcraft::OmpHashSpGEMM<Ring>(Make<double, uint8_t>(16, 1, ae),
-                                                Make<double, uint8_t>(1, 16, be));
+    const auto c =
+        spcraft::OmpHashSpGEMM<Ring>(Make<double, uint8_t>(16, 1, ae), Make<double, uint8_t>(1, 16, be));
   } catch (const std::overflow_error&) {
     threw = true;
   }

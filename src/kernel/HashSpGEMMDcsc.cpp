@@ -177,8 +177,7 @@ void AccumulateDcscEntries(const SPDCSC& A, const SPDCSC& B, const VL& offsets,
         std::size_t slot = (static_cast<std::size_t>(row) * kHashScale) & mask;
         while (table[slot].key != kEmpty && table[slot].key != row) slot = (slot + 1) & mask;
         table[slot].key = row;
-        table[slot].value =
-            SemiRing::Add(SemiRing::Multiply(A.val[q], B.val[p]), table[slot].value);
+        table[slot].value = SemiRing::Add(SemiRing::Multiply(A.val[q], B.val[p]), table[slot].value);
       }
     }
     std::size_t occupied = 0;

@@ -104,8 +104,7 @@ void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const VL& offsets
           slot = (slot + 1) % capacity;
         }
         table[slot].key = row;
-        table[slot].value =
-            SemiRing::Add(table[slot].value, SemiRing::Multiply(A.val[k], B.val[i]));
+        table[slot].value = SemiRing::Add(table[slot].value, SemiRing::Multiply(A.val[k], B.val[i]));
       }
     }
     std::size_t occupied = 0;
@@ -156,9 +155,9 @@ SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
   return result;
 }
 
-#define SPCRAFT_DEFINE_HASH_SPGEMM_CSC_TYPES(IT, NT, OT)                       \
-  template CooMatrix<IT, NT, OT> OmpHashSpGEMM<PlusTimesRing<NT>, IT, NT, OT>( \
-      const CscMatrix<IT, NT, OT>&, const CscMatrix<IT, NT, OT>&);
+#define SPCRAFT_DEFINE_HASH_SPGEMM_CSC_TYPES(IT, NT, OT)                                                    \
+  template CooMatrix<IT, NT, OT> OmpHashSpGEMM<PlusTimesRing<NT>, IT, NT, OT>(const CscMatrix<IT, NT, OT>&, \
+                                                                              const CscMatrix<IT, NT, OT>&);
 
 #define SPCRAFT_DEFINE_HASH_SPGEMM_CSC(r, product)                                          \
   SPCRAFT_DEFINE_HASH_SPGEMM_CSC_TYPES(BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), \

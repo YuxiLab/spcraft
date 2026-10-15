@@ -34,8 +34,7 @@ template <class Vector>
     { vec.size() } -> std::convertible_to<std::size_t>;
     out << vec[i];
   }
-void PrintVector(const Vector& vec, std::size_t count, std::string_view name,
-                 std::ostream& out = std::cout)
+void PrintVector(const Vector& vec, std::size_t count, std::string_view name, std::ostream& out = std::cout)
 {
   const std::size_t limit = std::min(count, static_cast<std::size_t>(vec.size()));
   out << name << ": [";
@@ -59,8 +58,8 @@ struct MatrixPrintBlock {
   std::int64_t cols = 0;
 };
 
-inline MatrixPrintBlock CheckedPrintBlock(std::int64_t m, std::int64_t n, std::int64_t row,
-                                          std::int64_t col, std::int64_t rows, std::int64_t cols)
+inline MatrixPrintBlock CheckedPrintBlock(std::int64_t m, std::int64_t n, std::int64_t row, std::int64_t col,
+                                          std::int64_t rows, std::int64_t cols)
 {
   if (m < 0 || n < 0 || row < 0 || col < 0 || rows < 0 || cols < 0)
     throw std::invalid_argument("PrintMatrix dimensions, starts, and counts must be nonnegative");
@@ -68,12 +67,11 @@ inline MatrixPrintBlock CheckedPrintBlock(std::int64_t m, std::int64_t n, std::i
   return {row, col, std::min(rows, m - row), std::min(cols, n - col)};
 }
 
-inline void PrintMatrixHeading(std::ostream& out, std::string_view name, std::int64_t m,
-                               std::int64_t n, const MatrixPrintBlock& block)
+inline void PrintMatrixHeading(std::ostream& out, std::string_view name, std::int64_t m, std::int64_t n,
+                               const MatrixPrintBlock& block)
 {
-  out << name << " (" << m << " x " << n << "), rows [" << block.row << ", "
-      << block.row + block.rows << "), cols [" << block.col << ", " << block.col + block.cols
-      << "):\n";
+  out << name << " (" << m << " x " << n << "), rows [" << block.row << ", " << block.row + block.rows
+      << "), cols [" << block.col << ", " << block.col + block.cols << "):\n";
 }
 
 // Store only entries in the requested block, without changing the source matrix.
@@ -107,14 +105,12 @@ class SparseMatrixPreview
   template <class NT>
   void Add(std::int64_t row, std::int64_t col, const NT& value)
   {
-    if (row < block.row || row >= block.row + block.rows || col < block.col ||
-        col >= block.col + block.cols)
+    if (row < block.row || row >= block.row + block.rows || col < block.col || col >= block.col + block.cols)
       return;
     std::ostringstream formatted;
     formatted.copyfmt(out);
     formatted << value;
-    const std::pair<CellMap::iterator, bool> insertion =
-        cells.try_emplace({row, col}, Cell{formatted.str()});
+    const std::pair<CellMap::iterator, bool> insertion = cells.try_emplace({row, col}, Cell{formatted.str()});
     if (!insertion.second) {
       Cell& cell = insertion.first->second;
       // Preserve duplicate entries: combining them would assume an addition rule.
@@ -136,14 +132,12 @@ class SparseMatrixPreview
     }
     const std::size_t row_width = std::to_string(block.row + block.rows - 1).size();
     std::size_t width = std::to_string(block.col + block.cols - 1).size();
-    for (const CellMap::value_type& entry : cells)
-      width = std::max(width, entry.second.text.size());
+    for (const CellMap::value_type& entry : cells) width = std::max(width, entry.second.text.size());
     const auto print_cell = [&](std::string_view text) {
       out << ' ' << std::string(width - text.size(), ' ') << text;
     };
     out << std::string(row_width, ' ');
-    for (std::int64_t col = block.col; col < block.col + block.cols; ++col)
-      print_cell(std::to_string(col));
+    for (std::int64_t col = block.col; col < block.col + block.cols; ++col) print_cell(std::to_string(col));
     out << '\n';
     for (std::int64_t row = block.row; row < block.row + block.rows; ++row) {
       const std::string label = std::to_string(row);
@@ -166,8 +160,7 @@ SP_MAT_TEMP
 void PrintMatrix(const SPCSR& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
                  std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
-  const detail::MatrixPrintBlock block =
-      detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
+  const detail::MatrixPrintBlock block = detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
   detail::SparseMatrixPreview preview(block, out);
   if (matrix.nnz != 0 && block.cols != 0) {
     for (std::int64_t r = block.row; r < block.row + block.rows; ++r)
@@ -182,8 +175,7 @@ SP_MAT_TEMP
 void PrintMatrix(const SPCSC& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
                  std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
-  const detail::MatrixPrintBlock block =
-      detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
+  const detail::MatrixPrintBlock block = detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
   detail::SparseMatrixPreview preview(block, out);
   if (matrix.nnz != 0 && block.rows != 0) {
     for (std::int64_t c = block.col; c < block.col + block.cols; ++c)
@@ -198,8 +190,7 @@ SP_MAT_TEMP
 void PrintMatrix(const SPCOO& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
                  std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
-  const detail::MatrixPrintBlock block =
-      detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
+  const detail::MatrixPrintBlock block = detail::CheckedPrintBlock(matrix.m, matrix.n, row, col, rows, cols);
   detail::SparseMatrixPreview preview(block, out);
   if (block.rows != 0 && block.cols != 0) {
     for (OT p = 0; p < matrix.nnz; ++p) {

@@ -72,14 +72,14 @@ void RunVariant(const cxxopts::ParseResult& result, Settings& settings, Report& 
         spcraft::metric::EffectiveCpuCores(timings.wall_seconds, timings.process_cpu_seconds);
     spcraft::GaugeSeries cpu_occupancy =
         spcraft::metric::CpuOccupancy(timings.wall_seconds, timings.process_cpu_seconds, threads);
-    run.profiles.push_back(spcraft::ResourceProfile{
-        spcraft::RunScope{}, {}, {spcraft::metric::WallTime(timings.wall_seconds)}});
+    run.profiles.push_back(
+        spcraft::ResourceProfile{spcraft::RunScope{}, {}, {spcraft::metric::WallTime(timings.wall_seconds)}});
     run.profiles.push_back(AlgorithmStorageProfile(A));
-    run.profiles.push_back(spcraft::ResourceProfile{
-        spcraft::CpuScope{0},
-        {{"runtime", "OpenMP"}, {"requested_threads", std::to_string(threads)}},
-        {spcraft::metric::ProcessCpuTime(std::move(timings.process_cpu_seconds)),
-         std::move(effective_cores), std::move(cpu_occupancy)}});
+    run.profiles.push_back(
+        spcraft::ResourceProfile{spcraft::CpuScope{0},
+                                 {{"runtime", "OpenMP"}, {"requested_threads", std::to_string(threads)}},
+                                 {spcraft::metric::ProcessCpuTime(std::move(timings.process_cpu_seconds)),
+                                  std::move(effective_cores), std::move(cpu_occupancy)}});
     report.AddRun(std::move(run));
   }
 }
@@ -127,8 +127,7 @@ int BenchmarkRun(const cxxopts::ParseResult& result)
   RunVariant<std::int64_t, double, std::int64_t>(result, settings, report);
 
   if (report.runs().empty()) {
-    throw std::runtime_error(
-        "no type combination selected; check --index, --precision and --offset");
+    throw std::runtime_error("no type combination selected; check --index, --precision and --offset");
   }
 
   // Render and write reports after every selected measurement has completed.

@@ -55,13 +55,12 @@ cudaError_t SpmvCudaBlockPerRow(const SPCSR& matrix, const SPDVEC& x, SPDVEC& y,
   }
   if (x.n != matrix.n || y.n != matrix.m) return cudaErrorInvalidValue;
   if (matrix.m == IT{0}) return cudaSuccess;
-  if (matrix.row_ptr == nullptr || matrix.col_id == nullptr || matrix.val == nullptr ||
-      x.val == nullptr || y.val == nullptr) {
+  if (matrix.row_ptr == nullptr || matrix.col_id == nullptr || matrix.val == nullptr || x.val == nullptr ||
+      y.val == nullptr) {
     return cudaErrorInvalidDevicePointer;
   }
 
-  return detail::SpmvCudaBlockPerRowImpl<SemiRing, IT, NT, OT, kBlockSize>::Run(matrix, x, y,
-                                                                                stream);
+  return detail::SpmvCudaBlockPerRowImpl<SemiRing, IT, NT, OT, kBlockSize>::Run(matrix, x, y, stream);
 }
 
 }  // namespace spcraft

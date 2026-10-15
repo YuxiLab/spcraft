@@ -11,9 +11,8 @@ namespace detail
 {
 template <class SemiRing, typename IT, typename NT, typename OT, int kBlockSize>
 __global__ __launch_bounds__(kBlockSize) void SpmvBlockPerRowKernel(IT num_rows, const OT* row_ptr,
-                                                                    const IT* col_id,
-                                                                    const NT* values, const NT* x,
-                                                                    NT* y)
+                                                                    const IT* col_id, const NT* values,
+                                                                    const NT* x, NT* y)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "SpMV semiring value type must match matrix value type");

@@ -21,14 +21,13 @@ static_assert(std::is_same_v<decltype(std::declval<Dense&>()[0]), double&>);
 static_assert(std::is_same_v<decltype(std::declval<const Dense&>()[0]), const double&>);
 
 template <class Vector>
-void CheckPrint(const Vector& vec, std::size_t count, std::string_view name,
-                std::string_view expected)
+void CheckPrint(const Vector& vec, std::size_t count, std::string_view name, std::string_view expected)
 {
   std::ostringstream out;
   spcraft::PrintVector(vec, count, name, out);
   if (out.str() != expected) {
-    ADD_FAILURE() << "PrintVector " << name << ": expected \"" << expected << "\", got \""
-                  << out.str() << "\"\n";
+    ADD_FAILURE() << "PrintVector " << name << ": expected \"" << expected << "\", got \"" << out.str()
+                  << "\"\n";
   }
 }
 

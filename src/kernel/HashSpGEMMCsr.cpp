@@ -23,9 +23,9 @@ SPND SPCOO OmpHashSpGEMM(const SPCSR& A, const SPCSR& B)
   return result;
 }
 
-#define SPCRAFT_DEFINE_HASH_SPGEMM_CSR_TYPES(IT, NT, OT)                       \
-  template CooMatrix<IT, NT, OT> OmpHashSpGEMM<PlusTimesRing<NT>, IT, NT, OT>( \
-      const CsrMatrix<IT, NT, OT>&, const CsrMatrix<IT, NT, OT>&);
+#define SPCRAFT_DEFINE_HASH_SPGEMM_CSR_TYPES(IT, NT, OT)                                                    \
+  template CooMatrix<IT, NT, OT> OmpHashSpGEMM<PlusTimesRing<NT>, IT, NT, OT>(const CsrMatrix<IT, NT, OT>&, \
+                                                                              const CsrMatrix<IT, NT, OT>&);
 
 #define SPCRAFT_DEFINE_HASH_SPGEMM_CSR(r, product)                                          \
   SPCRAFT_DEFINE_HASH_SPGEMM_CSR_TYPES(BOOST_PP_SEQ_ELEM(0, BOOST_PP_SEQ_ELEM(0, product)), \

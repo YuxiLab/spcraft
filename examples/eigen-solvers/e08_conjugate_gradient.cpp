@@ -37,11 +37,10 @@ Eigen::SparseMatrix<double> Laplacian2D(int grid)
 int main(int argc, char** argv)
 {
   cxxopts::Options options(argv[0], "Run CG and print a convergence history as CSV");
-  options.add_options()("g,grid", "Grid points per dimension",
-                        cxxopts::value<int>()->default_value("32"))(
+  options.add_options()("g,grid", "Grid points per dimension", cxxopts::value<int>()->default_value("32"))(
       "m,max-iterations", "Maximum iterations", cxxopts::value<int>()->default_value("500"))(
-      "t,tolerance", "Relative residual tolerance",
-      cxxopts::value<double>()->default_value("1e-10"))("h,help", "Show usage");
+      "t,tolerance", "Relative residual tolerance", cxxopts::value<double>()->default_value("1e-10"))(
+      "h,help", "Show usage");
   const auto arguments = options.parse(argc, argv);
   if (arguments.count("help") != 0) {
     std::cout << options.help();

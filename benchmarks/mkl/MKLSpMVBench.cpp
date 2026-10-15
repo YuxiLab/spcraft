@@ -28,8 +28,7 @@ namespace
  * width, while this check keeps the backend constraint next to the implementation.
  */
 template <class IT, class OT>
-inline constexpr bool kMklRepresentable =
-    std::is_same_v<IT, MKL_INT> && std::is_same_v<OT, MKL_INT>;
+inline constexpr bool kMklRepresentable = std::is_same_v<IT, MKL_INT> && std::is_same_v<OT, MKL_INT>;
 
 /**
  * @brief Load, verify and time one <IT, NT, OT> combination against oneMKL.
@@ -91,11 +90,11 @@ void RunVariant(const BenchmarkOptions& benchmark, const MKLOptions& options, Re
       run.profiles.push_back(spcraft::ResourceProfile{
           spcraft::RunScope{}, {}, {spcraft::metric::WallTime(timings.wall_seconds)}});
       run.profiles.push_back(AlgorithmStorageProfile(A));
-      run.profiles.push_back(spcraft::ResourceProfile{
-          spcraft::CpuScope{0},
-          {{"runtime", "oneMKL"}, {"requested_threads", std::to_string(threads)}},
-          {spcraft::metric::ProcessCpuTime(std::move(timings.process_cpu_seconds)),
-           std::move(effective_cores), std::move(cpu_occupancy)}});
+      run.profiles.push_back(
+          spcraft::ResourceProfile{spcraft::CpuScope{0},
+                                   {{"runtime", "oneMKL"}, {"requested_threads", std::to_string(threads)}},
+                                   {spcraft::metric::ProcessCpuTime(std::move(timings.process_cpu_seconds)),
+                                    std::move(effective_cores), std::move(cpu_occupancy)}});
       report.AddRun(std::move(run));
     }
   }

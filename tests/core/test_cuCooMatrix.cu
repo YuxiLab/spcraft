@@ -6,8 +6,7 @@ namespace
 
 int TestRun()
 {
-  return spcraft::tests::CheckCudaContainerTypes<spcraft::CooMatrix, spcraft::cuCooMatrix>(
-      "cuCooMatrix");
+  return spcraft::tests::CheckCudaContainerTypes<spcraft::CooMatrix, spcraft::cuCooMatrix>("cuCooMatrix");
 }
 
 }  // namespace

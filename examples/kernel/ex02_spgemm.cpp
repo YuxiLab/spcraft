@@ -51,9 +51,7 @@ int main(int argc, char** argv)
   const auto input = ParseMatrixInput(argc, argv, kDescription);
   if (!input.options) return input.exit_code;
   try {
-    const auto run = [&]<class IT, class NT, class OT>() {
-      return ExampleRun<IT, NT, OT>(*input.options);
-    };
+    const auto run = [&]<class IT, class NT, class OT>() { return ExampleRun<IT, NT, OT>(*input.options); };
     return DispatchMatrixInputTypes(*input.options, run);
   } catch (const std::exception& error) {
     fmt::print(stderr, "{}\n", error.what());

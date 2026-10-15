@@ -78,10 +78,9 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
   spcraft::spmv_openmp<spcraft::PlusTimesRing<NT>>(A, *x, *spcraft_y);
 
   const std::string type_name = std::is_same_v<NT, float> ? "FP32" : "FP64";
-  const std::uint64_t useful_bytes =
-      static_cast<std::uint64_t>(A.nnz) * (sizeof(NT) * 2 + sizeof(Index)) +
-      static_cast<std::uint64_t>(A.m + 1) * sizeof(Offset) +
-      static_cast<std::uint64_t>(A.m) * sizeof(NT);
+  const std::uint64_t useful_bytes = static_cast<std::uint64_t>(A.nnz) * (sizeof(NT) * 2 + sizeof(Index)) +
+                                     static_cast<std::uint64_t>(A.m + 1) * sizeof(Offset) +
+                                     static_cast<std::uint64_t>(A.m) * sizeof(NT);
 
 #ifdef SPCRAFT_USE_MKL
   auto mkl_y = std::make_shared<Vector<NT>>(A.m);
@@ -131,22 +130,18 @@ void run_spmv_benchmarks(const Matrix<NT>& A, const std::string& matrix_name,
     double max_error = 0.0;
     for (Index row = 0; row < A.m; ++row) {
       max_reference = std::max(max_reference, std::abs(static_cast<double>(spcraft_y->val[row])));
-      max_error =
-          std::max(max_error, std::abs(static_cast<double>(spcraft_y->val[row] - mkl_y->val[row])));
+      max_error = std::max(max_error, std::abs(static_cast<double>(spcraft_y->val[row] - mkl_y->val[row])));
     }
-    const double tolerance =
-        (std::is_same_v<NT, float> ? 1.0e-4 : 1.0e-11) * std::max(1.0, max_reference);
+    const double tolerance = (std::is_same_v<NT, float> ? 1.0e-4 : 1.0e-11) * std::max(1.0, max_reference);
     if (max_error > tolerance) {
-      throw std::runtime_error("oneMKL result differs from SPCraft for " + matrix_name +
-                               ": max error " + std::to_string(max_error) + ", tolerance " +
-                               std::to_string(tolerance));
+      throw std::runtime_error("oneMKL result differs from SPCraft for " + matrix_name + ": max error " +
+                               std::to_string(max_error) + ", tolerance " + std::to_string(tolerance));
     }
 
     const std::string mkl_name =
         "SpMV/MKL/" + matrix_name + "/" + type_name + "/threads:" + std::to_string(threads);
     auto* mkl_benchmark = benchmark::RegisterBenchmark(
-        mkl_name.c_str(),
-        [mkl_matrix, x, mkl_y, threads, useful_bytes, &A](benchmark::State& state) {
+        mkl_name.c_str(), [mkl_matrix, x, mkl_y, threads, useful_bytes, &A](benchmark::State& state) {
           omp_set_num_threads(threads);
           mkl_set_dynamic(0);
           mkl_set_num_threads(threads);
@@ -250,8 +245,8 @@ int main(int argc, char** argv)
 #ifdef SPCRAFT_USE_MKL
   MKLVersion mkl_version;
   mkl_get_version(&mkl_version);
-  std::cout << "oneMKL          : " << mkl_version.MajorVersion << '.' << mkl_version.MinorVersion
-            << '.' << mkl_version.UpdateVersion << " (GNU OpenMP, LP64)\n";
+  std::cout << "oneMKL          : " << mkl_version.MajorVersion << '.' << mkl_version.MinorVersion << '.'
+            << mkl_version.UpdateVersion << " (GNU OpenMP, LP64)\n";
 #else
   std::cout << "oneMKL          : disabled\n";
 #endif
@@ -285,14 +280,12 @@ int main(int argc, char** argv)
               << ", Seed=" << seed << ")\n";
 
     if (precision == "float" || precision == "both") {
-      f32_matrix =
-          std::make_unique<Matrix<float>>(spcraft::GenERGraph<float>(vertices, degree, seed));
+      f32_matrix = std::make_unique<Matrix<float>>(spcraft::GenERGraph<float>(vertices, degree, seed));
       std::cout << "  [FP32] Rows: " << f32_matrix->m << ", Cols: " << f32_matrix->n
                 << ", NNZ: " << f32_matrix->nnz << "\n";
     }
     if (precision == "double" || precision == "both") {
-      f64_matrix =
-          std::make_unique<Matrix<double>>(spcraft::GenERGraph<double>(vertices, degree, seed));
+      f64_matrix = std::make_unique<Matrix<double>>(spcraft::GenERGraph<double>(vertices, degree, seed));
       std::cout << "  [FP64] Rows: " << f64_matrix->m << ", Cols: " << f64_matrix->n
                 << ", NNZ: " << f64_matrix->nnz << "\n";
     }
@@ -301,12 +294,10 @@ int main(int argc, char** argv)
 
   // Register benchmarks with Google Benchmark
   if (f32_matrix) {
-    run_spmv_benchmarks<float>(*f32_matrix, matrix_name, thread_counts, min_time, repetitions,
-                               seed);
+    run_spmv_benchmarks<float>(*f32_matrix, matrix_name, thread_counts, min_time, repetitions, seed);
   }
   if (f64_matrix) {
-    run_spmv_benchmarks<double>(*f64_matrix, matrix_name, thread_counts, min_time, repetitions,
-                                seed);
+    run_spmv_benchmarks<double>(*f64_matrix, matrix_name, thread_counts, min_time, repetitions, seed);
   }
 
   // Run all registered Google Benchmarks

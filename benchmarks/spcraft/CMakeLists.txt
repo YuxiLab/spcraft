@@ -1,2 +1,16 @@
 add_executable(bench_ompspmv kernels/OmpSpMVBench.cpp)
 target_link_libraries(bench_ompspmv PRIVATE SPCraftGoogleBenchmark)
+
+if(SPCRAFT_USE_MPI)
+	add_executable(bench_comm_grid_2d CommGrid2DBenchmark.cpp)
+	target_link_libraries(bench_comm_grid_2d PRIVATE SPCraft benchmark::benchmark)
+	add_executable(bench_distributed_sparse_clone DistributedSparseMatrixCloneBenchmark.cpp)
+	target_link_libraries(bench_distributed_sparse_clone PRIVATE SPCraft benchmark::benchmark)
+endif()
+
+if(SPCRAFT_USE_MPI)
+	add_executable(bench_summa_2d SpGEMMSumma2DBenchmark.cpp)
+	target_link_libraries(bench_summa_2d PRIVATE SPCraft benchmark::benchmark)
+	add_executable(bench_summa_3d SpGEMMSumma3DBenchmark.cpp)
+	target_link_libraries(bench_summa_3d PRIVATE SPCraft benchmark::benchmark cxxopts::cxxopts)
+endif()

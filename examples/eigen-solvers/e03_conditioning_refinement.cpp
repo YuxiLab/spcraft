@@ -32,10 +32,9 @@ double ConditionNumber(const Eigen::MatrixXd& matrix)
 int main(int argc, char** argv)
 {
   cxxopts::Options options(argv[0], "Inspect error, residual, and iterative refinement");
-  options.add_options()("n,size", "Hilbert matrix dimension",
-                        cxxopts::value<int>()->default_value("10"))(
-      "r,refinements", "Iterative-refinement steps", cxxopts::value<int>()->default_value("3"))(
-      "h,help", "Show usage");
+  options.add_options()("n,size", "Hilbert matrix dimension", cxxopts::value<int>()->default_value("10"))(
+      "r,refinements", "Iterative-refinement steps", cxxopts::value<int>()->default_value("3"))("h,help",
+                                                                                                "Show usage");
   const auto arguments = options.parse(argc, argv);
   if (arguments.count("help") != 0) {
     std::cout << options.help();
@@ -64,8 +63,7 @@ int main(int argc, char** argv)
     // Compute the residual more accurately than the LU factors and correction solve.
     const Eigen::VectorXd residual =
         (high_precision_rhs - high_precision_matrix * solution.cast<long double>()).cast<double>();
-    const long double relative_error =
-        (solution.cast<long double>() - reference).norm() / reference.norm();
+    const long double relative_error = (solution.cast<long double>() - reference).norm() / reference.norm();
     std::cout << "step " << step << ": relative residual = " << residual.norm() / rhs.norm()
               << ", relative error = " << relative_error << '\n';
     solution += factorization.solve(residual);

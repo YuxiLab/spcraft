@@ -153,8 +153,7 @@ std::tuple<OT*, IT*, NT*> SPCSR::SafeAllocate(OT required_nnz, IT rows, IT colum
     new_val = static_cast<NT*>(std::malloc(value_count * sizeof(NT)));
   }
   // make sure 3 arraies are all allocated successfully.
-  if (new_row_ptr == nullptr ||
-      (required_nnz != OT{0} && (new_col_id == nullptr || new_val == nullptr))) {
+  if (new_row_ptr == nullptr || (required_nnz != OT{0} && (new_col_id == nullptr || new_val == nullptr))) {
     std::free(new_row_ptr);
     std::free(new_col_id);
     std::free(new_val);

@@ -49,23 +49,21 @@ bool SameAsSample(const Host& matrix)
   const std::int32_t col_id[3] = {0, 2, 1};
   const double values[3] = {1.0, 2.0, 3.0};
   return matrix.m == 2 && matrix.n == 3 && matrix.nnz == 3 &&
-         std::equal(row_ptr, row_ptr + 3, matrix.row_ptr) &&
-         std::equal(col_id, col_id + 3, matrix.col_id) &&
+         std::equal(row_ptr, row_ptr + 3, matrix.row_ptr) && std::equal(col_id, col_id + 3, matrix.col_id) &&
          std::equal(values, values + 3, matrix.val);
 }
 
 int TestRun()
 {
-  failures += spcraft::tests::CheckCudaContainerTypes<spcraft::CsrMatrix, spcraft::cuCsrMatrix>(
-      "cuCsrMatrix");
+  failures +=
+      spcraft::tests::CheckCudaContainerTypes<spcraft::CsrMatrix, spcraft::cuCsrMatrix>("cuCsrMatrix");
 
   // --- default construction owns nothing ---------------------------------
   {
     Device matrix;
     Check(matrix.row_ptr == nullptr && matrix.val == nullptr,
           "a default-constructed matrix should hold no buffers");
-    Check(matrix.nnz == 0 && matrix.m == 0 && matrix.n == 0,
-          "a default-constructed matrix should be empty");
+    Check(matrix.nnz == 0 && matrix.m == 0 && matrix.n == 0, "a default-constructed matrix should be empty");
   }
 
   // --- Allocate takes device storage and zeroes it -----------------------
@@ -85,8 +83,7 @@ int TestRun()
   {
     Device matrix;
     matrix.Allocate(0, 3, 3);
-    Check(matrix.nnz == 0 && matrix.row_ptr != nullptr,
-          "row_ptr is m+1 long even when nnz is zero");
+    Check(matrix.nnz == 0 && matrix.row_ptr != nullptr, "row_ptr is m+1 long even when nnz is zero");
     Device copy = matrix.Clone();
     Check(copy.nnz == 0 && copy.m == 3, "cloning an empty matrix should work");
   }

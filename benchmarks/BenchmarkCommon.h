@@ -157,8 +157,7 @@ template <class IT, class NT, class OT>
 
 //! Algorithm-owned CSR and dense-vector storage, excluding opaque backend workspaces.
 template <class IT, class NT, class OT>
-[[nodiscard]] inline spcraft::ResourceProfile AlgorithmStorageProfile(
-    const spcraft::CsrMatrix<IT, NT, OT>& A)
+[[nodiscard]] inline spcraft::ResourceProfile AlgorithmStorageProfile(const spcraft::CsrMatrix<IT, NT, OT>& A)
 {
   const std::uint64_t matrix = (static_cast<std::uint64_t>(A.m) + 1) * sizeof(OT) +
                                static_cast<std::uint64_t>(A.nnz) * (sizeof(IT) + sizeof(NT));
@@ -208,12 +207,10 @@ template <class NT>
  * than silently truncated.
  */
 template <class IT, class NT, class OT>
-[[nodiscard]] inline Eigen::SparseMatrix<NT, Eigen::RowMajor> ToEigen(
-    const spcraft::CsrMatrix<IT, NT, OT>& A)
+[[nodiscard]] inline Eigen::SparseMatrix<NT, Eigen::RowMajor> ToEigen(const spcraft::CsrMatrix<IT, NT, OT>& A)
 {
   constexpr auto kEigenLimit = std::numeric_limits<int>::max();
-  if (static_cast<std::int64_t>(A.m) > kEigenLimit ||
-      static_cast<std::int64_t>(A.n) > kEigenLimit) {
+  if (static_cast<std::int64_t>(A.m) > kEigenLimit || static_cast<std::int64_t>(A.n) > kEigenLimit) {
     throw std::runtime_error("matrix exceeds the Eigen reference's 32-bit index range");
   }
 
@@ -221,8 +218,7 @@ template <class IT, class NT, class OT>
   triplets.reserve(static_cast<std::size_t>(A.nnz));
   for (IT row = 0; row < A.m; ++row) {
     for (OT position = A.row_ptr[row]; position < A.row_ptr[row + 1]; ++position) {
-      triplets.emplace_back(static_cast<int>(row), static_cast<int>(A.col_id[position]),
-                            A.val[position]);
+      triplets.emplace_back(static_cast<int>(row), static_cast<int>(A.col_id[position]), A.val[position]);
     }
   }
   Eigen::SparseMatrix<NT, Eigen::RowMajor> result(static_cast<int>(A.m), static_cast<int>(A.n));
@@ -259,9 +255,8 @@ template <class IT, class NT, class OT>
   }
   const double tolerance = Tolerance<NT>() * std::max(1.0, largest);
   if (error > tolerance) {
-    throw std::runtime_error(
-        std::string(backend) + " SpMV disagrees with the Eigen reference: max error " +
-        std::to_string(error) + " exceeds tolerance " + std::to_string(tolerance));
+    throw std::runtime_error(std::string(backend) + " SpMV disagrees with the Eigen reference: max error " +
+                             std::to_string(error) + " exceeds tolerance " + std::to_string(tolerance));
   }
   return error;
 }
@@ -291,9 +286,8 @@ template <class Body>
                                         const std::string& label)
 {
   if (seconds_per_call > budget) {
-    throw std::runtime_error(label + ": a single iteration takes " +
-                             std::to_string(seconds_per_call) + "s, which exceeds the " +
-                             std::to_string(budget) + "s budget; raise --max-time");
+    throw std::runtime_error(label + ": a single iteration takes " + std::to_string(seconds_per_call) +
+                             "s, which exceeds the " + std::to_string(budget) + "s budget; raise --max-time");
   }
   const auto affordable = static_cast<long long>(budget / seconds_per_call);
   return static_cast<int>(std::clamp<long long>(affordable, 1, max_iterations));

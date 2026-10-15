@@ -58,8 +58,7 @@ std::vector<ThreadProfile> profile_spmv(const Matrix& matrix, const Vector& x, V
       OMP_FOR(schedule(static) nowait)
       for (Index row = 0; row < matrix.m; ++row) {
         Numeric sum{};
-        for (Offset position = matrix.row_ptr[row]; position < matrix.row_ptr[row + 1];
-             ++position) {
+        for (Offset position = matrix.row_ptr[row]; position < matrix.row_ptr[row + 1]; ++position) {
           sum += matrix.val[position] * x.val[matrix.col_id[position]];
         }
         y.val[row] = sum;
@@ -72,8 +71,8 @@ std::vector<ThreadProfile> profile_spmv(const Matrix& matrix, const Vector& x, V
       work_seconds += OMP_GET_WTIME() - start;
     }
 
-    profiles[thread] = ThreadProfile{thread, cpu_start, sched_getcpu(),
-                                     rows,   nonzeros,  work_seconds * 1000.0 / iterations};
+    profiles[thread] =
+        ThreadProfile{thread, cpu_start, sched_getcpu(), rows, nonzeros, work_seconds * 1000.0 / iterations};
   }
 
   profiles.resize(static_cast<std::size_t>(actual_threads));
@@ -87,8 +86,8 @@ int main(int argc, char** argv)
   cxxopts::Options options(argv[0], "Report per-thread work and load balance for SPCraft SpMV");
   options.add_options()("m,matrix", "Matrix Market file", cxxopts::value<std::string>())(
       "t,threads", "OpenMP thread count", cxxopts::value<int>()->default_value("16"))(
-      "i,iterations", "Profiled iterations", cxxopts::value<int>()->default_value("20"))(
-      "h,help", "Print help");
+      "i,iterations", "Profiled iterations", cxxopts::value<int>()->default_value("20"))("h,help",
+                                                                                         "Print help");
 
   const auto arguments = options.parse(argc, argv);
   if (arguments.count("help") != 0 || arguments.count("matrix") == 0) {
@@ -119,19 +118,17 @@ int main(int argc, char** argv)
                                                return sum + profile.average_work_ms;
                                              }) /
                              profiles.size();
-    const double max_time =
-        std::max_element(profiles.begin(), profiles.end(),
-                         [](const ThreadProfile& left, const ThreadProfile& right) {
-                           return left.average_work_ms < right.average_work_ms;
-                         })
-            ->average_work_ms;
+    const double max_time = std::max_element(profiles.begin(), profiles.end(),
+                                             [](const ThreadProfile& left, const ThreadProfile& right) {
+                                               return left.average_work_ms < right.average_work_ms;
+                                             })
+                                ->average_work_ms;
     const double mean_nnz = static_cast<double>(matrix.nnz) / profiles.size();
-    const auto max_nnz =
-        std::max_element(profiles.begin(), profiles.end(),
-                         [](const ThreadProfile& left, const ThreadProfile& right) {
-                           return left.nonzeros < right.nonzeros;
-                         })
-            ->nonzeros;
+    const auto max_nnz = std::max_element(profiles.begin(), profiles.end(),
+                                          [](const ThreadProfile& left, const ThreadProfile& right) {
+                                            return left.nonzeros < right.nonzeros;
+                                          })
+                             ->nonzeros;
 
     std::cout << "matrix,thread,cpu_start,cpu_end,rows,nnz,avg_work_ms,estimated_wait_ms\n";
     std::cout << std::setprecision(10);
@@ -142,9 +139,8 @@ int main(int argc, char** argv)
     }
 
     std::cerr << std::setprecision(5) << "matrix=" << path.stem().string() << " rows=" << matrix.m
-              << " nnz=" << matrix.nnz << " threads=" << profiles.size()
-              << " mean_work_ms=" << mean_time << " max_work_ms=" << max_time
-              << " time_imbalance=" << max_time / mean_time
+              << " nnz=" << matrix.nnz << " threads=" << profiles.size() << " mean_work_ms=" << mean_time
+              << " max_work_ms=" << max_time << " time_imbalance=" << max_time / mean_time
               << " nnz_imbalance=" << static_cast<double>(max_nnz) / mean_nnz << '\n';
   } catch (const std::exception& error) {
     std::cerr << "error: " << error.what() << '\n';

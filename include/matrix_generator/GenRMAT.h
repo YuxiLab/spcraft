@@ -25,8 +25,8 @@ namespace spcraft
  * duplicate edges are removed before the graph is symmetrized.
  */
 template <class NT, class IT, class OT = IT>
-SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double a = 0.57,
-                   double b = 0.19, double c = 0.19, double d = 0.05)
+SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double a = 0.57, double b = 0.19,
+                   double c = 0.19, double d = 0.05)
 {
   static_assert(std::is_integral_v<IT>, "R-MAT index type must be integral");
   static_assert(std::is_integral_v<OT>, "R-MAT offset type must be integral");
@@ -54,8 +54,7 @@ SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double
     throw std::invalid_argument("R-MAT initiator weights must be finite and nonnegative");
   }
 
-  const UnsignedIndex vertices_unsigned =
-      static_cast<UnsignedIndex>(UnsignedIndex{1} << scale_value);
+  const UnsignedIndex vertices_unsigned = static_cast<UnsignedIndex>(UnsignedIndex{1} << scale_value);
   if constexpr (sizeof(UnsignedIndex) > sizeof(std::size_t)) {
     if (vertices_unsigned > std::numeric_limits<std::size_t>::max()) {
       throw std::length_error("R-MAT vertex count exceeds addressable memory");
@@ -79,8 +78,7 @@ SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double
     UnsignedIndex destination = 0;
 
     for (std::uintmax_t level = 0; level < scale_value; ++level) {
-      const UnsignedIndex bit =
-          static_cast<UnsignedIndex>(UnsignedIndex{1} << (scale_value - level - 1));
+      const UnsignedIndex bit = static_cast<UnsignedIndex>(UnsignedIndex{1} << (scale_value - level - 1));
       const double quadrant = uniform(generator);
       if (quadrant >= ab) {
         source |= bit;

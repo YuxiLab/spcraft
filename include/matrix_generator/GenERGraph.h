@@ -34,8 +34,7 @@ SPND SPCSR GenERGraph(IT vertices, double expected_degree, std::uint64_t seed)
 
   // An undirected edge accounts for two degrees; reserve 5% above its expectation.
   constexpr double kReservationScale = 0.525;
-  const std::size_t reserve_count =
-      static_cast<std::size_t>(vertices * expected_degree * kReservationScale);
+  const std::size_t reserve_count = static_cast<std::size_t>(vertices * expected_degree * kReservationScale);
   std::vector<std::pair<IT, IT>> edges;
   edges.reserve(reserve_count);
 

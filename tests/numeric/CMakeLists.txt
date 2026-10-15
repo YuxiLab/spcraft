@@ -1,0 +1,3 @@
+add_executable(test_numeric_multiway_merge test_mtMultiwayMerge.cpp)
+target_link_libraries(test_numeric_multiway_merge PRIVATE SPCraftTestMain SPCraft)
+gtest_discover_tests(test_numeric_multiway_merge TEST_PREFIX multiway_merge. DISCOVERY_MODE PRE_TEST)

@@ -29,3 +29,17 @@ target_link_libraries(e04_conjugate_gradient
 
 add_executable(e05_print_matrix e05_print_matrix.cpp)
 target_link_libraries(e05_print_matrix PRIVATE SPCraft ${EIGEN3_TARGET} cxxopts::cxxopts)
+
+if(SPCRAFT_USE_MPI)
+	add_executable(e06_comm_grid_2d e06_comm_grid_2d.cpp)
+	target_link_libraries(e06_comm_grid_2d PRIVATE SPCraft cxxopts::cxxopts)
+	add_executable(e07_distributed_sparse_matrix e07_distributed_sparse_matrix.cpp)
+	target_link_libraries(e07_distributed_sparse_matrix PRIVATE SPCraft SPCraftInput cxxopts::cxxopts)
+endif()
+
+if(SPCRAFT_USE_MPI)
+	foreach(example IN ITEMS e08_summa_2d e09_summa_3d)
+		add_executable(${example} ${example}.cpp)
+		target_link_libraries(${example} PRIVATE SPCraft SPCraftInput ${EIGEN3_TARGET} cxxopts::cxxopts)
+	endforeach()
+endif()
