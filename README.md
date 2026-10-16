@@ -81,8 +81,11 @@ this preset, so configuration fails if it cannot be found. Build output goes to
 
 ## CUDA code navigation on macOS
 
-Run `python3 scripts/setup_macos_clangd.py` to prepare local clangd parsing for
-C++ and CUDA without installing a GPU driver or building the library. See
+With the native `macos-openmp` build active, run
+`python3 scripts/setup_macos_clangd.py --native-headers --check` to provide CUDA
+host declarations while preserving the native MPI compilation database. For
+Linux/CUDA implementation navigation, `python3 scripts/setup_macos_clangd.py`
+prepares a separate parsing environment without a GPU driver or a library build. See
 [the setup guide](scripts/clangd/README.md) for verification and editor details.
 
 ## Benchmark command-line options
