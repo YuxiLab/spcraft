@@ -200,6 +200,29 @@ if(SPCRAFT_BUILD_EXAMPLES AND NOT SPCRAFT_BUILD_DOWNSTREAM)
   add_subdirectory(examples/kernel EXCLUDE_FROM_ALL)
 endif()
 
+# Expand comment markers only in profiling builds; normal builds use original sources.
+if(SPCRAFT_USE_CALIPER)
+  set(SPCRAFT_PROFILER_TOOLS "$ENV{PROFILER_TOOLS_DIR}" CACHE PATH
+    "profiler.nvim checkout providing the marker generator")
+  if(NOT EXISTS "${SPCRAFT_PROFILER_TOOLS}/cmake/Profiler.cmake")
+    message(FATAL_ERROR
+      "Set SPCRAFT_PROFILER_TOOLS to a profiler.nvim checkout (or run ProfilerRun)")
+  endif()
+  include("${SPCRAFT_PROFILER_TOOLS}/cmake/Profiler.cmake")
+  set(profiler_targets SPCraft SPCraftInput)
+  foreach(example IN ITEMS e08_summa_2d e09_summa_3d)
+    if(TARGET ${example})
+      list(APPEND profiler_targets ${example})
+      target_link_libraries(${example} PRIVATE caliper)
+    endif()
+  endforeach()
+  target_link_libraries(SPCraftInput PRIVATE caliper)
+  profiler_instrument_targets(
+    ROOT "${PROJECT_SOURCE_DIR}"
+    INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include"
+    TARGETS ${profiler_targets})
+endif()
+
 #################################################################
 # Install Binaries
 #################################################################

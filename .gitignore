@@ -14,6 +14,8 @@ lib/
 .profiler/
 compile_commands.json
 .cache/
+.omo/
+.overseer/state.json
 .lake/
 **/.lake/
 .lean-fmt-cache/
@@ -32,6 +34,7 @@ pyrightconfig.json
 data/
 dataset/output
 *.mtx
+!examples/spcraft/inputs/summa_2d.mtx
 *.tar.gz
 
 # Reproducible raw benchmark output: benchmarks/results/<library>/<kernel>/

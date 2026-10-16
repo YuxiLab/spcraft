@@ -68,7 +68,10 @@
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "SPCRAFT_USE_MPI": false,
         "SPCRAFT_USE_CUDA": false,
-        "SPCRAFT_BUILD_EXAMPLES": true
+        "SPCRAFT_BUILD_EXAMPLES": true,
+        "SPCRAFT_BUILD_DOWNSTREAM": true,
+        "SPCRAFT_BUILD_BENCHMARKS": true,
+        "BUILD_TESTING": true
       }
     },
     {
@@ -88,8 +91,8 @@
     },
     {
       "name": "macos-openmp",
-      "displayName": "macOS + OpenMP (RelWithDebInfo)",
-      "description": "Apple Clang with libomp; set OpenMP_ROOT to the libomp installation prefix",
+      "displayName": "macOS + OpenMP + MPI (RelWithDebInfo)",
+      "description": "Apple Clang with libomp and MPI; set OpenMP_ROOT to the libomp installation prefix",
       "inherits": "base",
       "condition": {
         "type": "equals",
@@ -98,17 +101,37 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "CMAKE_C_COMPILER": "clang",
-        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_COMPILER": "cc",
+        "CMAKE_CXX_COMPILER": "c++",
         "SPCRAFT_USE_CUDA": false,
-        "SPCRAFT_USE_MPI": false,
+        "SPCRAFT_USE_MPI": true,
         "SPCRAFT_USE_MKL": false,
         "CMAKE_DISABLE_FIND_PACKAGE_OpenMP": false,
         "CMAKE_REQUIRE_FIND_PACKAGE_OpenMP": true,
         "OpenMP_ROOT": "$env{OpenMP_ROOT}",
         "SPCRAFT_BUILD_EXAMPLES": true,
+        "SPCRAFT_BUILD_DOWNSTREAM": true,
         "SPCRAFT_BUILD_BENCHMARKS": true,
         "BUILD_TESTING": true
+      }
+    },
+    {
+      "name": "profiler",
+      "displayName": "MPI SUMMA + Caliper",
+      "description": "Instrumented CPU build; install MPI-enabled Caliper or set caliper_DIR",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_PREFIX_PATH": "${sourceDir}/build/profiler-caliper-install;$env{CMAKE_PREFIX_PATH}",
+        "OpenMP_ROOT": "$env{OpenMP_ROOT}",
+        "SPCRAFT_USE_MPI": true,
+        "SPCRAFT_USE_CALIPER": true,
+        "SPCRAFT_USE_CUDA": false,
+        "SPCRAFT_USE_MKL": false,
+        "SPCRAFT_BUILD_DOWNSTREAM": true,
+        "SPCRAFT_BUILD_EXAMPLES": true,
+        "SPCRAFT_BUILD_BENCHMARKS": false,
+        "BUILD_TESTING": false
       }
     },
     {
@@ -119,6 +142,11 @@
     }
   ],
   "buildPresets": [
+    {
+      "name": "profiler",
+      "configurePreset": "profiler",
+      "targets": ["e08_summa_2d"]
+    },
     {
       "name": "cuda-openmp",
       "displayName": "Build CUDA + OpenMP (RelWithDebInfo)",
@@ -155,14 +183,14 @@
     },
     {
       "name": "macos-openmp",
-      "displayName": "Build macOS + OpenMP",
+      "displayName": "Build macOS + OpenMP + MPI",
       "configurePreset": "macos-openmp"
     }
   ],
   "testPresets": [
     {
       "name": "macos-openmp",
-      "displayName": "Test macOS + OpenMP",
+      "displayName": "Test macOS + OpenMP + MPI",
       "configurePreset": "macos-openmp",
       "output": {
         "outputOnFailure": true

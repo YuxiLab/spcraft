@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "name": "Local SUMMA smoke test",
+  "project": "../..",
+  "preset": "profiler",
+  "target": "e08_summa_2d",
+  "binary": "build/profiler/bin/e08_summa_2d",
+  "launcher": ["mpiexec", "-n", "4"],
+  "args": [
+    "--matrix", "examples/spcraft/inputs/summa_2d.mtx",
+    "--grid-rows", "2", "--grid-cols", "2"
+  ],
+  "environment": {"OMP_NUM_THREADS": "${threads}"},
+  "parameters": [
+    {
+      "id": "threads",
+      "label": "Threads per rank",
+      "choices": [1, 2, 4],
+      "selected": ["1"],
+      "requirements": {"cpus": "${value}"}
+    }
+  ],
+  "servers": {
+    "choices": [{"id": "local", "kind": "local"}],
+    "selected": ["local"]
+  },
+  "build": {
+    "before_run": true,
+    "directory": "build/profiler",
+    "jobs": 4,
+    "commands": [
+      ["cmake", "--preset", "${preset}", "-B", "${build_dir}"],
+      ["cmake", "--build", "${build_dir}", "--target", "${target}", "--parallel", "${build_jobs}"]
+    ]
+  },
+  "output_dir": "results/overseer",
+  "stop_on_failure": true
+}
