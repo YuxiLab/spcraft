@@ -106,9 +106,7 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
   std::vector<SPCOO> cstages;
   for (int q = 0; q < grid.Cols(); ++q) {
     // @profiler-iter q start
-
     // @profiler-region bcast_A start
-    // bcast A
     const Block& a = A_info[q];
     SPCSC opA;
     if (q == grid.Col()) {
@@ -123,7 +121,6 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
     MPI_Bcast(opA.val, a.nnz, MPIType<NT>(), q, row_world);
     // @profiler-region bcast_A end
     // @profiler-region bcast_B start
-    // bcast B
     const Block& b = B_info[q];
     SPCSC opB;
     if (q == grid.Row()) {

@@ -125,6 +125,7 @@ void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const VL& offsets
 SP_SR_MAT_TEMP
 SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
 {
+  // @profiler-region hash_validate start
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");
   if (A.n != B.m) throw std::invalid_argument("SpGEMM matrix dimensions do not match");
@@ -138,20 +139,41 @@ SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
     return result;
   }
   const int threads = OMP_GET_MAX_THREADS();
+  // @profiler-region hash_validate end
+
+  // 1. estimate flops
+  // @profiler-region hash_estimate_flops start
   VL flop = HashSpGEMMCscEstimateFlops(A, B);
-  // Keep this work prefix sum to match the CombBLAS baseline.
+  // @profiler-region hash_estimate_flops end
+
+  // 2. Keep this work prefix sum to match the CombBLAS baseline.
+  // @profiler-region hash_flops_prefix start
   VL flop_prefixsum = OmpPrefixSum(flop, threads);
+  // @profiler-region hash_flops_prefix end
+
   // 3. Symbolic phase: count unique rows and assign each column a COO slice.
+  // @profiler-region hash_symbolic start
   VI counts = HashSpGEMMCscSymbolicPhase(A, B, flop_prefixsum);
-  // Per-column counts fit int32_t, but their total may need 64-bit offsets.
+  // @profiler-region hash_symbolic end
+
+  // 4. prefix sum of nnz per column. Per-column counts fit int32_t, but their total may need 64-bit offsets.
+  // @profiler-region hash_output_offsets start
   const VL wide_counts(counts.begin(), counts.end());
   const VL offsets = OmpPrefixSum(wide_counts, threads);
   if (static_cast<std::uintmax_t>(offsets.back()) >
       static_cast<std::uintmax_t>(std::numeric_limits<OT>::max())) {
     throw std::overflow_error("SpGEMM output nnz exceeds offset type limit");
   }
+  // @profiler-region hash_output_offsets end
+
+  // @profiler-region hash_allocate start
   result.Allocate(static_cast<OT>(offsets.back()), A.m, B.n);
+  // @profiler-region hash_allocate end
+
+  // @profiler-region hash_numeric start
   HashSPGEMMCscNumericPhase<SemiRing>(A, B, offsets, result);
+  // @profiler-region hash_numeric end
+
   return result;
 }
 

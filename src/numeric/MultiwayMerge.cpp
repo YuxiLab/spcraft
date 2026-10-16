@@ -92,6 +92,7 @@ SPND SPCOO OmpMultiwayMerge(const std::vector<SPCOO>& inputs, IT m, IT n)
   }
 
   // Oversplit columns so dynamic scheduling can balance irregular merge work.
+  // @profiler-region merge_boundaries start
   constexpr int64_t kSplitsPerThread = 4;
   const int64_t desired_splits = kSplitsPerThread * OMP_GET_MAX_THREADS();
   const int64_t splits = std::min(int64_t{n}, desired_splits);
@@ -112,8 +113,10 @@ SPND SPCOO OmpMultiwayMerge(const std::vector<SPCOO>& inputs, IT m, IT n)
       boundaries[source][split] = (OT)(first - input.entries);
     }
   }
+  // @profiler-region merge_boundaries end
 
   // Count distinct coordinates so allocation depends on output nnz, not input nnz.
+  // @profiler-region merge_count start
   std::vector<int64_t> counts(splits);
   OMP_PARALLEL_FOR(schedule(dynamic))
   for (int64_t split = 0; split < splits; ++split) {
@@ -130,8 +133,10 @@ SPND SPCOO OmpMultiwayMerge(const std::vector<SPCOO>& inputs, IT m, IT n)
     VisitSplit(inputs, boundaries, split, count_entry);
     counts[split] = count;
   }
+  // @profiler-region merge_count end
 
   // Prefixes stay wide until the final merged size has passed the storage check.
+  // @profiler-region merge_allocate start
   std::vector<int64_t> offsets(splits + 1);
   for (int64_t split = 0; split < splits; ++split) {
     offsets[split + 1] = offsets[split] + counts[split];
@@ -141,8 +146,10 @@ SPND SPCOO OmpMultiwayMerge(const std::vector<SPCOO>& inputs, IT m, IT n)
     throw std::overflow_error("Multiway merge output nnz exceeds offset type limit");
   }
   result.Allocate((OT)total, m, n);
+  // @profiler-region merge_allocate end
 
   // Whole columns belong to one split, so threads write disjoint output ranges.
+  // @profiler-region merge_write start
   OMP_PARALLEL_FOR(schedule(dynamic))
   for (int64_t split = 0; split < splits; ++split) {
     const OT begin = offsets[split];
@@ -158,6 +165,7 @@ SPND SPCOO OmpMultiwayMerge(const std::vector<SPCOO>& inputs, IT m, IT n)
     };
     VisitSplit(inputs, boundaries, split, merge_entry);
   }
+  // @profiler-region merge_write end
   return result;
 }
 
