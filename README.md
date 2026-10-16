@@ -98,6 +98,13 @@ See [the Neovim workflow guide](docs/nvim-overseer.md) for Oh My Overseer tasks
 and Caliper profiling on the `yuxi/profiler` branch. The included `.profiler.json`
 and **Local SUMMA smoke test** experiment run a small four-rank SUMMA input and
 verify the product against Eigen, without downloading a dataset.
+Use the **Local SUMMA profiling** experiment to select datasets, threads, and
+MPI grids in Overseer, then press `P` to collect a report for each combination.
+The same annotated sources now build ordinary examples, timing-only `_benchmark`
+executables, and detailed `_profile` executables. The panel also selects warmups,
+repetition/time limits, and measurement mode. See the
+[standalone research draft](research/comment-profiler/main.tex) and its
+[evaluation driver](research/comment-profiler/evaluate.py).
 
 ## CUDA code navigation on macOS
 

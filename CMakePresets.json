@@ -145,7 +145,7 @@
     {
       "name": "profiler",
       "configurePreset": "profiler",
-      "targets": ["e08_summa_2d"]
+      "targets": ["e08_summa_2d_profile"]
     },
     {
       "name": "cuda-openmp",

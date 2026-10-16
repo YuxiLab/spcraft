@@ -19,14 +19,21 @@ int ExampleRun(const MatrixInputOptions& input)
   const auto coo = ReadMatrixInput<IT, NT, OT>(input.matrix_path);
   const auto matrix = coo.ToCsr();
   DenseVector<IT, NT> x(matrix.n);
-  DenseVector<IT, NT> y(matrix.m);
   // Keep the input vector reproducible across verification runs.
   constexpr int kSeed = 2026;
   x.Random(kSeed);
 
   // Call the tested kernel, then independently verify with Eigen.
   const auto start = Clock::now();
-  OmpSpMV<Ring>(matrix, x, y);
+  const DenseVector<IT, NT> y = [&] {
+    // @profiler-benchmark time_to_solution start
+    DenseVector<IT, NT> output(matrix.m);
+    // @profiler-region spmv start
+    OmpSpMV<Ring>(matrix, x, output);
+    // @profiler-region spmv end
+    return output;
+    // @profiler-benchmark time_to_solution end
+  }();
   const auto stop = Clock::now();
   const Seconds elapsed = stop - start;
   constexpr NT kTolerance = std::is_same_v<NT, float> ? NT{1e-6} : NT{1e-13};
@@ -49,9 +56,10 @@ int ExampleRun(const MatrixInputOptions& input)
 int main(int argc, char** argv)
 {
   constexpr auto kDescription = "Verify SpCraft OpenMP SpMV against Eigen";
-  const auto input = ParseMatrixInput(argc, argv, kDescription);
-  if (!input.options) return input.exit_code;
   try {
+    // @profiler-config argc argv
+    const MatrixInput input = ParseMatrixInput(argc, argv, kDescription);
+    if (!input.options) return input.exit_code;
     const auto run = [&]<class IT, class NT, class OT>() { return ExampleRun<IT, NT, OT>(*input.options); };
     return DispatchMatrixInputTypes(*input.options, run);
   } catch (const std::exception& error) {

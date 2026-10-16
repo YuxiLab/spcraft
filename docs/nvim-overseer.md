@@ -34,6 +34,7 @@ The installed NvChad configuration uses Space as its leader key:
 
 | Shortcut | Action |
 | --- | --- |
+| F1 | Open the OMO experiment panel; select experiments and options there |
 | Space cC | Configure, build and run |
 | Space cR | Build and run |
 | Space cb | Build |
@@ -57,9 +58,54 @@ program exit stops a workflow even if its output has no source location.
 
 ## Profile 2D SUMMA
 
+### Choose datasets and options through Overseer
+
+Press **F1** to open the OMO panel. Use the Experiment row or `O` to choose
+**Local SUMMA profiling**. On the Datasets row, press Enter to scan `datasets/`
+recursively for Matrix Market files,
+including files directly in that folder and under `datasets/output/`.
+The bundled SUMMA smoke matrix stays available alongside downloaded datasets.
+Use Tab to select datasets and Enter to apply the selection. Choose Threads per
+rank and MPI process grid the same way; the grid choice also sets the matching
+MPI rank count.
+
+Choose **Add folder…** in the dataset picker to add another input directory.
+The path prompt supports directory completion; relative paths are interpreted
+from the project root. Added folders are saved with the experiment and scanned
+recursively whenever you reopen the picker. Existing selections stay selected.
+
+For a small downloaded input set, run `bash download.sh suitsparsesmall` from
+`datasets/`. This places four bus matrices under `datasets/output/`; reopen the
+Datasets picker to discover them. Downloaders use the University of Florida HTTPS
+mirror, configurable through `SUITESPARSE_MM_URL`, and stop when a transfer fails.
+
+Press **`P` in the experiment panel** to profile the selected combinations.
+Alternatively, close the panel and use **Space p → Profile active experiment**
+or `:ProfilerExperiment`. These actions read the active experiment rather than
+the dataset argument in `.profiler.json`. The existing **Build and run profiler**
+action and `:ProfilerRun` continue to use standalone `.profiler.json` commands.
+
+Profiling freezes the resolved experiment settings, configures and builds once,
+then measures each selected dataset/thread/grid combination sequentially. Each
+combination gets its own rank traces, command log, `run.json`, and portable
+`profile.json` under `.profiler/runs/`. The saved manifest includes the experiment
+configuration, selected values, resolved command, and environment. The latest
+report opens after completion; **Show latest report** and `:ProfilerLoad` reopen
+saved reports. Program outputs using `${result}` or `${run_dir}` retain the
+experiment's `results/overseer/` locations.
+
+Use `:ProfilerStop` or stop the active Profiler task through Overseer to cancel
+the remaining combinations. A failed build or run stops profiling and keeps
+completed reports and failure logs. This integration accepts local servers
+without Slurm. Remote profiling is not implemented.
+Successful profiling build/run output panes close automatically. Failed commands
+open their output and keep it visible; the logs remain available after closing it.
+
+### Standalone commands and dependencies
+
 Use the `yuxi/profiler` branch. The repository's `.profiler.json` configures
 **Space p → Build and run profiler** (or `:ProfilerRun`). It configures and builds
-`e08_summa_2d` in `build/profiler`, then runs four MPI ranks on the included
+`e08_summa_2d_profile` in `build/profiler`, then runs four MPI ranks on the included
 `examples/spcraft/inputs/summa_2d.mtx` with a 2×2 process grid. The example checks
 the product against Eigen. This small input checks the workflow; use a larger
 matrix for performance analysis by editing the `--matrix` argument.
@@ -126,6 +172,66 @@ exception, break, and continue close live timers through RAII. Normal
 `macos-openmp` builds compile the original comment-only source. The build updates
 `.profiler/regions.json` for report navigation; `#line` directives keep generated
 compiler diagnostics tied to the original source locations.
+
+### Repeated benchmark blocks
+
+The normal `SPCraft` library and examples remain available in the profiling build.
+`SPCraft_profile` and `SPCraftInput_profile` are separate generated libraries.
+`ex01_spmv`, `ex02_spgemm`, and `e08_summa_2d` each have `_profile` and `_benchmark`
+executables. The former records internal phases; the latter links the original
+library and records only the outer call. Both retain the same generated repetition
+harness. The `_measurements` aggregate target builds both executable variants.
+
+An owning value-returning operation opts into repetition using comments:
+
+```cpp
+const DistSpCOO<IT, NT, OT> product = [&] {
+  // @profiler-benchmark time_to_solution start
+  return Mpi2DSummaSpGEMM<PlusTimesRing<NT>>(a, a);
+  // @profiler-benchmark time_to_solution end
+}();
+```
+
+Put `// @profiler-config argc argv` before the application's argument parser,
+inside its exception handler. Generated code consumes `--profiler-warmup N`,
+`--profiler-repeat N`, `--profiler-seconds S`, and `--profiler-trace on|off`.
+Defaults are 1 warmup and at most 1000 repetitions or 10 seconds. An explicit
+repeat limit replaces the default time limit; an explicit time limit replaces
+the default repeat limit. When both are explicit, the first limit ends the batch.
+Duration limits are checked between calls. `_benchmark` disables nested hooks at
+compile time regardless of the trace flag. Runtime `--profiler-trace off` on a
+`_profile` binary suppresses nested recording but retains its instrumented library.
+
+Input setup and reference checks stay outside the repeated block. Each call must
+return a fresh owning result and leave its logical inputs reusable. The previous
+result is destroyed outside timing, and the final result reaches the example's
+Eigen check. MPI repetitions synchronize rank entry outside timing; rank 0 makes
+the shared stopping decision. This harness currently uses `MPI_COMM_WORLD`.
+
+The dashboard's **Overall time to solution** is the median of per-repetition
+maximum rank durations, measured around the complete algorithm call. Its summary
+always covers all ranks and algorithm stages, even when the phase tree is filtered.
+Phase rows show median/mean, with min/mean/max bars across repetitions. The inspector
+adds min, max, sample standard deviation, and repetition count. It also retains
+explicitly labeled accumulated rank totals. Inner algorithm iteration and benchmark
+repetition are separate identifiers. Missing outer-rank coverage excludes a
+repetition; nested phases and phase maxima are never summed into the overall time.
+
+In **F1 → Local SUMMA profiling**, select the measurement mode, warmups, and budget,
+then press `P`. For command-line validation across serial, OpenMP, and MPI:
+
+```sh
+cmake --build build/profiler --parallel 4 --target \
+  ex01_spmv_measurements ex02_spgemm_measurements e08_summa_2d_measurements
+python3 research/comment-profiler/evaluate.py \
+  --matrix datasets/output/1138_bus/1138_bus.mtx --launches 3 --repetitions 1000
+```
+
+The script saves correctness-checked traces, dashboard reports, and per-launch
+statistics under `build/comment-profiler-evaluation/`. Its CLI accepts build,
+Caliper, matrix, launcher, and output paths. These local tests establish functional
+behavior; paper-quality overhead and scaling claims require the additional
+experiments specified in `research/comment-profiler/main.tex`.
 
 `ProfilerRun` supplies the installed plugin's generator path automatically. To
 configure from a terminal, pass `-DSPCRAFT_PROFILER_TOOLS=<profiler.nvim-checkout>`

@@ -1,0 +1,81 @@
+Session stopped for VM migration on <mention-date start="2026-10-16"/>. The prototype is implemented and functionally exercised, but final cleanup and the research evaluation are unfinished. All changes are uncommitted.
+
+## Goal and agreed design
+One maintained C++ example workload, comment-directed build generation, separate normal and profiling libraries, and generated benchmark/profile executables. Normal examples run once. Generated executables warm up and repeat only an owning value-returning operation; setup and reference checks remain outside.
+Caliper records nested phases and benchmark repetition separately from algorithm iteration. For each phase: sum calls within each rank/repetition, take that repetition’s rank maximum, then compute median, mean, min, max, and sample standard deviation. Overall time comes from the explicit outer call, never the sum of phase maxima.
+The project is also intended as a standalone systems/tooling paper with several workloads. Do not claim novelty, low overhead, or scaling from the current smoke results.
+
+## Completed
+- [x] CMake preserves SPCraft and creates SPCraft_profile plus matching input-library variants.
+- [x] Generated _profile and _benchmark executables for ex01_spmv, ex02_spgemm, and e08_summa_2d. Timing-only executables link the original library; _measurements builds both variants.
+- [x] Comment grammar: @profiler-benchmark NAME start/end and @profiler-config argc argv, in addition to nested region/iteration markers.
+- [x] Runtime controls: --profiler-warmup, --profiler-repeat, --profiler-seconds, --profiler-trace. Defaults: 1 warmup, first of 1000 repetitions or 10 seconds. A single explicit limit replaces the other default.
+- [x] MPI warmup/repetition coordination, rank-0 duration stopping decision, fresh returned outputs, previous-output destruction outside timing, and final-result verification.
+- [x] Integer nanosecond outer durations avoid floating-point JSON rounding. Dashboard adds overall median and per-phase repetition statistics; rank-total details remain labeled separately.
+- [x] e08 uses DCSC inputs prepared before timing, with nested SUMMA and hash-SpGEMM phases.
+- [x] F1 OMO panel selects dataset folders, measurement mode, warmups, and budget. P builds/profiles the selected experiment. Success output panes auto-close; failures remain visible.
+- [x] Dataset-folder picker, HTTPS downloader repairs, and false FAILURE status fix from earlier session work.
+- [x] Standalone LaTeX design draft and evaluation script under research/comment-profiler/.
+
+## First tasks on the new VM
+- [ ] Transfer the local handoff archive before leaving this VM. It contains patches and new files for four checkouts; moving only SpCraft loses most framework changes.
+- [ ] Restore each checkout at its recorded base revision. Run git apply --check on its changes.patch, apply it, then copy its new-files tree. Preserve existing work; do not reset dirty checkouts.
+- [ ] Install C++20, CMake/Ninja, Python, MPI, OpenMP, Eigen/Boost/fmt/cxxopts, Neovim, and MPI-enabled Caliper. Rebuild native binaries; macOS build directories are not portable.
+- [ ] Set SPCRAFT_PROFILER_TOOLS or PROFILER_TOOLS_DIR to the restored profiler.nvim checkout. Supply dependency paths as inputs; do not embed this Mac’s absolute paths.
+
+## P0: finish the implementation
+- [ ] Fix source attribution collisions. The global manifest maps time_to_solution to all three examples, so SUMMA can preview SpMV source. Existing repeated-region names can also collide across implementations. Do not merely loosen the assertion.
+- [ ] Suggested fix to investigate: emit the original source identity with each region/outer event, export it through cali-query, and filter source-navigation candidates by the actual observed region path/source. This fix has NOT been implemented.
+- [ ] Resume build/check_repeated_profile.lua. Its real OMO build/run, 4 ranks × 1000 repetitions, DCSC phases, statistics, and JSON reload succeeded; line 34 failed because it expected one source location and received three.
+- [ ] Add regression coverage for source collisions, correct source-range navigation, incomplete repetitions, zero-duration measurements, runtime option validation, warmup exclusion, duration-only stopping, and timing-only/profile mode separation.
+- [ ] Recheck latest baseline-comparison changes, which use per-repetition medians instead of accumulated totals. They were added after the last full Lua unit run.
+- [ ] Run clang-format on modified C++ and the runtime header, StyLua on modified Lua, and git diff --check. Complete final review of CMake dependency/property cloning and incremental generation.
+- [ ] Reload the plugin in the user’s editor and open a fresh dashboard after fixing source attribution. The live editor still has older loaded modules; do not assume it was refreshed.
+- [ ] Commit coherent changes in each repository after review; nothing was committed or pushed in this session.
+
+## P1: turn the prototype into a paper artifact
+- [ ] Package/version the generator and runtime so they can run independently of the Neovim UI; document their installation and pin all source versions.
+- [ ] Add generator/runtime hashes, compiler flags, Caliper/MPI versions, CPU topology, affinity, and full build provenance to experiment records.
+- [ ] Compare generated timing-only drivers with hand-written drivers using exactly matching setup, allocation, warmup, and synchronization boundaries.
+- [ ] Compare generated phase profiling with direct Caliper annotations. Measure runtime overhead, annotation-density effects, trace size, build time, and incremental rebuild cost.
+- [ ] Extend datasets and workloads; test several problem scales, thread/rank counts, injected imbalance, and MPI on multiple nodes.
+- [ ] Use independent process launches as statistical units for paper confidence intervals; do not treat 1000 inner repetitions as 1000 independent experiments.
+- [ ] Complete related work: Caliper, Score-P, CaPI, TAU, LIKWID, Google Benchmark, source transformation, and executable documentation. Establish a concrete contribution before selecting a venue.
+- [ ] Rebuild and visually inspect the LaTeX PDF, verify citations, add measured results and limitations, and keep hypotheses separate from verified claims.
+
+## Known limits
+The harness currently supports owning value-returning blocks with reusable logical inputs and MPI_COMM_WORLD collective execution. It does not reset arbitrary mutated inputs, support void blocks or arbitrary subcommunicators, bound trace memory, or handle asynchronous accelerator completion. Only the final returned result is checked. Timing-only binaries still record outer Caliper events outside the raw call timer, which can influence state between repetitions. Remote profiling remains deferred at the user’s request.
+
+## Validation already observed
+- Python grammar/generator tests: 14 passed.
+- Profiler Lua unit tests: 45 passed before the latest baseline-comparison edits.
+- Real serial/OpenMP/MPI evaluation: 36 launches, 36000 measured repetitions, all Eigen checks and trace coverage passed. Six cases × two modes × three launches; 1000 repetitions per launch on 1138_bus.
+- Duration/repetition combined-limit checks on 494_bus passed with 3 excluded warmups, including 4-rank MPI. A pure-duration/no-repeat-limit case still needs explicit validation.
+- Existing SUMMA correctness CTest cases passed with 1 and 4 MPI ranks.
+- Existing real Caliper integration passed for MPI regions/iterations and serial early return, exception, break/continue, and signed 64-bit iteration values.
+- Binary dependency inspection confirmed ordinary e08 has no Caliper dependency, timing-only e08 uses SPCraft, and detailed e08 uses SPCraft_profile.
+- No publication-quality performance or overhead conclusion was established.
+
+## Where the work lives
+SpCraft: /Users/yuxihong/workspace/code/sparse_computation/spcraft — branch yuxi/profiler, base c4cda336b9eae2cc75d4da3eb072bd798aa2d71e.
+Framework: ~/.config/nvim/local-plugins/profiler.nvim — generator/checker, CMake cloning, include/profiler/Benchmark.h, Caliper exporter, model, dashboard, and tests.
+OMO: ~/.local/share/nvim/lazy/oh-my-overseer.nvim — experiment planning/pickers, output lifecycle, status repair, tests. scripts/omo_agent.py and tests/remote_session_test.py had pre-existing user changes; preserve them.
+Neovim config: ~/.config/nvim — F1 mapping. The profiler checkout is nested and must be restored separately.
+Important source files: CMakeLists.txt; CMakePresets.json; examples/spcraft/e08_summa_2d.cpp; examples/kernel/ex01_spmv.cpp; examples/kernel/ex02_spgemm.cpp; src/mpi/SummaCommon.h; src/kernel/HashSpGEMMDcsc.cpp; .overseer/experiments/summa-profiling.json.
+Paper: research/comment-profiler/main.tex and references.bib. Last compiled PDF: build/comment-profiler-paper/main.pdf; bibliography was subsequently updated and needs rebuild.
+Evaluation: research/comment-profiler/evaluate.py; build/comment-profiler-validation/summary.json; build/comment-profiler-duration-check/summary.json.
+Dashboard snapshot: build/comment-profiler-dashboard.txt. Fresh report path: build/comment-profiler-latest.txt. Raw OMO profiling reports are under .profiler/runs/.
+
+## Resume commands
+```sh
+cmake --preset profiler -DSPCRAFT_PROFILER_TOOLS=<restored-profiler-checkout>
+cmake --build build/profiler --parallel 4 --target ex01_spmv_measurements ex02_spgemm_measurements e08_summa_2d_measurements
+python3 research/comment-profiler/evaluate.py --matrix datasets/output/1138_bus/1138_bus.mtx --launches 3 --repetitions 1000
+# In profiler.nvim:
+python3 -m unittest discover -s tests -p 'test_*.py'
+nvim -n --headless -u NONE -l tests/run.lua
+# In SpCraft after editor dependencies are restored:
+nvim -n --headless '+lua dofile("build/check_repeated_profile.lua")'
+```
+
+Related primary sources: [Caliper MPI support](https://software.llnl.gov/Caliper/MPIProfiling.html), [Caliper project and paper](https://software.llnl.gov/Caliper/), [CaPI](https://arxiv.org/abs/2303.11110), [Google Benchmark](https://github.com/google/benchmark/blob/main/docs/user_guide.md).

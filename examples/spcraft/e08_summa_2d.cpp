@@ -24,24 +24,31 @@ int ExampleRun(const MatrixInputOptions& input, int grid_rows, int grid_cols)
   const auto owns = [&](IT row, IT col) {
     return grid->Owner(row / row_extent, col / col_extent) == grid->Rank();
   };
-  const DistSpCSC<IT, NT, OT> a = PartitionSummaInput(source, grid, owns);
+  const DistSpCSC<IT, NT, OT> partitioned = PartitionSummaInput(source, grid, owns);
+  DcscMatrix<IT, NT, OT> local = DcscMatrix<IT, NT, OT>::FromCsc(partitioned.local);
+  const DistSpDCSC<IT, NT, OT> a(grid, std::move(local), source.m, source.n);
 
   // The collective API takes distributed matrices, including their grid and global dimensions.
-  const DistSpCOO<IT, NT, OT> product = Mpi2DSummaSpGEMM<PlusTimesRing<NT>>(a, a);
+  // A value-returning block lets the generated harness retain the last result for checking.
+  const DistSpCOO<IT, NT, OT> product = [&] {
+    // @profiler-benchmark time_to_solution start
+    return Mpi2DSummaSpGEMM<PlusTimesRing<NT>>(a, a);
+    // @profiler-benchmark time_to_solution end
+  }();
   const ExampleSparseMatrix<IT, NT> reference = ToEigenReference(source);
   const ExampleSparseMatrix<IT, NT> expected = reference * reference;
   const int local_status = CheckSummaReference(product, expected) ? 0 : 1;
   int status = 0;
   MPI_Allreduce(&local_status, &status, 1, MPI_INT, MPI_MAX, grid->World());
   if (grid->Rank() == 0) {
-    std::cout << "Synchronous 2D SUMMA Eigen check " << (status == 0 ? "passed" : "failed") << '\n';
+    std::cout << "Synchronous 2D SUMMA DCSC Eigen check " << (status == 0 ? "passed" : "failed") << '\n';
   }
   return status;
 }
 
 int main(int argc, char** argv)
 {
-  cxxopts::Options parser(argv[0], "Synchronous 2D SUMMA on a chosen process grid: C=A*A");
+  cxxopts::Options parser(argv[0], "Synchronous 2D SUMMA with DCSC blocks: C=A*A");
   AddMatrixInputOptions(parser);
   cxxopts::OptionAdder flags = parser.add_options();
   const std::shared_ptr<cxxopts::Value> rows_flag = cxxopts::value<int>()->default_value("0");
@@ -53,6 +60,7 @@ int main(int argc, char** argv)
   MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
   int status = 0;
   try {
+    // @profiler-config argc argv
     if (provided < MPI_THREAD_FUNNELED) throw std::runtime_error("MPI needs FUNNELED threading");
     const cxxopts::ParseResult args = parser.parse(argc, argv);
     if (args.count("help"))

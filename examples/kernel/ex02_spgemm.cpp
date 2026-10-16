@@ -22,7 +22,11 @@ int ExampleRun(const MatrixInputOptions& input)
 
   // Call the tested kernel; reference conversion and checking happen afterward.
   const auto start = Clock::now();
-  const SPCOO result = OmpHashSpGEMM<Ring>(matrix, matrix);
+  const SPCOO result = [&] {
+    // @profiler-benchmark time_to_solution start
+    return OmpHashSpGEMM<Ring>(matrix, matrix);
+    // @profiler-benchmark time_to_solution end
+  }();
 
   const auto stop = Clock::now();
   const Seconds elapsed = stop - start;
@@ -48,9 +52,10 @@ int ExampleRun(const MatrixInputOptions& input)
 int main(int argc, char** argv)
 {
   constexpr auto kDescription = "Verify SpCraft OpenMP SpGEMM against Eigen";
-  const auto input = ParseMatrixInput(argc, argv, kDescription);
-  if (!input.options) return input.exit_code;
   try {
+    // @profiler-config argc argv
+    const MatrixInput input = ParseMatrixInput(argc, argv, kDescription);
+    if (!input.options) return input.exit_code;
     const auto run = [&]<class IT, class NT, class OT>() { return ExampleRun<IT, NT, OT>(*input.options); };
     return DispatchMatrixInputTypes(*input.options, run);
   } catch (const std::exception& error) {

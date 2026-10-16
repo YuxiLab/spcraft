@@ -1,22 +1,34 @@
 #!/bin/bash
 
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OUTPUT_DIR="${DLOC:-${OUTPUT_DIR:-${SCRIPT_DIR}/output}}"
+OUTPUT_DIR="output"
+# The collection website redirects to a data server that currently returns 403.
+SUITESPARSE_MM_URL="${SUITESPARSE_MM_URL:-https://www.cise.ufl.edu/research/sparse/MM}"
 mkdir -p "${OUTPUT_DIR}"
 
 # Helper to download a file using curl or wget
 download_file() {
     local url="$1"
     local dest_file="$2"
+    local partial_file="${dest_file}.part"
     mkdir -p "$(dirname "${dest_file}")"
     if command -v curl >/dev/null 2>&1; then
-        curl -fSL -o "${dest_file}" "${url}"
+        if ! curl -fSL --retry 2 --connect-timeout 15 -o "${partial_file}" "${url}"; then
+            rm -f "${partial_file}"
+            return 1
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        wget --no-check-certificate -O "${dest_file}" "${url}"
+        if ! wget --tries=3 --timeout=30 -O "${partial_file}" "${url}"; then
+            rm -f "${partial_file}"
+            return 1
+        fi
     else
         echo "Error: neither curl nor wget found."
         return 1
     fi
+    mv "${partial_file}" "${dest_file}"
 }
 
 # Function to download a dataset
@@ -24,50 +36,50 @@ download_dataset() {
     local dataset_name="$1"
     local url="$2"
 
-    if [ -d "${OUTPUT_DIR}/${dataset_name}" ]; then
+    if [ -s "${OUTPUT_DIR}/${dataset_name}/${dataset_name}.mtx" ]; then
         echo "${OUTPUT_DIR}/${dataset_name} dataset exists."
     else
         echo "Downloading ${dataset_name} to ${OUTPUT_DIR}..."
         rm -f "${OUTPUT_DIR}/${dataset_name}.tar.gz"
-        download_file "${url}" "${OUTPUT_DIR}/${dataset_name}.tar.gz"
-        tar -xzf "${OUTPUT_DIR}/${dataset_name}.tar.gz" -C "${OUTPUT_DIR}"
+        download_file "${url}" "${OUTPUT_DIR}/${dataset_name}.tar.gz" || return 1
+        tar -xzf "${OUTPUT_DIR}/${dataset_name}.tar.gz" -C "${OUTPUT_DIR}" || return 1
         rm -f "${OUTPUT_DIR}/${dataset_name}.tar.gz"
     fi
 }
 
 download_tiny() {
     echo "Downloading tiny dataset to ${OUTPUT_DIR}"
-    # tilespgemm 
-    download_dataset pdb1HYS https://suitesparse-collection-website.herokuapp.com/MM/Williams/pdb1HYS.tar.gz
-    download_dataset consph https://suitesparse-collection-website.herokuapp.com/MM/Williams/consph.tar.gz
-    download_dataset webbase-1M https://suitesparse-collection-website.herokuapp.com/MM/Williams/webbase-1M.tar.gz
-    download_dataset bcspwr06 https://suitesparse-collection-website.herokuapp.com/MM/HB/bcspwr06.tar.gz
+    # tilespgemm
+    download_dataset pdb1HYS "${SUITESPARSE_MM_URL}/Williams/pdb1HYS.tar.gz"
+    download_dataset consph "${SUITESPARSE_MM_URL}/Williams/consph.tar.gz"
+    download_dataset webbase-1M "${SUITESPARSE_MM_URL}/Williams/webbase-1M.tar.gz"
+    download_dataset bcspwr06 "${SUITESPARSE_MM_URL}/HB/bcspwr06.tar.gz"
 }
 
 download_small() {
     echo "Downloading small dataset to ${OUTPUT_DIR}"
-    # tilespgemm 
-    download_dataset pdb1HYS https://suitesparse-collection-website.herokuapp.com/MM/Williams/pdb1HYS.tar.gz
-    download_dataset consph https://suitesparse-collection-website.herokuapp.com/MM/Williams/consph.tar.gz
-    download_dataset webbase-1M https://suitesparse-collection-website.herokuapp.com/MM/Williams/webbase-1M.tar.gz
-    download_dataset af_shell10 https://suitesparse-collection-website.herokuapp.com/MM/Schenk_AFE/af_shell10.tar.gz
-    download_dataset SiO2 https://suitesparse-collection-website.herokuapp.com/MM/PARSEC/SiO2.tar.gz
-    download_dataset gupta3 https://suitesparse-collection-website.herokuapp.com/MM/Gupta/gupta3.tar.gz
-    download_dataset rma10 https://suitesparse-collection-website.herokuapp.com/MM/Bova/rma10.tar.gz
-    download_dataset TSOPF_FS_b300_c2 https://suitesparse-collection-website.herokuapp.com/MM/TSOPF/TSOPF_FS_b300_c2.tar.gz
+    # tilespgemm
+    download_dataset pdb1HYS "${SUITESPARSE_MM_URL}/Williams/pdb1HYS.tar.gz"
+    download_dataset consph "${SUITESPARSE_MM_URL}/Williams/consph.tar.gz"
+    download_dataset webbase-1M "${SUITESPARSE_MM_URL}/Williams/webbase-1M.tar.gz"
+    download_dataset af_shell10 "${SUITESPARSE_MM_URL}/Schenk_AFE/af_shell10.tar.gz"
+    download_dataset SiO2 "${SUITESPARSE_MM_URL}/PARSEC/SiO2.tar.gz"
+    download_dataset gupta3 "${SUITESPARSE_MM_URL}/Gupta/gupta3.tar.gz"
+    download_dataset rma10 "${SUITESPARSE_MM_URL}/Bova/rma10.tar.gz"
+    download_dataset TSOPF_FS_b300_c2 "${SUITESPARSE_MM_URL}/TSOPF/TSOPF_FS_b300_c2.tar.gz"
 }
 
 download_medium() {
     echo "Downloading medium dataset to ${OUTPUT_DIR}"
     # SpGEMM/SpMV medium benchmark matrices (~50MB-300MB uncompressed / ~10MB-120MB compressed)
-    download_dataset cop20k_A https://suitesparse-collection-website.herokuapp.com/MM/Williams/cop20k_A.tar.gz
-    download_dataset cant https://suitesparse-collection-website.herokuapp.com/MM/Williams/cant.tar.gz
-    download_dataset mac_econ_fwd500 https://suitesparse-collection-website.herokuapp.com/MM/Williams/mac_econ_fwd500.tar.gz
-    download_dataset pwtk https://suitesparse-collection-website.herokuapp.com/MM/Boeing/pwtk.tar.gz
-    download_dataset hood https://suitesparse-collection-website.herokuapp.com/MM/GHS_psdef/hood.tar.gz
-    download_dataset bmwcra_1 https://suitesparse-collection-website.herokuapp.com/MM/GHS_psdef/bmwcra_1.tar.gz
-    download_dataset web-Google https://suitesparse-collection-website.herokuapp.com/MM/SNAP/web-Google.tar.gz
-    download_dataset TSOPF_RS_b2383 https://suitesparse-collection-website.herokuapp.com/MM/TSOPF/TSOPF_RS_b2383.tar.gz
+    download_dataset cop20k_A "${SUITESPARSE_MM_URL}/Williams/cop20k_A.tar.gz"
+    download_dataset cant "${SUITESPARSE_MM_URL}/Williams/cant.tar.gz"
+    download_dataset mac_econ_fwd500 "${SUITESPARSE_MM_URL}/Williams/mac_econ_fwd500.tar.gz"
+    download_dataset pwtk "${SUITESPARSE_MM_URL}/Boeing/pwtk.tar.gz"
+    download_dataset hood "${SUITESPARSE_MM_URL}/GHS_psdef/hood.tar.gz"
+    download_dataset bmwcra_1 "${SUITESPARSE_MM_URL}/GHS_psdef/bmwcra_1.tar.gz"
+    download_dataset web-Google "${SUITESPARSE_MM_URL}/SNAP/web-Google.tar.gz"
+    download_dataset TSOPF_RS_b2383 "${SUITESPARSE_MM_URL}/TSOPF/TSOPF_RS_b2383.tar.gz"
 }
 
 download_hipmcl() {
@@ -91,37 +103,37 @@ download_hipmcl() {
 
 download_tfCombBLAS() {
     echo "Downloading dataset used for benchmarking CombBLAS GPU to ${OUTPUT_DIR}"
-    download_dataset atmosmodd https://suitesparse-collection-website.herokuapp.com/MM/Bourchtein/atmosmodd.tar.gz
-    download_dataset delaunay_n22 https://suitesparse-collection-website.herokuapp.com/MM/DIMACS10/delaunay_n22.tar.gz 
+    download_dataset atmosmodd "${SUITESPARSE_MM_URL}/Bourchtein/atmosmodd.tar.gz"
+    download_dataset delaunay_n22 "${SUITESPARSE_MM_URL}/DIMACS10/delaunay_n22.tar.gz"
 }
 
 download_ACSpGEMM() {
     echo "Downloading dataset used for benchmarking AC-SpGEMM Paper to ${OUTPUT_DIR}"
-    download_dataset language https://suitesparse-collection-website.herokuapp.com/MM/Tromble/language.tar.gz
-    download_dataset scircuit https://suitesparse-collection-website.herokuapp.com/MM/Hamm/scircuit.tar.gz
-    download_dataset stat96v2 https://suitesparse-collection-website.herokuapp.com/MM/Meszaros/stat96v2.tar.gz
-    download_dataset asia_osm https://suitesparse-collection-website.herokuapp.com/MM/DIMACS10/asia_osm.tar.gz
-    download_dataset atmosmodl https://suitesparse-collection-website.herokuapp.com/MM/Bourchtein/atmosmodl.tar.gz
-    download_dataset filter3D https://suitesparse-collection-website.herokuapp.com/MM/Oberwolfach/filter3D.tar.gz
-    download_dataset bibd_19_9 https://suitesparse-collection-website.herokuapp.com/MM/JGD_BIBD/bibd_19_9.tar.gz
-    download_dataset cant https://suitesparse-collection-website.herokuapp.com/MM/Williams/cant.tar.gz
-    download_dataset landmark https://suitesparse-collection-website.herokuapp.com/MM/Pereyra/landmark.tar.gz
-    download_dataset hood https://suitesparse-collection-website.herokuapp.com/MM/GHS_psdef/hood.tar.gz
-    download_dataset TSOPF_RS_b2383 https://suitesparse-collection-website.herokuapp.com/MM/TSOPF/TSOPF_RS_b2383.tar.gz
-    download_dataset hugebubbles-00020 https://suitesparse-collection-website.herokuapp.com/MM/DIMACS10/hugebubbles-00020.tar.gz
-    download_dataset poisson3Da https://suitesparse-collection-website.herokuapp.com/MM/FEMLAB/poisson3Da.tar.gz
-    download_dataset TSC_OPF_1047 https://suitesparse-collection-website.herokuapp.com/MM/IPSO/TSC_OPF_1047.tar.gz
+    download_dataset language "${SUITESPARSE_MM_URL}/Tromble/language.tar.gz"
+    download_dataset scircuit "${SUITESPARSE_MM_URL}/Hamm/scircuit.tar.gz"
+    download_dataset stat96v2 "${SUITESPARSE_MM_URL}/Meszaros/stat96v2.tar.gz"
+    download_dataset asia_osm "${SUITESPARSE_MM_URL}/DIMACS10/asia_osm.tar.gz"
+    download_dataset atmosmodl "${SUITESPARSE_MM_URL}/Bourchtein/atmosmodl.tar.gz"
+    download_dataset filter3D "${SUITESPARSE_MM_URL}/Oberwolfach/filter3D.tar.gz"
+    download_dataset bibd_19_9 "${SUITESPARSE_MM_URL}/JGD_BIBD/bibd_19_9.tar.gz"
+    download_dataset cant "${SUITESPARSE_MM_URL}/Williams/cant.tar.gz"
+    download_dataset landmark "${SUITESPARSE_MM_URL}/Pereyra/landmark.tar.gz"
+    download_dataset hood "${SUITESPARSE_MM_URL}/GHS_psdef/hood.tar.gz"
+    download_dataset TSOPF_RS_b2383 "${SUITESPARSE_MM_URL}/TSOPF/TSOPF_RS_b2383.tar.gz"
+    download_dataset hugebubbles-00020 "${SUITESPARSE_MM_URL}/DIMACS10/hugebubbles-00020.tar.gz"
+    download_dataset poisson3Da "${SUITESPARSE_MM_URL}/FEMLAB/poisson3Da.tar.gz"
+    download_dataset TSC_OPF_1047 "${SUITESPARSE_MM_URL}/IPSO/TSC_OPF_1047.tar.gz"
 }
 
 download_suitsparse_small() {
     echo "Downloading SuiteSparse small dataset to ${OUTPUT_DIR}"
-    download_dataset 1138_bus https://suitesparse-collection-website.herokuapp.com/MM/HB/1138_bus.tar.gz
-    download_dataset 494_bus https://suitesparse-collection-website.herokuapp.com/MM/HB/494_bus.tar.gz
-    download_dataset 662_bus https://suitesparse-collection-website.herokuapp.com/MM/HB/662_bus.tar.gz
-    download_dataset 685_bus https://suitesparse-collection-website.herokuapp.com/MM/HB/685_bus.tar.gz
+    download_dataset 1138_bus "${SUITESPARSE_MM_URL}/HB/1138_bus.tar.gz"
+    download_dataset 494_bus "${SUITESPARSE_MM_URL}/HB/494_bus.tar.gz"
+    download_dataset 662_bus "${SUITESPARSE_MM_URL}/HB/662_bus.tar.gz"
+    download_dataset 685_bus "${SUITESPARSE_MM_URL}/HB/685_bus.tar.gz"
 }
 
-datasetname="$1"
+datasetname="${1:-}"
 
 if [[ "$datasetname" == "tiny" ]]; then
     download_tiny

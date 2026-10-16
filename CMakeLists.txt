@@ -128,10 +128,6 @@ if(SPCRAFT_USE_MPI)
 	target_compile_definitions(SPCraft PUBLIC SPCRAFT_USE_MPI=1)
 	target_link_libraries(SPCraft PUBLIC MPI::MPI_CXX)
 endif()
-if(SPCRAFT_USE_CALIPER)
-	target_compile_definitions(SPCraft PRIVATE SPCRAFT_USE_CALIPER=1)
-	target_link_libraries(SPCraft PRIVATE caliper)
-endif()
 if(SPCRAFT_USE_MKL)
 	target_compile_definitions(SPCraft PUBLIC SPCRAFT_USE_MKL=1)
 	target_link_libraries(SPCraft PUBLIC MKL::MKL)
@@ -200,7 +196,7 @@ if(SPCRAFT_BUILD_EXAMPLES AND NOT SPCRAFT_BUILD_DOWNSTREAM)
   add_subdirectory(examples/kernel EXCLUDE_FROM_ALL)
 endif()
 
-# Expand comment markers only in profiling builds; normal builds use original sources.
+# Generate separate profiling targets; the normal targets keep their original sources.
 if(SPCRAFT_USE_CALIPER)
   set(SPCRAFT_PROFILER_TOOLS "$ENV{PROFILER_TOOLS_DIR}" CACHE PATH
     "profiler.nvim checkout providing the marker generator")
@@ -210,16 +206,26 @@ if(SPCRAFT_USE_CALIPER)
   endif()
   include("${SPCRAFT_PROFILER_TOOLS}/cmake/Profiler.cmake")
   set(profiler_targets SPCraft SPCraftInput)
-  foreach(example IN ITEMS e08_summa_2d e09_summa_3d)
+  foreach(example IN ITEMS ex01_spmv ex02_spgemm e08_summa_2d e09_summa_3d)
     if(TARGET ${example})
       list(APPEND profiler_targets ${example})
-      target_link_libraries(${example} PRIVATE caliper)
     endif()
   endforeach()
-  target_link_libraries(SPCraftInput PRIVATE caliper)
-  profiler_instrument_targets(
+  set(profiler_mpi)
+  set(benchmark_examples)
+  foreach(example IN ITEMS ex01_spmv ex02_spgemm e08_summa_2d)
+    if(TARGET ${example})
+      list(APPEND benchmark_examples ${example})
+    endif()
+  endforeach()
+  if(SPCRAFT_USE_MPI)
+    set(profiler_mpi MPI)
+  endif()
+  profiler_add_targets(
+    ${profiler_mpi}
     ROOT "${PROJECT_SOURCE_DIR}"
     INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include"
+    BENCHMARKS ${benchmark_examples}
     TARGETS ${profiler_targets})
 endif()
 

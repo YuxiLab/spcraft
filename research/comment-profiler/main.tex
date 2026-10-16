@@ -1,0 +1,222 @@
+\documentclass[10pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,listings,xcolor,hyperref}
+\hypersetup{colorlinks=true,urlcolor=blue,citecolor=blue,linkcolor=blue}
+\lstset{basicstyle=\ttfamily\small,breaklines=true,columns=fullflexible,frame=single}
+\title{From Teaching Examples to Repeatable Performance Experiments\\
+through Comment-Directed Build Generation}
+\author{Research design and prototype draft}
+\date{\today}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Teaching examples explain an algorithm's public interface, whereas performance
+drivers control setup, warmup, repetition, and reporting. Maintaining both can
+introduce differences in workloads and timing boundaries. We investigate a build
+workflow in which source comments identify a repeatable operation and its nested
+phases. CMake retains ordinary targets and generates separate profiling sources,
+libraries, and executables. A generated harness repeats the selected operation,
+and Caliper records phase and repetition context. The prototype supports serial,
+OpenMP, and collective MPI workloads and provides a source-linked dashboard.
+This draft specifies the implementation and an evaluation protocol. The local
+validation exercises functionality; it does not establish low overhead,
+performance portability, or a publication-level novelty claim.
+\end{abstract}
+
+\section{Problem and research questions}
+Performance experiments need an explicit workload and timing boundary that remain
+consistent with the code developers read and maintain. A teaching example already
+loads inputs, invokes a public algorithm, and checks its result, but its single
+execution is insufficient for characterizing runtime variability. Copying it into
+a performance driver creates another place to maintain those choices.
+
+The research question is whether a small, checked annotation language and build
+transformation can preserve one workload definition while providing repeatable
+overall measurements and internal explanations. We evaluate four narrower questions:
+\begin{enumerate}
+\item Does generated execution preserve results, ownership, and supported control flow?
+\item How closely do its timing boundaries match explicit hand-written drivers?
+\item What runtime, build-time, and storage costs arise from the harness and phase recording?
+\item Does one workflow remain useful across serial, OpenMP, and MPI workloads?
+\end{enumerate}
+These are hypotheses to test. Comment syntax alone is not sufficient evidence of
+a new research contribution.
+
+\section{Design and implementation}
+The build transformation separates the maintained program from generated measurement
+code. Python validates comments before updating any generated file. CMake custom
+commands create a mirror under the build directory and regenerate it when sources,
+headers, or the generator change. Original targets continue to compile the original
+files. Source mappings and \texttt{\#line} directives retain navigation and compiler
+diagnostics at the original locations.
+
+\subsection{Annotation contract}
+The annotations identify configuration, a repeatable value-producing operation,
+and nested phases. For example, the distributed driver prepares DCSC operands before
+the following block:
+\begin{lstlisting}[language=C++]
+const DistSpCOO<IT, NT, OT> product = [&] {
+  // @profiler-benchmark time_to_solution start
+  return Mpi2DSummaSpGEMM<PlusTimesRing<NT>>(a, a);
+  // @profiler-benchmark time_to_solution end
+}();
+\end{lstlisting}
+The normal executable invokes this operation once. The generated executable replaces
+the annotated body with a call to a repetition harness. Its callable returns an
+owning value; the harness releases the previous result outside the timed interval
+and retains the last result for the example's independent reference check. Input
+loading, partitioning, and conversion occur once outside this block. The selected
+operation must produce a fresh result without irreversibly modifying its inputs.
+The prototype does not infer or restore mutated input state.
+
+\texttt{@profiler-region NAME start/end} identifies nested phase boundaries.
+\texttt{@profiler-iter VARIABLE start/end} associates an algorithm iteration with
+its region events. Benchmark repetition and algorithm iteration are distinct fields.
+\texttt{@profiler-config argc argv} consumes profiling-only flags before the
+application's own parser runs. Normal compilation treats all annotations as comments.
+
+The checker tokenizes comments, literals, braces, and preprocessor branches. It
+rejects unknown directives, crossed or unclosed pairs, and scope or branch crossings.
+It is not a C++ parser: the compiler checks types and return paths. Region guards
+close through C++ object lifetime. A benchmark block must be outside other annotated
+regions; a block that returns no value is unsupported by this initial harness.
+
+\subsection{Build products and measurement modes}
+Separate library targets allow the same project to retain its ordinary build while
+offering detailed instrumentation. \texttt{SPCraft} compiles original sources;
+\texttt{SPCraft\_profile} compiles their generated counterparts and links Caliper.
+Each selected example has three executable targets:
+\begin{description}
+\item[Ordinary example.] Original source and original library, executing once.
+\item[Timing-only benchmark.] Generated repetition harness with the original library.
+Nested annotation hooks in generated driver code are disabled at compile time.
+\item[Detailed profile.] Generated harness and instrumented library, recording nested phases.
+\end{description}
+The timing-only executable still links Caliper to record one outer result per rank
+and repetition. Its raw call timer excludes the outer annotation's begin/end and
+trace output. This mode is not an instrumentation-free executable, and recording
+between repetitions can affect cache and scheduling state. Comparison with a separate
+hand-written reference driver remains necessary.
+
+\subsection{Execution protocol}
+The runtime controls warmups and limits without rebuilding the application.
+Defaults are 1 warmup and termination after either 1000 measured repetitions or
+10 seconds of batch wall time. A single explicit repetition or duration limit
+replaces the other default; providing both terminates at the first limit. A running
+operation completes before a duration cutoff is checked.
+
+Warmup phase hooks and default-channel recording are disabled. For measured MPI
+repetitions, the harness releases the preceding output and calls a world-communicator
+barrier before starting the local call timer. The call includes algorithm-internal
+allocation, communication, computation, and returned-result construction. Reductions,
+stopping decisions, and outer trace recording are outside the raw call timer. Rank 0
+decides whether to stop and broadcasts that decision, ensuring matching collective
+execution. This prototype assumes the measured operation uses all ranks in
+\texttt{MPI\_COMM\_WORLD}; subcommunicators require an explicit extension.
+
+The outer elapsed duration is stored as integer nanoseconds. This avoids decimal
+rounding of short floating-point durations during JSON export. Caliper supplies
+nested phase durations and rank context. Asynchronous accelerator operations would
+require explicit completion before stopping the timer and are not evaluated here.
+
+\section{Measurement and statistical model}
+Distributed timing requires reductions in a specified order. Let $t_{j,r,p,k}$ be
+the inclusive duration of call $k$ to phase $p$ on rank $r$ during measured repetition
+$j$. The phase sample is
+\[
+ T_{j,p}=\max_r\left(\sum_k t_{j,r,p,k}\right).
+\]
+The dashboard reports the median, mean, minimum, maximum, and sample standard
+deviation of $T_{j,p}$ across repetitions. This differs from first accumulating all
+repetitions per rank and then taking one maximum. Algorithm iterations can be filtered
+before the per-rank sum while benchmark repetition identifiers remain intact.
+
+Overall time to solution comes from the explicit outer call timer, with the same
+per-repetition rank maximum. It is not reconstructed from child phases. Different
+phases can attain their maxima on different ranks, and inclusive parent/child timers
+overlap. Consequently, adding phase maxima does not produce overall elapsed time.
+The dashboard retains a separate rank-total view for diagnosing imbalance and labels
+those values as accumulated times.
+
+Every expected rank must provide an outer timer for a repetition to contribute to
+global statistics. The dashboard excludes partially covered repetitions and reports
+their count. A genuinely unexecuted phase contributes zero when the corresponding
+outer measurement is complete. The evaluation script rejects missing or duplicate
+outer observations and discontinuous repetition identifiers. The final retained result
+is checked against Eigen after the batch; the current prototype does not validate
+every intermediate repetition.
+
+\section{Evaluation plan and prototype validation}
+The evaluation must separate functional validation from performance conclusions.
+The supplied \texttt{evaluate.py} runs serial and 2-thread OpenMP SpMV and SpGEMM,
+and DCSC SUMMA with 1 and 4 MPI ranks. Every case runs in timing-only and detailed
+profiling modes. It verifies the numerical check, trace coverage, repetition count,
+and presence or absence of nested phases. Each run retains raw traces, a portable
+dashboard report, command, selected environment, input hash, binary hash, source
+revision, dirty-file list, and measurement limits. Trial order is shuffled with a
+recorded seed; independent launches are retained separately.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lll}
+\toprule
+Case & Purpose & Reference \\
+\midrule
+SpMV, 1 thread & Short operation and allocation boundary & Eigen \\
+SpMV, 2 threads & Internally threaded workload & Eigen \\
+SpGEMM, 1/2 threads & Irregular work and nested hash phases & Eigen \\
+SUMMA, 1/4 ranks & Collective repetition and rank statistics & Eigen \\
+Control-flow fixtures & Early exits and lexical safety & Hand-checked events \\
+\bottomrule
+\end{tabular}
+\caption{Initial validation cases. Local execution validates the workflow; these
+cases alone do not establish scaling or generality.}
+\end{table}
+
+Publication experiments should add matrices spanning shape, sparsity, and per-column
+work; several problem scales; physical cores with recorded affinity; independent
+process launches; and MPI execution on multiple nodes. Hand-written timing drivers
+should use the identical input, output-allocation boundary, warmup policy, and
+repetition schedule. A direct Caliper-API implementation should establish whether
+generation changes either timing fidelity or instrumentation overhead. Google
+Benchmark manual timing provides a useful shared-memory comparison with matching
+boundaries~\cite{googlebenchmark}. Confidence intervals should be constructed over
+independent-launch summaries rather than treating all inner repetitions as independent.
+
+Additional experiments should measure annotation density, very short regions,
+incremental rebuild cost, trace growth, missing-rank diagnostics, and injected rank
+imbalance. Negative tests should cover malformed markers, invalid options, mutable
+inputs, incompatible collective schedules, and exceptions. Support claims must be
+limited to exercised compiler, C++ language, OpenMP, and MPI configurations.
+
+\section{Related work and prospective contribution}
+Existing tools already provide source instrumentation and rich parallel performance
+analysis. Caliper supplies application annotations, contextual data, MPI-aware
+measurement, and analysis services~\cite{caliper}; this prototype uses those facilities
+and does not claim to introduce them. Score-P supports automatic and user-defined
+instrumentation~\cite{scorepmanual}. CaPI investigates configurable selective
+instrumentation~\cite{capi}. Google Benchmark provides repetition, statistics,
+and manual timing for benchmark drivers~\cite{googlebenchmark}.
+
+The prospective contribution is the checked transition from an example's semantic
+operation boundary to separate generated execution modes, together with explicit
+repetition/rank accounting, original-source navigation, and reproducible experiment
+artifacts. The evaluation must establish practical benefits over direct annotations
+and conventional drivers. A broader literature review, including TAU, LIKWID,
+source-to-source instrumentation, and executable documentation, remains required
+before claiming originality or choosing a publication venue.
+
+\section{Limitations and next steps}
+The current implementation is a local prototype whose supported semantics should be
+made explicit before broader deployment. It assumes repeatable owning-return workloads,
+world-collective MPI execution, and CPU completion at function return. It checks the
+last result, cannot restore arbitrary mutable state, and records traces whose size
+grows with repetitions and annotation density. The Neovim dashboard is one consumer;
+the build generator and evaluation script execute without the editor. Remote execution,
+accelerator completion rules, bounded-memory aggregation, subcommunicators, and a
+state-reset annotation are future extensions rather than completed capabilities.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}
