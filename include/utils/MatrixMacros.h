@@ -15,6 +15,7 @@
 #define DISTSPCSC DistSpCSC<IT, NT, OT>
 #define DISTSPDCSC DistSpDCSC<IT, NT, OT>
 #define SPDVEC DenseVector<IT, NT>
+#define SPSVEC SparseVector<IT, NT>
 #define SPND [[nodiscard]]
 
 // CHECK

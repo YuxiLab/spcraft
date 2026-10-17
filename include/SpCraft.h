@@ -11,6 +11,7 @@
 #include "core/CsrMatrix.h"
 #include "core/DcscMatrix.h"
 #include "core/DenseVector.h"
+#include "core/SparseVector.h"
 #include "eigen/eigeninterface.h"
 #include "graph/PageRank.h"
 #include "graph/mtPageRank.h"
