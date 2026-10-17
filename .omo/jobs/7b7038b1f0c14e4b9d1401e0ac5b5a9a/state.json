@@ -1,1 +1,0 @@
-{"child":{"birth":"16748483","pid":1842311},"created_at":1792080360.5538948,"exit_code":0,"fingerprint":"be9da8c92a6d09d1aae2c79b6daf9b2672c1955e8a0a884a352617b7fb518955","finished_at":1792080366.617192,"job":"7b7038b1f0c14e4b9d1401e0ac5b5a9a","job_id":null,"revision":null,"scheduler":"process","status":"SUCCESS","terminal":true,"worker":{"birth":"16748479","pid":1842309}}

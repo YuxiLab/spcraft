@@ -11,6 +11,10 @@ bin/
 lib/
 
 # Generated files & tooling cache
+# Oh My Overseer experiments, jobs, and profiler.nvim runs stay on the local machine.
+.omo/
+.overseer/
+.profiler/
 compile_commands.json
 .cache/
 .lake/
