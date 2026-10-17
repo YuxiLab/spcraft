@@ -98,7 +98,7 @@ def database():
         for source in sorted((ROOT / folder).rglob('*')):
             if source.suffix not in ('.cu', '.cuh', '.cpp', '.hpp', '.h'):
                 continue
-            # Per AGENTS.md, .cuh files contain host declarations, not kernels.
+            # SpCraft .cuh files contain host declarations, not kernels.
             cuda = source.suffix == '.cu'
             command = flags + ['-x', 'cuda' if cuda else 'c++']
             source_path = source.relative_to(ROOT).as_posix()

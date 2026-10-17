@@ -23,8 +23,8 @@ declarations, with its license retained under `build/clangd-macos/mkl_include/`.
 Download URLs and SHA-256 hashes are in `macos-deps.json`.
 
 The database contains explicit entries for project sources and headers. `.cu`
-files use CUDA mode and Clang's CUDA wrappers before GCC's C++ headers. As required
-by this project's `AGENTS.md`, `.cuh` files use host C++ mode. CUDA declarations
+files use CUDA mode and Clang's CUDA wrappers before GCC's C++ headers. `.cuh`
+files hold host-side declarations only, so they use host C++ mode. CUDA declarations
 remain enabled with `SPCRAFT_USE_CUDA=1`. Host C++ files enable OpenMP parsing;
 CUDA files use host-only CUDA parsing, without enabling OpenMP. This does not
 validate GPU code generation, linking, or execution.
