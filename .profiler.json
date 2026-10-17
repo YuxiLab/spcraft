@@ -1,0 +1,10 @@
+{
+  "mpi": true,
+  "build": ["cmake", "-P", "cmake/BuildProfiler.cmake"],
+  "run": [
+    "mpiexec", "-n", "4", "./build/profiler/bin/e08_summa_2d_profile",
+    "--matrix", "examples/spcraft/inputs/summa_2d.mtx",
+    "--grid-rows", "2", "--grid-cols", "2"
+  ],
+  "env": {"OMP_NUM_THREADS": "1"}
+}

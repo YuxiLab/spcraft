@@ -23,6 +23,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -DNDEBUG")
 option(SPCRAFT_USE_MPI "Activate the MPI dependency" OFF)
 option(SPCRAFT_USE_CUDA "Activate the CUDA dependency" OFF)
 option(SPCRAFT_USE_MKL "Activate the oneMKL sparse backend" OFF)
+option(SPCRAFT_USE_CALIPER "Enable Caliper profiling annotations" OFF)
 option(SPCRAFT_BENCH_COMBBLAS "Activate the CombBLAS comparison benchmarks" OFF)
 option(SPCRAFT_BENCH_GINKGO "Activate the GINKGO comparison benchmarks" OFF)
 option(SPCRAFT_BENCH_NETWORKX "Activate the GINKGO comparison benchmarks" OFF)
@@ -69,6 +70,10 @@ endif()
 
 if(SPCRAFT_USE_MPI)
 	find_package(MPI REQUIRED COMPONENTS CXX)
+endif()
+
+if(SPCRAFT_USE_CALIPER)
+	find_package(caliper CONFIG REQUIRED)
 endif()
 
 if(SPCRAFT_USE_CUDA)
@@ -189,6 +194,39 @@ endif()
 # EXCLUDE_FROM_ALL preserves the library-only default build.
 if(SPCRAFT_BUILD_EXAMPLES AND NOT SPCRAFT_BUILD_DOWNSTREAM)
   add_subdirectory(examples/kernel EXCLUDE_FROM_ALL)
+endif()
+
+# Generate separate profiling targets; the normal targets keep their original sources.
+if(SPCRAFT_USE_CALIPER)
+  set(SPCRAFT_PROFILER_TOOLS "$ENV{PROFILER_TOOLS_DIR}" CACHE PATH
+    "profiler.nvim checkout providing the marker generator")
+  if(NOT EXISTS "${SPCRAFT_PROFILER_TOOLS}/cmake/Profiler.cmake")
+    message(FATAL_ERROR
+      "Set SPCRAFT_PROFILER_TOOLS to a profiler.nvim checkout (or run ProfilerRun)")
+  endif()
+  include("${SPCRAFT_PROFILER_TOOLS}/cmake/Profiler.cmake")
+  set(profiler_targets SPCraft SPCraftInput)
+  foreach(example IN ITEMS ex01_spmv ex02_spgemm e08_summa_2d e09_summa_3d)
+    if(TARGET ${example})
+      list(APPEND profiler_targets ${example})
+    endif()
+  endforeach()
+  set(profiler_mpi)
+  set(benchmark_examples)
+  foreach(example IN ITEMS ex01_spmv ex02_spgemm e08_summa_2d)
+    if(TARGET ${example})
+      list(APPEND benchmark_examples ${example})
+    endif()
+  endforeach()
+  if(SPCRAFT_USE_MPI)
+    set(profiler_mpi MPI)
+  endif()
+  profiler_add_targets(
+    ${profiler_mpi}
+    ROOT "${PROJECT_SOURCE_DIR}"
+    INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include"
+    BENCHMARKS ${benchmark_examples}
+    TARGETS ${profiler_targets})
 endif()
 
 #################################################################

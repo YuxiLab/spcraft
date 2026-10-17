@@ -121,9 +121,7 @@ int BenchmarkRun(const cxxopts::ParseResult& result)
   RunVariant<std::int32_t, float, std::int64_t>(result, settings, report);
   RunVariant<std::int32_t, double, std::int32_t>(result, settings, report);
   RunVariant<std::int32_t, double, std::int64_t>(result, settings, report);
-  RunVariant<std::int64_t, float, std::int32_t>(result, settings, report);
   RunVariant<std::int64_t, float, std::int64_t>(result, settings, report);
-  RunVariant<std::int64_t, double, std::int32_t>(result, settings, report);
   RunVariant<std::int64_t, double, std::int64_t>(result, settings, report);
 
   if (report.runs().empty()) {

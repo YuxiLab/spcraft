@@ -34,7 +34,9 @@ SPMV_BENCHMARKS = {
 }
 
 ALL_PRESETS = {**SPGEMM_BENCHMARKS, **SPMV_BENCHMARKS}
-BASE_URL = "https://sparse.tamu.edu/MM"
+BASE_URL = os.environ.get(
+    "SUITESPARSE_MM_URL", "https://www.cise.ufl.edu/research/sparse/MM"
+).rstrip("/")
 
 
 def download_matrix(name_or_path: str, output_dir: Path) -> bool:

@@ -83,7 +83,10 @@ def download_matrix(data_root: Path, spec: MatrixSpec) -> Path:
         return target
 
     target.parent.mkdir(parents=True, exist_ok=True)
-    url = f"http://sparse-files.engr.tamu.edu/MM/{spec.group}/{spec.name}.tar.gz"
+    base_url = os.environ.get(
+        "SUITESPARSE_MM_URL", "https://www.cise.ufl.edu/research/sparse/MM"
+    ).rstrip("/")
+    url = f"{base_url}/{spec.group}/{spec.name}.tar.gz"
     archive = target.parent / f"{spec.name}.tar.gz.part"
     print(f"Downloading {spec.name}: {url}", flush=True)
     with urllib.request.urlopen(url) as response, archive.open("wb") as output:

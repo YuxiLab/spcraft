@@ -74,8 +74,8 @@ std::vector<BlockInfo<IT, OT>> GatherLocalMatInfo(const MPI_Comm mpi_comm, IT m,
 SP_SR_MAT_TEMP
 SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
 {
+  // @profiler-region dimchk start
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>, "Semiring and Matrix type mismatch");
-
   // Each rank owns one contiguous submatrix on the shared process grid.
   const bool same_grid = A.commgrid && B.commgrid && A.commgrid == B.commgrid;
   if (!same_grid || A.commgrid->World() == MPI_COMM_NULL) {
@@ -95,6 +95,7 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
   }
   DISTSPCOO result(A.commgrid, A.m, B.n);
   if (A.n == 0) return result;
+  // @profiler-region dimchk end
 
   // A metadata follows process columns; B metadata follows process rows.
   using Block = BlockInfo<IT, OT>;
@@ -104,7 +105,8 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
   const std::vector<Block> B_info = GatherLocalMatInfo(col_world, B.local.m, B.local.n, B.local.nnz);
   std::vector<SPCOO> cstages;
   for (int q = 0; q < grid.Cols(); ++q) {
-    // bcast A
+    // @profiler-iter q start
+    // @profiler-region bcast_A start
     const Block& a = A_info[q];
     SPCSC opA;
     if (q == grid.Col()) {
@@ -117,7 +119,8 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
     MPI_Bcast(opA.col_ptr, a.n + 1, MPIType<OT>(), q, row_world);
     MPI_Bcast(opA.row_id, a.nnz, MPIType<IT>(), q, row_world);
     MPI_Bcast(opA.val, a.nnz, MPIType<NT>(), q, row_world);
-    // bcast B
+    // @profiler-region bcast_A end
+    // @profiler-region bcast_B start
     const Block& b = B_info[q];
     SPCSC opB;
     if (q == grid.Row()) {
@@ -130,11 +133,17 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
     MPI_Bcast(opB.col_ptr, b.n + 1, MPIType<OT>(), q, col_world);
     MPI_Bcast(opB.row_id, b.nnz, MPIType<IT>(), q, col_world);
     MPI_Bcast(opB.val, b.nnz, MPIType<NT>(), q, col_world);
+    // @profiler-region bcast_B end
+    // @profiler-region localspgemm start
     SPCOO tmpc = OmpHashSpGEMM<SemiRing>(opA, opB);
     cstages.push_back(std::move(tmpc));
+    // @profiler-region localspgemm end
+    // @profiler-iter q end
   }
+  // @profiler-region multiwaymerge start
   // merge stages' COO
   result.local = OmpMultiwayMerge<SemiRing>(cstages, A.local.m, B.local.n);
+  // @profiler-region multiwaymerge end
   return result;
 }
 

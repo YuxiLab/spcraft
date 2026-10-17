@@ -217,18 +217,32 @@ SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B)
     return result;
   }
   const int threads = OMP_GET_MAX_THREADS();
+  // @profiler-region hash_lookup start
   const DcscColumnLookup<IT, NT, OT> lookup(A);
+  // @profiler-region hash_lookup end
+  // @profiler-region hash_estimate_flops start
   const VL flops = EstimateDcscFlops(A, B, lookup);
+  // @profiler-region hash_estimate_flops end
+  // @profiler-region hash_flops_prefix start
   const VL flop_prefixsum = OmpPrefixSum(flops, threads);
+  // @profiler-region hash_flops_prefix end
+  // @profiler-region hash_symbolic start
   const VL counts = CountDcscEntries(A, B, flop_prefixsum, lookup);
+  // @profiler-region hash_symbolic end
 
+  // @profiler-region hash_output_offsets start
   const VL offsets = OmpPrefixSum(counts, threads);
+  // @profiler-region hash_output_offsets end
   if (static_cast<std::uintmax_t>(offsets.back()) >
       static_cast<std::uintmax_t>(std::numeric_limits<OT>::max())) {
     throw std::overflow_error("SpGEMM output nnz exceeds offset type limit");
   }
+  // @profiler-region hash_allocate start
   result.Allocate(static_cast<OT>(offsets.back()), A.m, B.n);
+  // @profiler-region hash_allocate end
+  // @profiler-region hash_numeric start
   AccumulateDcscEntries<SemiRing>(A, B, offsets, lookup, result);
+  // @profiler-region hash_numeric end
   return result;
 }
 

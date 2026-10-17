@@ -63,11 +63,23 @@ CUDA-enabled installations also export `SPCraft::SPCraftCUDA`.
 
 ## Build on macOS with OpenMP
 
-Install the Xcode Command Line Tools and the build dependencies (`brew install
-cmake ninja libomp`). The `macos-openmp` preset uses Clang and libomp, disables
-CUDA, MPI, and MKL, and builds the examples, CPU benchmarks, and tests.
+Install the Xcode Command Line Tools and the Homebrew dependencies:
 
 ```bash
+brew bundle --file=Brewfile
+```
+
+The Brewfile includes Boost, Eigen, fmt, cxxopts, Google Benchmark, GoogleTest,
+libomp, MPI, CMake, and Ninja. CMake discovers these installed packages before
+using its download fallback. `fast_matrix_market` has no Homebrew core formula
+and continues to use that fallback; MPI-enabled Caliper is installed separately
+as described in the [Neovim workflow guide](docs/nvim-overseer.md).
+
+The `macos-openmp` preset uses the system `cc`/`c++` drivers with libomp and MPI,
+disables CUDA and MKL, and builds the examples, CPU benchmarks, and tests.
+
+```bash
+export PATH="$(brew --prefix open-mpi)/bin:$PATH"
 export OpenMP_ROOT="$(brew --prefix libomp)"
 cmake --preset macos-openmp
 cmake --build --preset macos-openmp --parallel
@@ -76,13 +88,31 @@ ctest --preset macos-openmp
 
 For a non-Homebrew installation, set `OpenMP_ROOT` to your libomp installation
 prefix containing `include/omp.h` and `lib/libomp.dylib`. OpenMP is required by
-this preset, so configuration fails if it cannot be found. Build output goes to
+this preset, and MPI compiler wrappers must be on `PATH`. Configuration fails
+if either dependency cannot be found. Build output goes to
 `build/macos-openmp`.
+
+## Neovim profiling and experiments
+
+See [the Neovim workflow guide](docs/nvim-overseer.md) for Oh My Overseer tasks
+and Caliper profiling on the `yuxi/profiler` branch. The included `.profiler.json`
+and **Local SUMMA smoke test** experiment run a small four-rank SUMMA input and
+verify the product against Eigen, without downloading a dataset.
+Use the **Local SUMMA profiling** experiment to select datasets, threads, and
+MPI grids in Overseer, then press `P` to collect a report for each combination.
+The same annotated sources now build ordinary examples, timing-only `_benchmark`
+executables, and detailed `_profile` executables. The panel also selects warmups,
+repetition/time limits, and measurement mode. See the
+[standalone research draft](research/comment-profiler/main.tex) and its
+[evaluation driver](research/comment-profiler/evaluate.py).
 
 ## CUDA code navigation on macOS
 
-Run `python3 scripts/setup_macos_clangd.py` to prepare local clangd parsing for
-C++ and CUDA without installing a GPU driver or building the library. See
+With the native `macos-openmp` build active, run
+`python3 scripts/setup_macos_clangd.py --native-headers --check` to provide CUDA
+host declarations while preserving the native MPI compilation database. For
+Linux/CUDA implementation navigation, `python3 scripts/setup_macos_clangd.py`
+prepares a separate parsing environment without a GPU driver or a library build. See
 [the setup guide](scripts/clangd/README.md) for verification and editor details.
 
 ## Benchmark command-line options

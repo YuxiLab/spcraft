@@ -1,5 +1,29 @@
 # macOS clangd setup
 
+## Native CMake builds
+
+When using the native `macos-openmp` preset, keep its compilation database active
+and add the CUDA headers needed by the editor's `SPCRAFT_USE_CUDA=1` definition:
+
+```sh
+python3 scripts/setup_macos_clangd.py --native-headers --check
+```
+
+This downloads only the pinned CUDA runtime and internal compiler headers. It
+adds a managed host-only include fragment to the existing `.clangd`,
+preserving the active database and editor rules. It saves the original config in
+`build/clangd-macos/clangd-before-native-headers.yaml`. Re-running setup reuses
+verified downloads. Include paths are relative to the active compilation commands;
+rerun after changing the build directory.
+`--check` verifies the MPI CSC SUMMA source, `utils.h`, and `cuCsrMatrix.cuh`.
+Restart clangd in Neovim with `:LspRestart clangd` after setup.
+
+These headers support host declarations only; parsing `.cu` implementations needs
+the Linux environment described below. Native CMake builds keep their configured
+backends and do not link CUDA libraries.
+
+## Linux/CUDA parsing environment
+
 From the repository root, with Xcode Command Line Tools and Python 3.9+:
 
 ```sh

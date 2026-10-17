@@ -108,7 +108,10 @@ def read_mtx_header(path: Path) -> tuple[int, int, int]:
 def download_matrix(data_root: Path, spec: MatrixSpec) -> Path:
     target = matrix_path(data_root, spec)
     target.parent.mkdir(parents=True, exist_ok=True)
-    url = f"http://sparse-files.engr.tamu.edu/MM/{spec.group}/{spec.name}.tar.gz"
+    base_url = os.environ.get(
+        "SUITESPARSE_MM_URL", "https://www.cise.ufl.edu/research/sparse/MM"
+    ).rstrip("/")
+    url = f"{base_url}/{spec.group}/{spec.name}.tar.gz"
     # Download beside the target, then move: an interrupted run must not leave a
     # half-written .mtx that looks present to the next invocation.
     archive = target.parent / f"{spec.name}.tar.gz.part"

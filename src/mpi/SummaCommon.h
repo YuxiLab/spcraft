@@ -202,17 +202,31 @@ DISTSPCOO RunSummaStages(const Matrix& A, const Matrix& B, int layer, int layers
 
   // Blocking broadcasts finish before local multiplication or the next panel.
   for (int64_t k = layer; k < blocks; k += layers) {
+    // @profiler-iter k start
+    // @profiler-region stage start
     const IT width = std::min(block, inner - k * block);
     const int root = k;
     const IT first = 0;
     DcscMatrix<IT, NT, OT> a_panel;
     DcscMatrix<IT, NT, OT> b_panel;
+    // @profiler-region panel_preparation start
     if (grid.Col() == root) a_panel = ColumnPanel<IT, NT, OT>(A.local, first, width);
     if (grid.Row() == root) b_panel = RowPanel<IT, NT, OT>(B.local, first, width);
+    // @profiler-region panel_preparation end
+    // @profiler-region bcast_A start
     BroadcastPanel(a_panel, root, grid.RowWorld(), A.local.m, width);
+    // @profiler-region bcast_A end
+    // @profiler-region bcast_B start
     BroadcastPanel(b_panel, root, grid.ColWorld(), width, B.local.n);
+    // @profiler-region bcast_B end
+    // @profiler-region local_spgemm start
     CooMatrix<IT, NT, OT> partial = OmpHashSpGEMM<SemiRing>(a_panel, b_panel);
+    // @profiler-region local_spgemm end
+    // @profiler-region merge start
     result.local = AddProducts<SemiRing>(result.local, partial);
+    // @profiler-region merge end
+    // @profiler-region stage end
+    // @profiler-iter k end
   }
   return result;
 }
