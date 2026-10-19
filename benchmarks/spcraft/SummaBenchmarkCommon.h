@@ -2,16 +2,11 @@
 
 #include "SpCraft.h"
 
-#include <sstream>
-
-#include <benchmark/benchmark.h>
-
 using namespace spcraft;
 
 using SummaBenchmarkCSC = DistSpCSC<int64_t, double, int64_t>;
 using SummaBenchmarkCOO = DistSpCOO<int64_t, double, int64_t>;
 constexpr int64_t kSummaExtent = 2048;
-constexpr int kSummaIterations = 20;
 
 //! Construct a distributed diagonal through public COO and CSC APIs before timing.
 template <class Predicate>
@@ -43,19 +38,4 @@ inline bool VerifySummaBenchmark(const SummaBenchmarkCOO& product)
     if (product.GlobalRow(entry.row) != product.GlobalCol(entry.col) || entry.val != 4) return false;
   }
   return true;
-}
-
-inline void ReportSummaBenchmarks(MPI_Comm world)
-{
-  int rank = 0;
-  MPI_Comm_rank(world, &rank);
-  std::ostringstream hidden;
-  benchmark::ConsoleReporter reporter;
-  if (rank != 0) {
-    reporter.SetOutputStream(&hidden);
-    reporter.SetErrorStream(&hidden);
-  }
-  benchmark::RunSpecifiedBenchmarks(&reporter);
-  benchmark::ClearRegisteredBenchmarks();
-  benchmark::Shutdown();
 }

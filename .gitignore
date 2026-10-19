@@ -36,6 +36,7 @@ data/
 dataset/output
 *.mtx
 !examples/spcraft/inputs/summa_2d.mtx
+!tests/benchmarks/mpi/inputs/*.mtx
 *.tar.gz
 
 # Reproducible raw benchmark output: benchmarks/results/<library>/<kernel>/

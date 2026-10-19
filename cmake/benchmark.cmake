@@ -28,3 +28,4 @@ function(find_benchmark)
 		message(FATAL_ERROR "Google Benchmark target not available")
 	endif()
 endfunction()
+

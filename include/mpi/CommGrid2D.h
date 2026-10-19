@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "utils/MatrixMacros.h"
+
 namespace spcraft
 {
 
@@ -67,29 +69,29 @@ class CommGrid2D
   /*****************************************************************************
    *                             Member Functions                              *
    ****************************************************************************/
-  MPI_Comm World() const noexcept;
+  SPND MPI_Comm World() const noexcept;
 
-  MPI_Comm RowWorld() const noexcept;
+  SPND MPI_Comm RowWorld() const noexcept;
 
-  MPI_Comm ColWorld() const noexcept;
+  SPND MPI_Comm ColWorld() const noexcept;
 
-  int Rank() const noexcept;
+  SPND int Rank() const noexcept;
 
-  int Size() const noexcept;
+  SPND int Size() const noexcept;
 
-  int Rows() const noexcept;
+  SPND int Rows() const noexcept;
 
-  int Cols() const noexcept;
+  SPND int Cols() const noexcept;
 
-  int Row() const noexcept;
+  SPND int Row() const noexcept;
 
-  int Col() const noexcept;
+  SPND int Col() const noexcept;
 
   //! Source/world rank at process coordinates; rejects coordinates outside the grid.
-  int RankAt(int row, int col) const;
+  SPND int RankAt(int row, int col) const;
 
   //! Source/world rank owning a nonnegative matrix block coordinate.
-  int Owner(int64_t block_row, int64_t block_col) const;
+  SPND int Owner(int64_t block_row, int64_t block_col) const;
 
  private:
   void Free() noexcept;

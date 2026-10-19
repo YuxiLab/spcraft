@@ -182,6 +182,14 @@ executables. The former records internal phases; the latter links the original
 library and records only the outer call. Both retain the same generated repetition
 harness. The `_measurements` aggregate target builds both executable variants.
 
+With `SPCRAFT_BUILD_BENCHMARKS=ON`, `Bench_Mpi2DSummaSpGEMM` also gets these
+variants. Build `Bench_Mpi2DSummaSpGEMM_measurements`, then launch
+`Bench_Mpi2DSummaSpGEMM_benchmark` or `Bench_Mpi2DSummaSpGEMM_profile` with a
+square MPI rank count. Pass `-a A.mtx` and optionally `-b B.mtx`; omitting B
+computes `A*A`. Positional `A.mtx [B.mtx]` arguments also work. The benchmark
+keeps one OpenMP thread per rank and verifies the final product against Eigen
+after measurement. Its ordinary target performs a single correctness check.
+
 An owning value-returning operation opts into repetition using comments:
 
 ```cpp

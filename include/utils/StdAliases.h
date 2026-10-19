@@ -21,5 +21,6 @@ namespace spcraft
 #define VVNT std::vector<std::vector<NT>>
 #define VOT std::vector<OT>
 #define VVOT std::vector<std::vector<OT>>
+#define VSPCOO std::vector<SPCOO>
 
 }  // namespace spcraft

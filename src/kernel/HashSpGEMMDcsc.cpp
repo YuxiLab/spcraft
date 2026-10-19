@@ -217,6 +217,9 @@ SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B)
     return result;
   }
   const int threads = OMP_GET_MAX_THREADS();
+
+  // TODO: fix SpDCSC HashSpGEMM kernel and do the profiling.
+  
   // @profiler-region hash_lookup start
   const DcscColumnLookup<IT, NT, OT> lookup(A);
   // @profiler-region hash_lookup end

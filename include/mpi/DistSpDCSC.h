@@ -11,15 +11,7 @@ namespace spcraft
 {
 
 /**
- * @brief Distributed DCSC storage with shared grid ownership and move-only local storage.
- * Each rank owns one contiguous local submatrix. Global m and n determine the
- * partition through the process grid. Clone copies local buffers and shares
- * the grid. The local matrix's memowned flag controls ownership of its buffers.
- * Construction and Allocate are local operations; all ranks supply the same
- * global dimensions and grid mapping. Populate or redistribute entries separately.
- * Release all shared grid owners before MPI_Finalize.
- * Link SPCraft with MPI enabled for float, double, or bool and signed (IT, OT)
- * widths (32, 32), (32, 64), or (64, 64).
+ * @brief Distributed DCSC matrix.
  */
 SP_MAT_TEMP_DEFAULT
 class DistSpDCSC

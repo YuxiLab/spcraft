@@ -1,15 +1,37 @@
 #include "SpCraft.h"
-#include "SummaBenchmarkCommon.h"
+#include "../SummaBenchmarkCommon.h"
 
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
+#include <benchmark/benchmark.h>
 #include <cxxopts.hpp>
 
 using namespace spcraft;
 
-int BenchmarkRun(int argc, char** argv, int layers)
+namespace
+{
+
+constexpr int kSummaIterations = 20;
+
+void ReportSummaBenchmarks(MPI_Comm world)
+{
+  int rank = 0;
+  MPI_Comm_rank(world, &rank);
+  std::ostringstream hidden;
+  benchmark::ConsoleReporter reporter;
+  if (rank != 0) {
+    reporter.SetOutputStream(&hidden);
+    reporter.SetErrorStream(&hidden);
+  }
+  benchmark::RunSpecifiedBenchmarks(&reporter);
+  benchmark::ClearRegisteredBenchmarks();
+  benchmark::Shutdown();
+}
+
+int RunSumma3DBenchmark(int argc, char** argv, int layers)
 {
   benchmark::Initialize(&argc, argv);
   if (benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
@@ -47,6 +69,8 @@ int BenchmarkRun(int argc, char** argv, int layers)
   return 0;
 }
 
+}  // namespace
+
 int main(int argc, char** argv)
 {
   cxxopts::Options parser(argv[0], "3D SUMMA benchmark; also accepts Google Benchmark flags");
@@ -69,7 +93,7 @@ int main(int argc, char** argv)
       for (std::string& argument : remaining) benchmark_argv.push_back(argument.data());
       benchmark_argv.push_back(nullptr);
       const int benchmark_argc = static_cast<int>(remaining.size());
-      status = ::BenchmarkRun(benchmark_argc, benchmark_argv.data(), layers);
+      status = RunSumma3DBenchmark(benchmark_argc, benchmark_argv.data(), layers);
     }
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';

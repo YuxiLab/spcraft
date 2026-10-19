@@ -34,6 +34,10 @@ struct BlockInfo {
   OT nnz = 0;  //!< Local submatrix nonzeros.
 };
 
+/**
+ * @brief Gather local matrix size information across a comm world.
+ *
+ */
 template <class IT, class OT>
 std::vector<BlockInfo<IT, OT>> GatherLocalMatInfo(const MPI_Comm mpi_comm, IT m, IT n, OT nnz)
 {
@@ -74,7 +78,6 @@ std::vector<BlockInfo<IT, OT>> GatherLocalMatInfo(const MPI_Comm mpi_comm, IT m,
 SP_SR_MAT_TEMP
 SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
 {
-  // @profiler-region dimchk start
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>, "Semiring and Matrix type mismatch");
   // Each rank owns one contiguous submatrix on the shared process grid.
   const bool same_grid = A.commgrid && B.commgrid && A.commgrid == B.commgrid;
@@ -95,7 +98,6 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
   }
   DISTSPCOO result(A.commgrid, A.m, B.n);
   if (A.n == 0) return result;
-  // @profiler-region dimchk end
 
   // A metadata follows process columns; B metadata follows process rows.
   using Block = BlockInfo<IT, OT>;
@@ -103,7 +105,7 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
   const MPI_Comm col_world = grid.ColWorld();
   const std::vector<Block> A_info = GatherLocalMatInfo(row_world, A.local.m, A.local.n, A.local.nnz);
   const std::vector<Block> B_info = GatherLocalMatInfo(col_world, B.local.m, B.local.n, B.local.nnz);
-  std::vector<SPCOO> cstages;
+  VSPCOO cstages;
   for (int q = 0; q < grid.Cols(); ++q) {
     // @profiler-iter q start
     // @profiler-region bcast_A start

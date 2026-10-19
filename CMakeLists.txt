@@ -206,14 +206,18 @@ if(SPCRAFT_USE_CALIPER)
   endif()
   include("${SPCRAFT_PROFILER_TOOLS}/cmake/Profiler.cmake")
   set(profiler_targets SPCraft SPCraftInput)
-  foreach(example IN ITEMS ex01_spmv ex02_spgemm e08_summa_2d e09_summa_3d)
+  set(profiler_include_dirs "${PROJECT_SOURCE_DIR}/include")
+  if(TARGET Bench_Mpi2DSummaSpGEMM)
+    list(APPEND profiler_include_dirs "${PROJECT_SOURCE_DIR}/benchmarks/spcraft")
+  endif()
+  foreach(example IN ITEMS ex01_spmv ex02_spgemm e08_summa_2d e09_summa_3d Bench_Mpi2DSummaSpGEMM)
     if(TARGET ${example})
       list(APPEND profiler_targets ${example})
     endif()
   endforeach()
   set(profiler_mpi)
   set(benchmark_examples)
-  foreach(example IN ITEMS ex01_spmv ex02_spgemm e08_summa_2d)
+  foreach(example IN ITEMS ex01_spmv ex02_spgemm e08_summa_2d Bench_Mpi2DSummaSpGEMM)
     if(TARGET ${example})
       list(APPEND benchmark_examples ${example})
     endif()
@@ -224,7 +228,7 @@ if(SPCRAFT_USE_CALIPER)
   profiler_add_targets(
     ${profiler_mpi}
     ROOT "${PROJECT_SOURCE_DIR}"
-    INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include"
+    INCLUDE_DIRS ${profiler_include_dirs}
     BENCHMARKS ${benchmark_examples}
     TARGETS ${profiler_targets})
 endif()

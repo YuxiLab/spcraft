@@ -338,7 +338,28 @@ mpiexec -n 8 build/bin/e09_summa_3d --matrix A.mtx --layers 2
 ctest --test-dir build -R 'test_mpi_(2dspgemm|3dspgemm|CommGrid3D)' --output-on-failure
 ```
 
-`bench_summa_2d` and `bench_summa_3d --layers 2` benchmark a verified diagonal
-problem. They use fixed collective iteration counts and report the maximum
-elapsed time across ranks. Launch with a square rank count for 2D, or a square
-rank count per layer for 3D. The benchmarks currently use one OpenMP thread.
+`Bench_Mpi2DSummaSpGEMM` accepts Matrix Market files with `-a A.mtx -b B.mtx`
+and computes `A*B` with one OpenMP thread per rank. A is required; omitting B
+reuses A and computes `A*A`. Positional `A.mtx [B.mtx]` arguments also work.
+The long option names are `--matrix-a` and `--matrix-b`.
+Enable benchmarks in a Caliper build to generate repeated timing and
+profiling variants using the `profiler.nvim` harness:
+
+```bash
+cmake --preset profiler -DSPCRAFT_BUILD_BENCHMARKS=ON \
+  -DSPCRAFT_PROFILER_TOOLS=/path/to/profiler.nvim
+cmake --build build/profiler --parallel 4 --target Bench_Mpi2DSummaSpGEMM_measurements
+mpiexec -n 4 build/profiler/bin/Bench_Mpi2DSummaSpGEMM_benchmark \
+  -a A.mtx -b B.mtx --profiler-warmup 1 --profiler-repeat 20
+```
+
+Use a square rank count. Input construction, output disposal, rank-entry barriers,
+and the final Eigen correctness check are outside the measured call. Rectangular
+inputs are supported when A's column count matches B's row count. Each rank
+reads the input files and builds an Eigen reference. Rank 0 coordinates
+stopping and prints the median of per-repetition maximum rank durations. The
+`_profile` variant also records internal phases; see the
+[profiling workflow](docs/nvim-overseer.md#repeated-benchmark-blocks) for trace
+collection and runtime options. Defaults are one warmup and at most 1000
+repetitions or 10 seconds. The ordinary target performs one correctness check
+without timing and needs no Caliper dependency.

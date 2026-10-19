@@ -40,12 +40,7 @@ void OmpPrefixSumImpl(const IT* in, OT* out, std::size_t size, int threads)
 template <class IT, class OT = IT>
 std::vector<OT> OmpPrefixSum(const std::vector<IT>& in, int threads)
 {
-  // Prefix inputs are nonnegative counts; validate before narrowing any partial sum.
-  const int64_t total = std::accumulate(in.begin(), in.end(), int64_t{0});
-  if (static_cast<std::uintmax_t>(total) > static_cast<std::uintmax_t>(std::numeric_limits<OT>::max())) {
-    throw std::overflow_error("prefix sum exceeds output type");
-  }
-  const std::size_t size = in.size();
+  const auto size = in.size();
   std::vector<OT> out(size + 1);
   OmpPrefixSumImpl(in.data(), out.data(), size, threads);
   return out;

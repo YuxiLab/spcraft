@@ -14,36 +14,38 @@ namespace spcraft
 namespace
 {
 
+
+// @brief 
+// Note: this is symbolic phase of hash-based spgemm. It determines the EXACT nnz of a single column in 
+// output C matrix. 
+// for per column variable we use IT, for the prefx sum variables we use OT.
 SP_MAT_TEMP
-VI HashSpGEMMCscSymbolicPhase(const SPCSC& A, const SPCSC& B, const VL& flops_prefixsum)
+VIT HashSpGEMMCscSymbolicPhase(const SPCSC& A, const SPCSC& B, const VOT& flops_prefixsum)
 {
   constexpr IT kMinCapacity = 16;
   constexpr IT kHashScale = 107;
-  constexpr IT kEmpty = static_cast<IT>(-1);
-  VI counts(B.n);
-
+  constexpr IT kEmpty = -1;
+  VIT counts(B.n);
   // Each column owns its scratch; irregular expansions are scheduled dynamically.
   OMP_PARALLEL_FOR(schedule(dynamic))
   for (IT column = 0; column < B.n; ++column) {
     const OT begin = B.col_ptr[column];
     const OT end = B.col_ptr[column + 1];
-    const IT flops = static_cast<IT>(flops_prefixsum[column + 1] - flops_prefixsum[column]);
-    IT capacity = kMinCapacity;
-    while (capacity < flops) capacity <<= 1;
-    std::vector<IT> keys(capacity, kEmpty);
-
+    const IT flops = flops_prefixsum[column + 1] - flops_prefixsum[column];
+    IT htsize = kMinCapacity;
+    while (htsize < flops) htsize <<= 1;
+    std::vector<IT> keys(htsize, kEmpty);
     for (OT p = begin; p < end; ++p) {
       const IT a_column = B.row_id[p];
       for (OT q = A.col_ptr[a_column]; q < A.col_ptr[a_column + 1]; ++q) {
         const IT row = A.row_id[q];
-        IT slot = static_cast<IT>((static_cast<std::size_t>(row) * kHashScale) % capacity);
-        while (keys[slot] != kEmpty && keys[slot] != row) slot = (slot + 1) % capacity;
+        IT slot = (row * kHashScale) % htsize;
+        while (keys[slot] != kEmpty && keys[slot] != row) slot = (slot + 1) % htsize;
         keys[slot] = row;
       }
     }
-
-    std::int32_t count = 0;
-    for (IT slot = 0; slot < capacity; ++slot) {
+    int32_t count = 0;
+    for (IT slot = 0; slot < htsize; ++slot) {
       if (keys[slot] != kEmpty) ++count;
     }
     counts[column] = count;
@@ -52,9 +54,9 @@ VI HashSpGEMMCscSymbolicPhase(const SPCSC& A, const SPCSC& B, const VL& flops_pr
 }
 
 SP_MAT_TEMP
-VL HashSpGEMMCscEstimateFlops(const SPCSC& A, const SPCSC& B)
+VOT HashSpGEMMCscEstimateFlops(const SPCSC& A, const SPCSC& B)
 {
-  VL flops(B.n);
+  VOT flops(B.n);
   OMP_PARALLEL_FOR(schedule(dynamic))
   for (IT j = 0; j < B.n; ++j) {
     int64_t current_column_flops = 0;
@@ -74,7 +76,7 @@ VL HashSpGEMMCscEstimateFlops(const SPCSC& A, const SPCSC& B)
  * Entries are sorted by row within each column; structural zeros are retained.
  */
 SP_SR_MAT_TEMP
-void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const VL& offsets, SPCOO& result)
+void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const VOT& offsets, SPCOO& result)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");
@@ -125,7 +127,6 @@ void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const VL& offsets
 SP_SR_MAT_TEMP
 SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
 {
-  // @profiler-region hash_validate start
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");
   if (A.n != B.m) throw std::invalid_argument("SpGEMM matrix dimensions do not match");
@@ -139,27 +140,26 @@ SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
     return result;
   }
   const int threads = OMP_GET_MAX_THREADS();
-  // @profiler-region hash_validate end
 
   // 1. estimate flops
   // @profiler-region hash_estimate_flops start
-  VL flop = HashSpGEMMCscEstimateFlops(A, B);
+  VOT flop = HashSpGEMMCscEstimateFlops(A, B);
   // @profiler-region hash_estimate_flops end
 
   // 2. Keep this work prefix sum to match the CombBLAS baseline.
   // @profiler-region hash_flops_prefix start
-  VL flop_prefixsum = OmpPrefixSum(flop, threads);
+  VOT flop_prefixsum = OmpPrefixSum(flop, threads);
   // @profiler-region hash_flops_prefix end
 
   // 3. Symbolic phase: count unique rows and assign each column a COO slice.
   // @profiler-region hash_symbolic start
-  VI counts = HashSpGEMMCscSymbolicPhase(A, B, flop_prefixsum);
+  VIT counts = HashSpGEMMCscSymbolicPhase(A, B, flop_prefixsum);
   // @profiler-region hash_symbolic end
 
   // 4. prefix sum of nnz per column. Per-column counts fit int32_t, but their total may need 64-bit offsets.
   // @profiler-region hash_output_offsets start
-  const VL wide_counts(counts.begin(), counts.end());
-  const VL offsets = OmpPrefixSum(wide_counts, threads);
+  const VIT wide_counts(counts.begin(), counts.end());
+  const VOT offsets = OmpPrefixSum<IT,OT>(wide_counts, threads);
   if (static_cast<std::uintmax_t>(offsets.back()) >
       static_cast<std::uintmax_t>(std::numeric_limits<OT>::max())) {
     throw std::overflow_error("SpGEMM output nnz exceeds offset type limit");
