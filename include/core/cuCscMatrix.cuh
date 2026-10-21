@@ -83,17 +83,17 @@ class cuCscMatrix
   void Reset();
 
   //! Download into a newly allocated host CSC matrix.
-  SPND SPCSC ToHost() const;
+  [[nodiscard]] SPCSC ToHost() const;
 
   //! Borrow device buffers for kernels; the view cannot outlive their storage.
-  SPND SPCSC View() const;
+  [[nodiscard]] SPCSC View() const;
 
  private:
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
   //! Allocate zeroed device buffers; free partial allocations before throwing.
-  SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(IT n, OT nnz);
+  [[nodiscard]] static std::tuple<OT*, IT*, NT*> SafeAllocate(IT n, OT nnz);
 
   //! Free owned buffers; callers must clear or overwrite their member pointers.
   static void SafeDelete(bool memowned, OT* col_ptr, IT* row_id, NT* val);

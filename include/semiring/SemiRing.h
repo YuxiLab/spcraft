@@ -28,12 +28,12 @@ struct PlusTimesRing {
   inline static constexpr NT kAdditiveIdentity = NT{0};
   inline static constexpr NT kMultiplicativeIdentity = NT{1};
 
-  SPND SPCRAFT_SEMIRING_HOST_DEVICE static constexpr NT Add(const NT& left, const NT& right)
+  [[nodiscard]] SPCRAFT_SEMIRING_HOST_DEVICE static constexpr NT Add(const NT& left, const NT& right)
   {
     return left + right;
   }
 
-  SPND SPCRAFT_SEMIRING_HOST_DEVICE static constexpr NT Multiply(const NT& left, const NT& right)
+  [[nodiscard]] SPCRAFT_SEMIRING_HOST_DEVICE static constexpr NT Multiply(const NT& left, const NT& right)
   {
     return left * right;
   }

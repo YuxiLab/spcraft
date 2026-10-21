@@ -25,9 +25,9 @@ struct EigenComparison {
 };
 
 template <class IT, class NT, class OT>
-SPND EigenComparison CompareSpMVWithEigen(const SPCSR& a, const SPDVEC& x, const SPDVEC& y, NT tol);
+[[nodiscard]] EigenComparison CompareSpMVWithEigen(const SPCSR& a, const SPDVEC& x, const SPDVEC& y, NT tol);
 
 template <class IT, class NT, class OT>
-SPND EigenComparison CompareSpGEMMWithEigen(const SPCSC& a, const SPCSC& b, const SPCSC& c, NT tol);
+[[nodiscard]] EigenComparison CompareSpGEMMWithEigen(const SPCSC& a, const SPCSC& b, const SPCSC& c, NT tol);
 
 }  // namespace spcraft

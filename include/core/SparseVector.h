@@ -58,29 +58,29 @@ class SparseVector
   /*****************************************************************************
    *                             Member Functions                              *
    ****************************************************************************/
-  SPND IT size() const noexcept { return n; }
+  [[nodiscard]] IT size() const noexcept { return n; }
 
   //! Allocate replacement storage before freeing the current owned arrays.
   void Allocate(IT count, IT length);
 
   //! Return an owning copy of host-accessible storage.
-  SPND SparseVector Clone() const;
+  [[nodiscard]] SparseVector Clone() const;
 
   //! Release ownership without freeing; calling this on live owned storage leaks it.
   void Reset() noexcept;
 
   //! Expand to a dense vector; positions without a stored entry hold `fill`.
   //! @throws std::invalid_argument when indices are out of range or not strictly increasing.
-  SPND SPDVEC ToDense(NT fill) const;
+  [[nodiscard]] SPDVEC ToDense(NT fill) const;
 
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
   //! Keep every element of `dense` that differs from `fill`, in index order.
-  SPND static SparseVector FromDense(const SPDVEC& dense, NT fill);
+  [[nodiscard]] static SparseVector FromDense(const SPDVEC& dense, NT fill);
 
  private:
-  SPND static std::tuple<IT*, NT*> SafeAllocate(IT count, IT length);
+  [[nodiscard]] static std::tuple<IT*, NT*> SafeAllocate(IT count, IT length);
 
   static void SafeDelete(bool owned, IT* ind, NT* val) noexcept;
 };

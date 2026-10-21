@@ -59,22 +59,22 @@ class cuCooMatrix
   //! Allocate zeroed replacement storage, preserving this object on failure.
   void Allocate(OT count, IT rows, IT columns);
 
-  SPND cuCooMatrix Clone() const;
+  [[nodiscard]] cuCooMatrix Clone() const;
 
   //! Release ownership without freeing; use on moved-from objects or views.
   void Reset();
 
   //! Download into newly allocated host storage.
-  SPND SPCOO ToHost() const;
+  [[nodiscard]] SPCOO ToHost() const;
 
   //! Borrow device entries; the view cannot outlive the device allocation.
-  SPND SPCOO View() const;
+  [[nodiscard]] SPCOO View() const;
 
  private:
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
-  SPND static Entry* SafeAllocate(OT count, IT rows, IT columns);
+  [[nodiscard]] static Entry* SafeAllocate(OT count, IT rows, IT columns);
 
   static void SafeDelete(bool owned, Entry* entries);
 };

@@ -50,7 +50,7 @@ class DenseVector
   /*****************************************************************************
    *                             Member Functions                              *
    ****************************************************************************/
-  SPND IT size() const noexcept { return n; }
+  [[nodiscard]] IT size() const noexcept { return n; }
 
   //! Unchecked element access; storage must be host-accessible.
   NT& operator[](IT index) noexcept { return val[index]; }
@@ -61,7 +61,7 @@ class DenseVector
   void Allocate(IT size);
 
   //! Return an owning copy of host-accessible storage.
-  SPND DenseVector Clone() const;
+  [[nodiscard]] DenseVector Clone() const;
 
   //! Release ownership without freeing; calling this on live owned storage leaks it.
   void Reset() noexcept;
@@ -74,7 +74,7 @@ class DenseVector
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
-  SPND static NT* SafeAllocate(IT size);
+  [[nodiscard]] static NT* SafeAllocate(IT size);
 
   static void SafeDelete(bool owned, NT* ptr) noexcept;
 };

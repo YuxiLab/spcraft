@@ -41,7 +41,7 @@ struct TimingStats {
   /*****************************************************************************
    *                             Member Functions                              *
    ****************************************************************************/
-  SPND double CoefficientOfVariation() const
+  [[nodiscard]] double CoefficientOfVariation() const
   {
     constexpr double kPercentScale = 100.0;
     return mean > 0.0 ? kPercentScale * stddev / mean : 0.0;
@@ -50,7 +50,7 @@ struct TimingStats {
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
-  SPND static TimingStats From(const std::vector<double>& samples, bool allow_negative = false)
+  [[nodiscard]] static TimingStats From(const std::vector<double>& samples, bool allow_negative = false)
   {
     if (samples.empty()) {
       throw std::invalid_argument("TimingStats requires at least one sample");
@@ -150,12 +150,12 @@ inline constexpr std::string_view kWallTimeImbalance = "wall_time_imbalance";
 inline constexpr std::string_view kCpuTimeImbalance = "cpu_time_imbalance";
 inline constexpr std::string_view kNonzeroImbalance = "nonzero_imbalance";
 
-SPND inline SecondsSeries WallTime(std::vector<double> samples)
+[[nodiscard]] inline SecondsSeries WallTime(std::vector<double> samples)
 {
   return {std::string(kWallTime), MetricSummary::Median, std::move(samples)};
 }
 
-SPND inline SecondsSeries ProcessCpuTime(std::vector<double> samples)
+[[nodiscard]] inline SecondsSeries ProcessCpuTime(std::vector<double> samples)
 {
   // Linux may charge live worker threads to the process clock in batches.
   // The total (and therefore mean per iteration) remains correct, while a
@@ -163,7 +163,7 @@ SPND inline SecondsSeries ProcessCpuTime(std::vector<double> samples)
   return {std::string(kProcessCpuTime), MetricSummary::Mean, std::move(samples)};
 }
 
-SPND inline GaugeSeries EffectiveCpuCores(const std::vector<double>& wall_seconds,
+[[nodiscard]] inline GaugeSeries EffectiveCpuCores(const std::vector<double>& wall_seconds,
                                           const std::vector<double>& cpu_seconds)
 {
   if (wall_seconds.size() != cpu_seconds.size()) {
@@ -176,7 +176,7 @@ SPND inline GaugeSeries EffectiveCpuCores(const std::vector<double>& wall_second
   return result;
 }
 
-SPND inline GaugeSeries CpuOccupancy(const std::vector<double>& wall_seconds,
+[[nodiscard]] inline GaugeSeries CpuOccupancy(const std::vector<double>& wall_seconds,
                                      const std::vector<double>& cpu_seconds, int threads)
 {
   if (threads < 1) throw std::invalid_argument("thread count must be positive");
@@ -304,7 +304,7 @@ struct VerificationResult {
 namespace detail
 {
 
-SPND inline const char* SummaryName(MetricSummary summary)
+[[nodiscard]] inline const char* SummaryName(MetricSummary summary)
 {
   switch (summary) {
     case MetricSummary::Minimum:
@@ -324,7 +324,7 @@ SPND inline const char* SummaryName(MetricSummary summary)
 }
 
 template <class T>
-SPND inline double Headline(const std::vector<T>& samples, MetricSummary summary, bool allow_negative = false)
+[[nodiscard]] inline double Headline(const std::vector<T>& samples, MetricSummary summary, bool allow_negative = false)
 {
   if (samples.empty()) {
     throw std::invalid_argument("metric series requires at least one sample");
@@ -350,7 +350,7 @@ SPND inline double Headline(const std::vector<T>& samples, MetricSummary summary
   throw std::logic_error("unknown metric summary");
 }
 
-SPND inline std::string ScopeKey(const ProfileScope& scope)
+[[nodiscard]] inline std::string ScopeKey(const ProfileScope& scope)
 {
   std::string key = std::visit(
       []<class Scope>(const Scope& value) -> std::string {
@@ -425,7 +425,7 @@ inline void ValidateMetric(const MetricSeries& metric)
       metric);
 }
 
-SPND inline std::string EscapeJson(std::string_view text)
+[[nodiscard]] inline std::string EscapeJson(std::string_view text)
 {
   std::string escaped{};
   escaped.reserve(text.size());
@@ -472,7 +472,7 @@ struct BenchmarkRun {
   /*****************************************************************************
    *                             Member Functions                              *
    ****************************************************************************/
-  SPND std::string TypeTag() const
+  [[nodiscard]] std::string TypeTag() const
   {
     constexpr std::size_t kPrefixLength = 3;  // Skip the "int" prefix in storage type names.
     if (info.index_type.size() <= kPrefixLength || info.offset_type.size() <= kPrefixLength) return "-";
@@ -481,7 +481,7 @@ struct BenchmarkRun {
     return "i" + index + "/o" + offset;
   }
 
-  SPND const SecondsSeries& WallTime() const
+  [[nodiscard]] const SecondsSeries& WallTime() const
   {
     for (const ResourceProfile& profile : profiles) {
       if (!std::holds_alternative<RunScope>(profile.scope)) continue;
@@ -495,16 +495,16 @@ struct BenchmarkRun {
     throw std::invalid_argument("benchmark run requires run-scoped wall_time samples");
   }
 
-  SPND TimingStats Stats() const { return TimingStats::From(WallTime().samples); }
+  [[nodiscard]] TimingStats Stats() const { return TimingStats::From(WallTime().samples); }
 
-  SPND double Gflops() const
+  [[nodiscard]] double Gflops() const
   {
     constexpr double kGigaScale = 1.0e-9;
     const double median = Stats().median;
     return median > 0.0 ? workload.flops_per_iteration / median * kGigaScale : 0.0;
   }
 
-  SPND double GbytesPerSecond() const
+  [[nodiscard]] double GbytesPerSecond() const
   {
     constexpr double kGigaScale = 1.0e-9;
     const double median = Stats().median;
@@ -589,9 +589,9 @@ class BenchmarkReport
     runs_.push_back(std::move(run));
   }
 
-  SPND const ReportInfo& info() const { return info_; }
+  [[nodiscard]] const ReportInfo& info() const { return info_; }
 
-  SPND const std::vector<BenchmarkRun>& runs() const { return runs_; }
+  [[nodiscard]] const std::vector<BenchmarkRun>& runs() const { return runs_; }
 
   void Validate() const
   {
@@ -623,7 +623,7 @@ struct RenderedMetric {
   double maximum{};
 };
 
-SPND inline RenderedMetric RenderMetric(const MetricSeries& metric)
+[[nodiscard]] inline RenderedMetric RenderMetric(const MetricSeries& metric)
 {
   RenderedMetric rendered = std::visit(
       []<class Series>(const Series& series) {
@@ -663,7 +663,7 @@ SPND inline RenderedMetric RenderMetric(const MetricSeries& metric)
   return rendered;
 }
 
-SPND inline std::string Truncate(std::string_view text, std::size_t limit)
+[[nodiscard]] inline std::string Truncate(std::string_view text, std::size_t limit)
 {
   return text.size() <= limit ? std::string(text) : std::string(text.substr(0, limit - 1)) + "~";
 }
@@ -676,7 +676,7 @@ class TextReportRenderer
   /*****************************************************************************
    *                             Member Functions                              *
    ****************************************************************************/
-  SPND std::string RenderSummary(const BenchmarkReport& report) const
+  [[nodiscard]] std::string RenderSummary(const BenchmarkReport& report) const
   {
     report.Validate();
     constexpr int kWidth = 145;
@@ -709,7 +709,7 @@ class TextReportRenderer
     return output;
   }
 
-  SPND std::string RenderDetails(const BenchmarkReport& report) const
+  [[nodiscard]] std::string RenderDetails(const BenchmarkReport& report) const
   {
     report.Validate();
     std::string output = "PROFILE DETAILS\n";
@@ -731,7 +731,7 @@ class TextReportRenderer
     return output;
   }
 
-  SPND std::string Render(const BenchmarkReport& report) const
+  [[nodiscard]] std::string Render(const BenchmarkReport& report) const
   {
     std::string output = RenderSummary(report);
     output += "\n";
@@ -774,7 +774,7 @@ class JsonReportRenderer
   /*****************************************************************************
    *                             Member Functions                              *
    ****************************************************************************/
-  SPND std::string Render(const BenchmarkReport& report) const
+  [[nodiscard]] std::string Render(const BenchmarkReport& report) const
   {
     report.Validate();
     std::string output = fmt::format("{{\n  \"schema_version\": 3,\n  \"title\": \"{}\",\n  \"info\": {{",
@@ -908,7 +908,7 @@ struct HostTimingSamples {
   std::vector<double> process_cpu_seconds{};
 };
 
-SPND inline double ProcessCpuSeconds()
+[[nodiscard]] inline double ProcessCpuSeconds()
 {
   rusage usage{};
   if (getrusage(RUSAGE_SELF, &usage) != 0) {
@@ -921,7 +921,7 @@ SPND inline double ProcessCpuSeconds()
   return user + system;
 }
 
-SPND inline double ThreadCpuSeconds()
+[[nodiscard]] inline double ThreadCpuSeconds()
 {
   timespec value{};
   if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &value) != 0) {
@@ -932,7 +932,7 @@ SPND inline double ThreadCpuSeconds()
 
 /** @brief Collect paired wall and process CPU samples for each invocation. */
 template <class Body>
-SPND HostTimingSamples TimeHostIterations(Body&& body, int iterations)
+[[nodiscard]] HostTimingSamples TimeHostIterations(Body&& body, int iterations)
 {
   if (iterations < 1) {
     throw std::invalid_argument("TimeHostIterations requires at least one iteration");
@@ -959,7 +959,7 @@ SPND HostTimingSamples TimeHostIterations(Body&& body, int iterations)
  * GPU bodies must synchronize before returning so that asynchronous work is included.
  */
 template <class Body>
-SPND std::vector<double> TimeIterations(Body&& body, int iterations)
+[[nodiscard]] std::vector<double> TimeIterations(Body&& body, int iterations)
 {
   if (iterations < 1) {
     throw std::invalid_argument("TimeIterations requires at least one iteration");

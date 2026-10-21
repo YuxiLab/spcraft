@@ -15,7 +15,7 @@ namespace detail
 {
 
 template <class Entry>
-SPND inline std::size_t SpGEMMHashCapacity(std::uintmax_t count)
+[[nodiscard]] inline std::size_t SpGEMMHashCapacity(std::uintmax_t count)
 {
   if (count == 0) {
     return 0;
@@ -36,7 +36,7 @@ SPND inline std::size_t SpGEMMHashCapacity(std::uintmax_t count)
 }
 
 template <class IT>
-SPND inline std::size_t SpGEMMHashSlot(IT column, std::size_t mask)
+[[nodiscard]] inline std::size_t SpGEMMHashSlot(IT column, std::size_t mask)
 {
   // Match CombBLAS's multiplicative hash, with unsigned arithmetic so large
   // column indices cannot trigger signed multiplication overflow.

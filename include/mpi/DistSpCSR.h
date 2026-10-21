@@ -57,7 +57,7 @@ class DistSpCSR
 
   void Allocate(OT count, IT global_m, IT global_n);
 
-  SPND DistSpCSR Clone() const;
+  [[nodiscard]] DistSpCSR Clone() const;
 
   //! Release ownership without freeing local buffers, as in the local containers.
   void Reset() noexcept;

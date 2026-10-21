@@ -83,17 +83,17 @@ class cuCsrMatrix
   void Reset();
 
   //! Download into a newly allocated host CSR matrix.
-  SPND SPCSR ToHost() const;
+  [[nodiscard]] SPCSR ToHost() const;
 
   //! Borrow device buffers for kernels; the view cannot outlive their storage.
-  SPND SPCSR View() const;
+  [[nodiscard]] SPCSR View() const;
 
  private:
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
   //! Allocate zeroed device buffers; free partial allocations before throwing.
-  SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(IT m, OT nnz);
+  [[nodiscard]] static std::tuple<OT*, IT*, NT*> SafeAllocate(IT m, OT nnz);
 
   //! Free owned buffers; callers must clear or overwrite their member pointers.
   static void SafeDelete(bool memowned, OT* row_ptr, IT* col_id, NT* val);

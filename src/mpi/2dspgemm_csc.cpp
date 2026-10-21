@@ -77,7 +77,7 @@ std::vector<BlockInfo<IT, OT>> GatherLocalMatInfo(const MPI_Comm mpi_comm, IT m,
 }  // namespace
 
 template <class SemiRing, class IT, class NT, class OT>
-SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
+[[nodiscard]] DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>, "Semiring and Matrix type mismatch");
   // Each rank owns one contiguous submatrix on the shared process grid.

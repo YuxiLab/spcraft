@@ -11,7 +11,6 @@
 #define DISTSPDCSC DistSpDCSC<IT, NT, OT>
 #define SPDVEC DenseVector<IT, NT>
 #define SPSVEC SparseVector<IT, NT>
-#define SPND [[nodiscard]]
 
 // CHECK
 #define CHECK_INTTYPE_LIMIT(val, T)                                                                      \

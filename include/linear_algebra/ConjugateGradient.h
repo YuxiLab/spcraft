@@ -44,7 +44,7 @@ namespace detail
 
 //! Reject option sets no solve can act on.
 template <class NT>
-SPND constexpr bool CgOptionsAreValid(const CgOptions<NT>& options)
+[[nodiscard]] constexpr bool CgOptionsAreValid(const CgOptions<NT>& options)
 {
   return options.tolerance >= NT{0} && options.max_iterations >= 0;
 }

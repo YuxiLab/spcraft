@@ -71,7 +71,7 @@ class CsrMatrix
    *                              Static Members                               *
    ****************************************************************************/
   // tedious function with all boundary check.
-  SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(OT required_nnz, IT rows, IT columns);
+  [[nodiscard]] static std::tuple<OT*, IT*, NT*> SafeAllocate(OT required_nnz, IT rows, IT columns);
 
   // delete the memory if owned.
   static void SafeDelete(bool owned, OT* row_ptr, IT* col_id, NT* val) noexcept;

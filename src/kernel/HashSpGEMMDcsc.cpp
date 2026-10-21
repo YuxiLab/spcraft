@@ -202,7 +202,7 @@ void HashSpGEMMDcscNumericPhase(const SPDCSC& A, const SPDCSC& B, const V<OT>& o
  * are retained. Work/output prefixes use int64_t, with OT-checked output storage.
  */
 template <class SemiRing, class IT, class NT, class OT>
-SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B)
+[[nodiscard]] SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");

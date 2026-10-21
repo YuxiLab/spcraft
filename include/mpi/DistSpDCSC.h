@@ -57,7 +57,7 @@ class DistSpDCSC
 
   void Allocate(OT count, IT global_m, IT global_n, IT stored_columns);
 
-  SPND DistSpDCSC Clone() const;
+  [[nodiscard]] DistSpDCSC Clone() const;
 
   //! Release ownership without freeing local buffers, as in the local containers.
   void Reset() noexcept;

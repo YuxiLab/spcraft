@@ -18,19 +18,19 @@ namespace spcraft
  * @brief Hash-based SpGEMM Algorithm with Csc format input and COO output.
  */
 template <class SemiRing, class IT, class NT, class OT>
-SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B);
+[[nodiscard]] SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B);
 
 /**
  * @brief Hash-based SpGEMM Algorithm with Dcsc format input and COO output.
  */
 template <class SemiRing, class IT, class NT, class OT>
-SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B);
+[[nodiscard]] SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B);
 
 /**
  * @brief Hash-based SpGEMM Algorithm with Csr format input and COO output.
  * Nonempty CSR multiplication is not yet implemented.
  */
 template <class SemiRing, class IT, class NT, class OT>
-SPND SPCOO OmpHashSpGEMM(const SPCSR& A, const SPCSR& B);
+[[nodiscard]] SPCOO OmpHashSpGEMM(const SPCSR& A, const SPCSR& B);
 
 }  // namespace spcraft

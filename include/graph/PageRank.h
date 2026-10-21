@@ -61,7 +61,7 @@ struct PageRankResult {
  * @return P^T in CSR, with at most adjacency.nnz entries.
  */
 template <class IT, class NT, class OT>
-SPND SPCSR pagerank_operator(const SPCSR& adjacency)
+[[nodiscard]] SPCSR pagerank_operator(const SPCSR& adjacency)
 {
   static_assert(std::is_floating_point_v<NT>, "PageRank requires a floating-point value type");
   static_assert(std::is_integral_v<IT>, "PageRank index type must be integral");
@@ -138,7 +138,7 @@ namespace detail
 
 //! Reject option sets no backend can act on. Shared so both backends agree.
 template <class NT>
-SPND constexpr bool PageRankOptionsAreValid(const PageRankOptions<NT>& options)
+[[nodiscard]] constexpr bool PageRankOptionsAreValid(const PageRankOptions<NT>& options)
 {
   return options.damping >= NT{0} && options.damping < NT{1} && options.tolerance >= NT{0} &&
          options.max_iterations >= 0;

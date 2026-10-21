@@ -25,7 +25,7 @@ namespace spcraft
  * duplicate edges are removed before the graph is symmetrized.
  */
 template <class NT, class IT, class OT = IT>
-SPND SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double a = 0.57, double b = 0.19,
+[[nodiscard]] SPCSR GenRMAT(IT scale, std::size_t edge_factor, std::uint64_t seed, double a = 0.57, double b = 0.19,
                    double c = 0.19, double d = 0.05)
 {
   static_assert(std::is_integral_v<IT>, "R-MAT index type must be integral");

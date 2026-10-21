@@ -65,25 +65,25 @@ class DcscMatrix
   //! Allocate zeroed replacement storage, preserving this object on failure.
   void Allocate(OT nonzeros, IT nRows, IT nCols, IT storedColumns);
 
-  SPND DcscMatrix Clone() const;
+  [[nodiscard]] DcscMatrix Clone() const;
 
   //! Release ownership without freeing. Use on moved-from objects or views.
   void Reset();
 
   //! Copy to CSC; this explicitly allocates n+1 offsets.
-  SPND SPCSC ToCsc() const;
+  [[nodiscard]] SPCSC ToCsc() const;
 
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
   //! Copy a well-formed CSC matrix, dropping empty column headers only.
-  SPND static DcscMatrix FromCsc(const SPCSC& source);
+  [[nodiscard]] static DcscMatrix FromCsc(const SPCSC& source);
 
  private:
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
-  SPND static std::tuple<OT*, IT*, IT*, NT*> SafeAllocate(IT nzc, OT nnz);
+  [[nodiscard]] static std::tuple<OT*, IT*, IT*, NT*> SafeAllocate(IT nzc, OT nnz);
 
   static void SafeDelete(bool owned, OT* pointers, IT* columns, IT* rows, NT* values);
 };

@@ -21,7 +21,7 @@ namespace spcraft
  * without examining all O(n²) possible edges.
  */
 template <class NT, class IT, class OT = IT>
-SPND SPCSR GenERGraph(IT vertices, double expected_degree, std::uint64_t seed)
+[[nodiscard]] SPCSR GenERGraph(IT vertices, double expected_degree, std::uint64_t seed)
 {
   if (vertices < 2 || expected_degree <= 0.0 || expected_degree >= vertices - 1.0) {
     throw std::invalid_argument("expected degree must be in (0, vertices - 1)");

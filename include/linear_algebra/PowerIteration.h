@@ -36,7 +36,7 @@ namespace detail
 
 //! Reject option sets no iteration can act on.
 template <class NT>
-SPND constexpr bool PowerIterationOptionsAreValid(const PowerIterationOptions<NT>& options)
+[[nodiscard]] constexpr bool PowerIterationOptionsAreValid(const PowerIterationOptions<NT>& options)
 {
   return options.tolerance >= NT{0} && options.max_iterations >= 0;
 }

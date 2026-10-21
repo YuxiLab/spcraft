@@ -69,29 +69,29 @@ class CommGrid2D
   /*****************************************************************************
    *                             Member Functions                              *
    ****************************************************************************/
-  SPND MPI_Comm World() const noexcept;
+  [[nodiscard]] MPI_Comm World() const noexcept;
 
-  SPND MPI_Comm RowWorld() const noexcept;
+  [[nodiscard]] MPI_Comm RowWorld() const noexcept;
 
-  SPND MPI_Comm ColWorld() const noexcept;
+  [[nodiscard]] MPI_Comm ColWorld() const noexcept;
 
-  SPND int Rank() const noexcept;
+  [[nodiscard]] int Rank() const noexcept;
 
-  SPND int Size() const noexcept;
+  [[nodiscard]] int Size() const noexcept;
 
-  SPND int Rows() const noexcept;
+  [[nodiscard]] int Rows() const noexcept;
 
-  SPND int Cols() const noexcept;
+  [[nodiscard]] int Cols() const noexcept;
 
-  SPND int Row() const noexcept;
+  [[nodiscard]] int Row() const noexcept;
 
-  SPND int Col() const noexcept;
+  [[nodiscard]] int Col() const noexcept;
 
   //! Source/world rank at process coordinates; rejects coordinates outside the grid.
-  SPND int RankAt(int row, int col) const;
+  [[nodiscard]] int RankAt(int row, int col) const;
 
   //! Source/world rank owning a nonnegative matrix block coordinate.
-  SPND int Owner(int64_t block_row, int64_t block_col) const;
+  [[nodiscard]] int Owner(int64_t block_row, int64_t block_col) const;
 
  private:
   void Free() noexcept;

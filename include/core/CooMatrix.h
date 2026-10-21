@@ -65,19 +65,19 @@ class CooMatrix
    ****************************************************************************/
   void Allocate(OT count, IT rows, IT columns);
 
-  SPND CooMatrix Clone() const;
+  [[nodiscard]] CooMatrix Clone() const;
 
   void Reset() noexcept;
 
-  SPND SPCSC ToCsc() const;
+  [[nodiscard]] SPCSC ToCsc() const;
 
-  SPND SPCSR ToCsr() const;
+  [[nodiscard]] SPCSR ToCsr() const;
 
  private:
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
-  SPND static Entry* SafeAllocate(OT count, IT rows, IT columns);
+  [[nodiscard]] static Entry* SafeAllocate(OT count, IT rows, IT columns);
 
   static void SafeDelete(bool owned, Entry* entries) noexcept;
 };

@@ -26,7 +26,7 @@ namespace detail
  * @throws std::bad_array_new_length when count elements of T cannot be sized.
  */
 template <class T, class CountType>
-SPND inline std::size_t CheckedElementCount(CountType count)
+[[nodiscard]] inline std::size_t CheckedElementCount(CountType count)
 {
   static_assert(std::is_integral_v<CountType>, "element counts must be integral");
   if (static_cast<std::uintmax_t>(count) >

@@ -8,7 +8,7 @@ namespace spcraft
 {
 
 template <class SemiRing, class IT, class NT, class OT>
-SPND SPCOO OmpHashSpGEMM(const SPCSR& A, const SPCSR& B)
+[[nodiscard]] SPCOO OmpHashSpGEMM(const SPCSR& A, const SPCSR& B)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");

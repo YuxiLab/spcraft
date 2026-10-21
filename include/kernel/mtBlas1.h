@@ -11,7 +11,7 @@ namespace detail
 
 //! Dot Product of two dense vectors, return a scalar.
 template <class IT, class NT>
-SPND NT Dot(const SPDVEC& left, const SPDVEC& right)
+[[nodiscard]] NT Dot(const SPDVEC& left, const SPDVEC& right)
 {
   const IT n = left.n;
   NT total = NT{0};
@@ -80,7 +80,7 @@ void Copy(const SPDVEC& x, SPDVEC& y)
 
 //! Backward-compatible wrappers
 template <class IT, class NT>
-SPND NT DotOpenMP(const SPDVEC& left, const SPDVEC& right) { return Dot(left, right); }
+[[nodiscard]] NT DotOpenMP(const SPDVEC& left, const SPDVEC& right) { return Dot(left, right); }
 
 template <class IT, class NT>
 void AxpyOpenMP(NT alpha, const SPDVEC& x, SPDVEC& y) { Axpy(alpha, x, y); }

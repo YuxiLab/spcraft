@@ -103,7 +103,7 @@ DISTSPCOO RunLayeredSumma(const Matrix& A, const Matrix& B, const CommGrid3D& gr
 }  // namespace
 
 template <class SemiRing, class IT, class NT, class OT>
-SPND DistSpCOO<IT, NT, OT> Mpi3DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B, const CommGrid3D& g)
+[[nodiscard]] DistSpCOO<IT, NT, OT> Mpi3DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B, const CommGrid3D& g)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>);
   DISTSPCOO result = RunLayeredSumma<SemiRing, IT, NT, OT>(A, B, g);
@@ -111,7 +111,7 @@ SPND DistSpCOO<IT, NT, OT> Mpi3DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC&
 }
 
 template <class SemiRing, class IT, class NT, class OT>
-SPND DISTSPCOO Mpi3DSummaSpGEMM(const DISTSPDCSC& A, const DISTSPDCSC& B, const CommGrid3D& g)
+[[nodiscard]] DISTSPCOO Mpi3DSummaSpGEMM(const DISTSPDCSC& A, const DISTSPDCSC& B, const CommGrid3D& g)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>);
   DISTSPCOO result = RunLayeredSumma<SemiRing, IT, NT, OT>(A, B, g);

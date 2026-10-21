@@ -11,7 +11,7 @@
 namespace spcraft
 {
 template <class SemiRing, class IT, class NT, class OT>
-SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPDCSC& A, const DISTSPDCSC& B)
+[[nodiscard]] DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPDCSC& A, const DISTSPDCSC& B)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");

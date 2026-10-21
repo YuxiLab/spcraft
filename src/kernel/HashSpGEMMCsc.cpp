@@ -125,7 +125,7 @@ void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const V<OT>& offs
 }  // namespace
 
 template <class SemiRing, class IT, class NT, class OT>
-SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
+[[nodiscard]] SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");

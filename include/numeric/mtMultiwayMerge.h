@@ -22,6 +22,6 @@ namespace spcraft
  * @see https://github.com/PASSIONLab/CombBLAS/blob/master/include/CombBLAS/MultiwayMerge.h
  */
 template <class SemiRing, class IT, class NT, class OT>
-SPND SPCOO OmpMultiwayMerge(const std::vector<SPCOO>& inputs, IT m, IT n);
+[[nodiscard]] SPCOO OmpMultiwayMerge(const std::vector<SPCOO>& inputs, IT m, IT n);
 
 }  // namespace spcraft

@@ -67,7 +67,7 @@ class CscMatrix
   /*****************************************************************************
    *                              Static Members                               *
    ****************************************************************************/
-  SPND static std::tuple<OT*, IT*, NT*> SafeAllocate(IT n, OT nnz);
+  [[nodiscard]] static std::tuple<OT*, IT*, NT*> SafeAllocate(IT n, OT nnz);
 
   static void SafeDelete(bool memowned, OT* col_ptr, IT* row_id, NT* val);
 };

@@ -57,7 +57,7 @@ class DistSpCOO
 
   void Allocate(OT count, IT global_m, IT global_n);
 
-  SPND DistSpCOO Clone() const;
+  [[nodiscard]] DistSpCOO Clone() const;
 
   //! Release ownership without freeing local buffers, as in the local containers.
   void Reset() noexcept;
