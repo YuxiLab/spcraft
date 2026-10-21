@@ -19,23 +19,23 @@ namespace
 /**
  * @brief CombBLAS-style chunk lookup with O(A.nzc) storage, built for nonempty A.
  */
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 class DcscColumnLookup
 {
  public:
   /*****************************************************************************
    *                               Constructors                                *
    ****************************************************************************/
-  explicit DcscColumnLookup(const SPDCSC& A) : matrix(A)
+  explicit DcscColumnLookup(const SPDCSC& A) : A(A)
   {
     // Integer ceiling division avoids losing column IDs through float rounding.
-    const int64_t extent = static_cast<int64_t>(A.n) + 1;
+    const IT extent = A.n + 1;
     chunk_size = (extent - 1) / A.nzc + 1;
-    const int64_t chunks = (extent - 1) / chunk_size + 1;
-    aux.resize(detail::CheckedElementCount<IT>(chunks + 1));
-    int64_t next_chunk = 1;
+    const IT chunks = (extent - 1) / chunk_size + 1;
+    aux.resize(chunks + 1);
+    IT next_chunk = 1;
     for (IT col = 0; col < A.nzc; ++col) {
-      const int64_t chunk = A.col_id[col] / chunk_size;
+      const IT chunk = A.col_id[col] / chunk_size;
       while (next_chunk <= chunk) aux[next_chunk++] = col;
     }
     while (next_chunk <= chunks) aux[next_chunk++] = A.nzc;
@@ -44,39 +44,37 @@ class DcscColumnLookup
   /*****************************************************************************
    *                             Member Functions                              *
    ****************************************************************************/
-  std::vector<std::pair<OT, OT>> FillColInds(const SPDCSC& B, IT col) const
+  VPair<OT, OT> FillColInds(const SPDCSC& B, IT col) const
   {
     const OT begin = B.col_ptr[col];
     const OT end = B.col_ptr[col + 1];
-    const std::size_t count = static_cast<std::size_t>(end - begin);
-    std::vector<std::pair<OT, OT>> ranges(count);
+    const OT count = end - begin;
+    VPair<OT, OT> ranges(count);
     if (count == 0) return ranges;
 
-    // CombBLAS switches to scanning when many A columns are requested. Our
-    // containers also permit unsorted rows, which must use independent lookups.
-    constexpr std::size_t kScanThreshold = 4;
-    const bool scan = static_cast<std::size_t>(matrix.nzc) / count < kScanThreshold &&
-                      std::is_sorted(B.row_id + begin, B.row_id + end);
+    constexpr IT kScanThreshold = 4;
+    const bool scan = (OT)A.nzc / count < kScanThreshold;
+    // if count is large -> a linear scan is enough
     if (scan) {
       IT pos = 0;
       for (OT p = begin; p < end; ++p) {
         const IT column = B.row_id[p];
-        while (pos < matrix.nzc && matrix.col_id[pos] < column) ++pos;
-        if (pos < matrix.nzc && matrix.col_id[pos] == column) {
-          ranges[p - begin] = {matrix.col_ptr[pos], matrix.col_ptr[pos + 1]};
+        while (pos < A.nzc && A.col_id[pos] < column) ++pos;
+        if (pos < A.nzc && A.col_id[pos] == column) {
+          ranges[p - begin] = {A.col_ptr[pos], A.col_ptr[pos + 1]};
         }
-        // Keep pos at a match so repeated B row IDs reuse the same A column.
       }
     } else {
+      // if count is small -> use chunk data structure
       for (OT p = begin; p < end; ++p) {
         const IT column = B.row_id[p];
         const int64_t chunk = column / chunk_size;
         for (IT pos = aux[chunk]; pos < aux[chunk + 1]; ++pos) {
-          if (matrix.col_id[pos] == column) {
-            ranges[p - begin] = {matrix.col_ptr[pos], matrix.col_ptr[pos + 1]};
+          if (A.col_id[pos] == column) {
+            ranges[p - begin] = {A.col_ptr[pos], A.col_ptr[pos + 1]};
             break;
           }
-          if (matrix.col_id[pos] > column) break;
+          if (A.col_id[pos] > column) break;
         }
       }
     }
@@ -87,18 +85,18 @@ class DcscColumnLookup
   /*****************************************************************************
    *                               Data Members                                *
    ****************************************************************************/
-  const SPDCSC& matrix;
-  VIT aux{};
-  int64_t chunk_size = 0;
+  const SPDCSC& A;
+  V<IT> aux{};
+  IT chunk_size = 0;
 };
 
-SP_MAT_TEMP
-VL EstimateDcscFlops(const SPDCSC& A, const SPDCSC& B, const DcscColumnLookup<IT, NT, OT>& lookup)
+template <class IT, class NT, class OT>
+V<OT> EstimateDcscFlops(const SPDCSC& A, const SPDCSC& B, const DcscColumnLookup<IT, NT, OT>& lookup)
 {
-  VL flops(B.nzc, 0);
+  V<OT> flops(B.nzc, 0);
   OMP_PARALLEL_FOR(schedule(dynamic))
   for (IT col = 0; col < B.nzc; ++col) {
-    const std::vector<std::pair<OT, OT>> ranges = lookup.FillColInds(B, col);
+    const VPair<OT, OT> ranges = lookup.FillColInds(B, col);
     int64_t count = 0;
     for (const std::pair<OT, OT>& range : ranges) count += range.second - range.first;
     flops[col] = count;
@@ -106,28 +104,30 @@ VL EstimateDcscFlops(const SPDCSC& A, const SPDCSC& B, const DcscColumnLookup<IT
   return flops;
 }
 
-SP_MAT_TEMP
-VL CountDcscEntries(const SPDCSC& A, const SPDCSC& B, const VL& flop_prefixsum,
-                    const DcscColumnLookup<IT, NT, OT>& lookup)
+template <class IT, class NT, class OT>
+V<IT> HashSpGEMMDcscSymbolicPhase(const SPDCSC& A, const SPDCSC& B, const V<OT>& flop_prefixsum,
+                                  const DcscColumnLookup<IT, NT, OT>& lookup)
 {
-  VL counts(B.nzc, 0);
-  constexpr std::size_t kMinCapacity = 16;
-  constexpr std::size_t kHashScale = 107;
-  constexpr IT kEmpty = static_cast<IT>(-1);
+  // yuxi: in the symbolic phase, only flop prefix sum is OT. others are all single 
+  // column conuter, so they should not exceed the IT range. 
+  V<IT> counts(B.nzc, 0);
+  constexpr IT kMinCapacity = 16;
+  constexpr IT kHashScale = 107;
+  constexpr IT kEmpty = -1;
   OMP_PARALLEL_FOR(schedule(dynamic))
   for (IT col = 0; col < B.nzc; ++col) {
-    const int64_t flops = flop_prefixsum[col + 1] - flop_prefixsum[col];
+    const IT flops = flop_prefixsum[col + 1] - flop_prefixsum[col];
     if (flops == 0) continue;
-    std::size_t capacity = kMinCapacity;
-    while (capacity < static_cast<std::size_t>(flops)) capacity <<= 1;
-    const std::size_t mask = capacity - 1;
-    std::vector<IT> keys(capacity, kEmpty);
-    const std::vector<std::pair<OT, OT>> ranges = lookup.FillColInds(B, col);
-    int64_t count = 0;
+    IT capacity = kMinCapacity;
+    while (capacity < flops) capacity <<= 1;
+    const IT mask = capacity - 1;
+    V<IT> keys(capacity, kEmpty);
+    const VPair<OT, OT> ranges = lookup.FillColInds(B, col);
+    IT count = 0;
     for (const std::pair<OT, OT>& range : ranges) {
       for (OT p = range.first; p < range.second; ++p) {
         const IT row = A.row_id[p];
-        std::size_t slot = (static_cast<std::size_t>(row) * kHashScale) & mask;
+        IT slot = (row * kHashScale) & mask;
         while (keys[slot] != kEmpty && keys[slot] != row) slot = (slot + 1) & mask;
         if (keys[slot] == kEmpty) {
           keys[slot] = row;
@@ -144,8 +144,8 @@ VL CountDcscEntries(const SPDCSC& A, const SPDCSC& B, const VL& flop_prefixsum,
  * @brief Accumulate and sort each stored B column into its reserved COO slice.
  */
 SP_SR_MAT_TEMP
-void AccumulateDcscEntries(const SPDCSC& A, const SPDCSC& B, const VL& offsets,
-                           const DcscColumnLookup<IT, NT, OT>& lookup, SPCOO& result)
+void HashSpGEMMDcscNumericPhase(const SPDCSC& A, const SPDCSC& B, const V<OT>& offsets,
+                                const DcscColumnLookup<IT, NT, OT>& lookup, SPCOO& result)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");
@@ -156,38 +156,38 @@ void AccumulateDcscEntries(const SPDCSC& A, const SPDCSC& B, const VL& offsets,
     IT key = static_cast<IT>(-1);
     NT value = SemiRing::kAdditiveIdentity;
   };
-  constexpr std::size_t kMinCapacity = 16;
-  constexpr std::size_t kHashScale = 107;
+  constexpr IT kMinCapacity = 16;
+  constexpr IT kHashScale = 107;
   constexpr IT kEmpty = static_cast<IT>(-1);
   OMP_PARALLEL_FOR(schedule(dynamic))
   for (IT col = 0; col < B.nzc; ++col) {
-    const int64_t count = offsets[col + 1] - offsets[col];
+    const IT count = offsets[col + 1] - offsets[col];
     if (count == 0) continue;
-    std::size_t capacity = kMinCapacity;
-    while (capacity < static_cast<std::size_t>(count)) capacity <<= 1;
-    const std::size_t mask = capacity - 1;
+    IT capacity = kMinCapacity;
+    while (capacity < count) capacity <<= 1;
+    const IT mask = capacity - 1;
     std::vector<HashKeyEntry> table(capacity, {kEmpty, SemiRing::kAdditiveIdentity});
-    const std::vector<std::pair<OT, OT>> ranges = lookup.FillColInds(B, col);
+    const VPair<OT, OT> ranges = lookup.FillColInds(B, col);
     const OT begin = B.col_ptr[col];
     const OT end = B.col_ptr[col + 1];
     for (OT p = begin; p < end; ++p) {
       const std::pair<OT, OT>& range = ranges[p - begin];
       for (OT q = range.first; q < range.second; ++q) {
         const IT row = A.row_id[q];
-        std::size_t slot = (static_cast<std::size_t>(row) * kHashScale) & mask;
+        IT slot = (row * kHashScale) & mask;
         while (table[slot].key != kEmpty && table[slot].key != row) slot = (slot + 1) & mask;
         table[slot].key = row;
         table[slot].value = SemiRing::Add(SemiRing::Multiply(A.val[q], B.val[p]), table[slot].value);
       }
     }
-    std::size_t occupied = 0;
-    for (std::size_t slot = 0; slot < capacity; ++slot) {
+    IT occupied = 0;
+    for (IT slot = 0; slot < capacity; ++slot) {
       if (table[slot].key != kEmpty) table[occupied++] = table[slot];
     }
     std::sort(table.begin(), table.begin() + occupied,
               [](const HashKeyEntry& a, const HashKeyEntry& b) { return a.key < b.key; });
-    OT dest = static_cast<OT>(offsets[col]);
-    for (std::size_t slot = 0; slot < occupied; ++slot) {
+    OT dest = offsets[col];
+    for (IT slot = 0; slot < occupied; ++slot) {
       result.entries[dest++] = {table[slot].key, B.col_id[col], table[slot].value};
     }
   }
@@ -218,33 +218,27 @@ SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B)
   }
   const int threads = OMP_GET_MAX_THREADS();
 
-  // TODO: fix SpDCSC HashSpGEMM kernel and do the profiling.
-  
   // @profiler-region hash_lookup start
   const DcscColumnLookup<IT, NT, OT> lookup(A);
   // @profiler-region hash_lookup end
   // @profiler-region hash_estimate_flops start
-  const VL flops = EstimateDcscFlops(A, B, lookup);
+  const V<OT> flops = EstimateDcscFlops(A, B, lookup);
   // @profiler-region hash_estimate_flops end
   // @profiler-region hash_flops_prefix start
-  const VL flop_prefixsum = OmpPrefixSum(flops, threads);
+  const V<OT> flop_prefixsum = OmpPrefixSum(flops, threads);
   // @profiler-region hash_flops_prefix end
   // @profiler-region hash_symbolic start
-  const VL counts = CountDcscEntries(A, B, flop_prefixsum, lookup);
+  const V<IT> counts = HashSpGEMMDcscSymbolicPhase(A, B, flop_prefixsum, lookup);
   // @profiler-region hash_symbolic end
 
   // @profiler-region hash_output_offsets start
-  const VL offsets = OmpPrefixSum(counts, threads);
+  const V<OT> offsets = OmpPrefixSum<IT,OT>(counts, threads);
   // @profiler-region hash_output_offsets end
-  if (static_cast<std::uintmax_t>(offsets.back()) >
-      static_cast<std::uintmax_t>(std::numeric_limits<OT>::max())) {
-    throw std::overflow_error("SpGEMM output nnz exceeds offset type limit");
-  }
   // @profiler-region hash_allocate start
   result.Allocate(static_cast<OT>(offsets.back()), A.m, B.n);
   // @profiler-region hash_allocate end
   // @profiler-region hash_numeric start
-  AccumulateDcscEntries<SemiRing>(A, B, offsets, lookup, result);
+  HashSpGEMMDcscNumericPhase<SemiRing>(A, B, offsets, lookup, result);
   // @profiler-region hash_numeric end
   return result;
 }

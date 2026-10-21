@@ -17,6 +17,7 @@
 #include "mpi/mpiutil.h"
 #include "numeric/mtMultiwayMerge.h"
 #include "semiring/SemiRing.h"
+#include "utils/StdAliases.h"
 
 namespace spcraft
 {
@@ -105,7 +106,7 @@ SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
   const MPI_Comm col_world = grid.ColWorld();
   const std::vector<Block> A_info = GatherLocalMatInfo(row_world, A.local.m, A.local.n, A.local.nnz);
   const std::vector<Block> B_info = GatherLocalMatInfo(col_world, B.local.m, B.local.n, B.local.nnz);
-  VSPCOO cstages;
+  V<CooMatrix<IT, NT, OT>> cstages;
   for (int q = 0; q < grid.Cols(); ++q) {
     // @profiler-iter q start
     // @profiler-region bcast_A start

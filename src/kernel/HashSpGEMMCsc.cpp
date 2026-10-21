@@ -20,12 +20,12 @@ namespace
 // output C matrix. 
 // for per column variable we use IT, for the prefx sum variables we use OT.
 SP_MAT_TEMP
-VIT HashSpGEMMCscSymbolicPhase(const SPCSC& A, const SPCSC& B, const VOT& flops_prefixsum)
+V<IT> HashSpGEMMCscSymbolicPhase(const SPCSC& A, const SPCSC& B, const V<OT>& flops_prefixsum)
 {
   constexpr IT kMinCapacity = 16;
   constexpr IT kHashScale = 107;
   constexpr IT kEmpty = -1;
-  VIT counts(B.n);
+  V<IT> counts(B.n);
   // Each column owns its scratch; irregular expansions are scheduled dynamically.
   OMP_PARALLEL_FOR(schedule(dynamic))
   for (IT column = 0; column < B.n; ++column) {
@@ -54,9 +54,9 @@ VIT HashSpGEMMCscSymbolicPhase(const SPCSC& A, const SPCSC& B, const VOT& flops_
 }
 
 SP_MAT_TEMP
-VOT HashSpGEMMCscEstimateFlops(const SPCSC& A, const SPCSC& B)
+V<OT> HashSpGEMMCscEstimateFlops(const SPCSC& A, const SPCSC& B)
 {
-  VOT flops(B.n);
+  V<OT> flops(B.n);
   OMP_PARALLEL_FOR(schedule(dynamic))
   for (IT j = 0; j < B.n; ++j) {
     int64_t current_column_flops = 0;
@@ -76,7 +76,7 @@ VOT HashSpGEMMCscEstimateFlops(const SPCSC& A, const SPCSC& B)
  * Entries are sorted by row within each column; structural zeros are retained.
  */
 SP_SR_MAT_TEMP
-void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const VOT& offsets, SPCOO& result)
+void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const V<OT>& offsets, SPCOO& result)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
                 "Semiring value type must match matrix value type");
@@ -143,23 +143,23 @@ SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
 
   // 1. estimate flops
   // @profiler-region hash_estimate_flops start
-  VOT flop = HashSpGEMMCscEstimateFlops(A, B);
+  V<OT> flop = HashSpGEMMCscEstimateFlops(A, B);
   // @profiler-region hash_estimate_flops end
 
   // 2. Keep this work prefix sum to match the CombBLAS baseline.
   // @profiler-region hash_flops_prefix start
-  VOT flop_prefixsum = OmpPrefixSum(flop, threads);
+  V<OT> flop_prefixsum = OmpPrefixSum(flop, threads);
   // @profiler-region hash_flops_prefix end
 
   // 3. Symbolic phase: count unique rows and assign each column a COO slice.
   // @profiler-region hash_symbolic start
-  VIT counts = HashSpGEMMCscSymbolicPhase(A, B, flop_prefixsum);
+  V<IT> counts = HashSpGEMMCscSymbolicPhase(A, B, flop_prefixsum);
   // @profiler-region hash_symbolic end
 
   // 4. prefix sum of nnz per column. Per-column counts fit int32_t, but their total may need 64-bit offsets.
   // @profiler-region hash_output_offsets start
-  const VIT wide_counts(counts.begin(), counts.end());
-  const VOT offsets = OmpPrefixSum<IT,OT>(wide_counts, threads);
+  const V<IT> wide_counts(counts.begin(), counts.end());
+  const V<OT> offsets = OmpPrefixSum<IT,OT>(wide_counts, threads);
   if (static_cast<std::uintmax_t>(offsets.back()) >
       static_cast<std::uintmax_t>(std::numeric_limits<OT>::max())) {
     throw std::overflow_error("SpGEMM output nnz exceeds offset type limit");
