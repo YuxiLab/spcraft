@@ -21,10 +21,10 @@ namespace spcraft
  *                                Constructors                                 *
  ******************************************************************************/
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPSVEC::SparseVector() noexcept = default;
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPSVEC::SparseVector(IT count, IT length)
 {
   std::tie(ind, val) = SafeAllocate(count, length);
@@ -33,20 +33,20 @@ SPSVEC::SparseVector(IT count, IT length)
   memowned = true;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPSVEC::SparseVector(IT* ind_, NT* val_, IT count, IT length)
     : ind(ind_), val(val_), nnz(count), n(length), memowned(false)
 {
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPSVEC::SparseVector(SPSVEC&& rhs) noexcept
     : ind(rhs.ind), val(rhs.val), nnz(rhs.nnz), n(rhs.n), memowned(rhs.memowned)
 {
   rhs.Reset();
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPSVEC& SPSVEC::operator=(SPSVEC&& rhs) noexcept
 {
   if (this != &rhs) {
@@ -61,14 +61,14 @@ SPSVEC& SPSVEC::operator=(SPSVEC&& rhs) noexcept
   return *this;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPSVEC::~SparseVector() { SafeDelete(memowned, ind, val); }
 
 /*******************************************************************************
  *                              Member Functions                               *
  ******************************************************************************/
 
-SP_VEC_TEMP
+template <class IT, class NT>
 void SPSVEC::Allocate(IT count, IT length)
 {
   IT* new_ind = nullptr;
@@ -82,7 +82,7 @@ void SPSVEC::Allocate(IT count, IT length)
   memowned = true;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPSVEC SPSVEC::Clone() const
 {
   SPSVEC ret(nnz, n);
@@ -94,7 +94,7 @@ SPSVEC SPSVEC::Clone() const
   return ret;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 void SPSVEC::Reset() noexcept
 {
   ind = nullptr;
@@ -104,7 +104,7 @@ void SPSVEC::Reset() noexcept
   memowned = false;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPDVEC SPSVEC::ToDense(NT fill) const
 {
   // Each entry is checked against its predecessor, so the whole array is
@@ -133,7 +133,7 @@ SPDVEC SPSVEC::ToDense(NT fill) const
  *                               Static Members                                *
  ******************************************************************************/
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPSVEC SPSVEC::FromDense(const SPDVEC& dense, NT fill)
 {
   IT count = 0;
@@ -155,7 +155,7 @@ SPSVEC SPSVEC::FromDense(const SPDVEC& dense, NT fill)
   return sparse;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 std::tuple<IT*, NT*> SPSVEC::SafeAllocate(IT count, IT length)
 {
   if constexpr (std::is_signed_v<IT>) {
@@ -182,7 +182,7 @@ std::tuple<IT*, NT*> SPSVEC::SafeAllocate(IT count, IT length)
   return {new_ind, new_val};
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 void SPSVEC::SafeDelete(bool owned, IT* ind, NT* val) noexcept
 {
   if (!owned) return;

@@ -34,7 +34,7 @@ MatrixInput ParseMatrixInput(int argc, const char* const* argv, const char* desc
   }
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 CooMatrix<IT, NT, OT> ReadMatrixInput(const std::string& path)
 {
   CooMatrix<IT, NT, OT> matrix(path);

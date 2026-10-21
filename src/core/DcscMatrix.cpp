@@ -20,10 +20,10 @@ namespace spcraft
  *                                Constructors                                 *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPDCSC::DcscMatrix() noexcept = default;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPDCSC::DcscMatrix(OT* pointers, IT* columns, IT* rows, NT* values, OT nonzeros, IT nRows, IT nCols,
                    IT storedColumns)
     : col_ptr(pointers),
@@ -38,7 +38,7 @@ SPDCSC::DcscMatrix(OT* pointers, IT* columns, IT* rows, NT* values, OT nonzeros,
 {
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPDCSC::DcscMatrix(DcscMatrix&& rhs) noexcept
     : col_ptr(rhs.col_ptr),
       col_id(rhs.col_id),
@@ -53,10 +53,10 @@ SPDCSC::DcscMatrix(DcscMatrix&& rhs) noexcept
   rhs.Reset();
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPDCSC::~DcscMatrix() { SafeDelete(memowned, col_ptr, col_id, row_id, val); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPDCSC& SPDCSC::operator=(DcscMatrix&& rhs) noexcept
 {
   if (this != &rhs) {
@@ -79,7 +79,7 @@ SPDCSC& SPDCSC::operator=(DcscMatrix&& rhs) noexcept
  *                              Member Functions                               *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPDCSC::Allocate(OT nonzeros, IT nRows, IT nCols, IT storedColumns)
 {
   static_assert(std::is_integral_v<IT> && std::is_integral_v<OT>);
@@ -106,7 +106,7 @@ void SPDCSC::Allocate(OT nonzeros, IT nRows, IT nCols, IT storedColumns)
   memowned = true;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPDCSC SPDCSC::Clone() const
 {
   SPDCSC result;
@@ -120,7 +120,7 @@ SPDCSC SPDCSC::Clone() const
   return result;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPDCSC::Reset()
 {
   col_ptr = nullptr;
@@ -132,7 +132,7 @@ void SPDCSC::Reset()
   memowned = false;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPDCSC SPDCSC::FromCsc(const SPCSC& source)
 {
   IT columns = 0;
@@ -156,7 +156,7 @@ SPDCSC SPDCSC::FromCsc(const SPCSC& source)
   return result;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSC SPDCSC::ToCsc() const
 {
   SPCSC result;
@@ -179,7 +179,7 @@ SPCSC SPDCSC::ToCsc() const
  *                               Static Members                                *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 std::tuple<OT*, IT*, IT*, NT*> SPDCSC::SafeAllocate(IT nzc, OT nnz)
 {
   const std::size_t columns = detail::CheckedElementCount<IT>(nzc);
@@ -201,7 +201,7 @@ std::tuple<OT*, IT*, IT*, NT*> SPDCSC::SafeAllocate(IT nzc, OT nnz)
   return {p, c, r, v};
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPDCSC::SafeDelete(bool owned, OT* pointers, IT* columns, IT* rows, NT* values)
 {
   if (owned) {

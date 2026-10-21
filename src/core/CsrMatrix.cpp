@@ -21,19 +21,19 @@ namespace spcraft
  *                                Constructors                                 *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSR::CsrMatrix() noexcept = default;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSR::CsrMatrix(OT* row_ptr_, IT* col_id_, NT* val_, OT nnz_, IT m_, IT n_)
     : row_ptr(row_ptr_), col_id(col_id_), val(val_), nnz(nnz_), m(m_), n(n_), memowned(false)
 {
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSR::CsrMatrix(OT nnz_, IT m_, IT n_) : nnz(nnz_), m(m_), n(n_) { Allocate(nnz, m, n); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSR::CsrMatrix(SPCSR&& rhs) noexcept
     : row_ptr(rhs.row_ptr),
       col_id(rhs.col_id),
@@ -46,7 +46,7 @@ SPCSR::CsrMatrix(SPCSR&& rhs) noexcept
   rhs.Reset();
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSR& SPCSR::operator=(SPCSR&& rhs) noexcept
 {
   if (this != &rhs) {
@@ -63,14 +63,14 @@ SPCSR& SPCSR::operator=(SPCSR&& rhs) noexcept
   return *this;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSR::~CsrMatrix() { SafeDelete(memowned, row_ptr, col_id, val); }
 
 /*******************************************************************************
  *                              Member Functions                               *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSR SPCSR::Clone() const
 {
   SPCSR res;
@@ -87,7 +87,7 @@ SPCSR SPCSR::Clone() const
   return res;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPCSR::Allocate(OT require_nnz, IT nRows, IT nCols)
 {
   const std::tuple<OT*, IT*, NT*> replacement = SafeAllocate(require_nnz, nRows, nCols);
@@ -99,7 +99,7 @@ void SPCSR::Allocate(OT require_nnz, IT nRows, IT nCols)
   memowned = true;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPCSR::Reset() noexcept
 {
   row_ptr = nullptr;
@@ -114,7 +114,7 @@ void SPCSR::Reset() noexcept
 /*******************************************************************************
  *                               Static Members                                *
  ******************************************************************************/
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 std::tuple<OT*, IT*, NT*> SPCSR::SafeAllocate(OT required_nnz, IT rows, IT columns)
 {
   // if IT is signed type, chk row,col >= 0
@@ -163,7 +163,7 @@ std::tuple<OT*, IT*, NT*> SPCSR::SafeAllocate(OT required_nnz, IT rows, IT colum
   return {new_row_ptr, new_col_id, new_val};
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPCSR::SafeDelete(bool owned, OT* row_ptr, IT* col_id, NT* val) noexcept
 {
   if (!owned) return;

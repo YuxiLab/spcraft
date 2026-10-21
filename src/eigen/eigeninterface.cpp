@@ -28,7 +28,7 @@ using EigenCsr = Eigen::SparseMatrix<NT, Eigen::RowMajor, std::int64_t>;
 template <class NT>
 using EigenVector = Eigen::Matrix<NT, Eigen::Dynamic, 1>;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 EigenCsc<NT> ToEigen(const SPCSC& matrix)
 {
   // Eigen uses one storage-index type for both indices and offsets. Triplets
@@ -45,7 +45,7 @@ EigenCsc<NT> ToEigen(const SPCSC& matrix)
   return result;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 EigenCsr<NT> ToEigen(const SPCSR& matrix)
 {
   std::vector<Eigen::Triplet<NT, std::int64_t>> entries;
@@ -60,7 +60,7 @@ EigenCsr<NT> ToEigen(const SPCSR& matrix)
   return result;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 Eigen::Map<const EigenVector<NT>> ToEigen(const DenseVector<IT, NT>& vector)
 {
   Eigen::Map<const EigenVector<NT>> result(vector.val, static_cast<Eigen::Index>(vector.n));
@@ -69,7 +69,7 @@ Eigen::Map<const EigenVector<NT>> ToEigen(const DenseVector<IT, NT>& vector)
 
 }  // namespace
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 EigenComparison CompareSpMVWithEigen(const SPCSR& a, const SPDVEC& x, const SPDVEC& y, NT tol)
 {
   if (a.n != x.n || a.m != y.n) {
@@ -91,7 +91,7 @@ EigenComparison CompareSpMVWithEigen(const SPCSR& a, const SPDVEC& x, const SPDV
   return result;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 EigenComparison CompareSpGEMMWithEigen(const SPCSC& a, const SPCSC& b, const SPCSC& c, NT tol)
 {
   if (a.n != b.m || c.m != a.m || c.n != b.n) {

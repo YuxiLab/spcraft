@@ -8,7 +8,7 @@
 
 using namespace spcraft;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 int ExampleRun(const MatrixInputOptions& input)
 {
   using Ring = PlusTimesRing<NT>;

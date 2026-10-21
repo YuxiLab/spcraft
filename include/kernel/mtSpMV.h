@@ -13,7 +13,7 @@ namespace spcraft
 /**
  * @brief Compute y = A * x over a semiring using OpenMP CSR row traversal.
  */
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 void OmpSpMV(const SPCSR& A, const SPDVEC& x, SPDVEC& y)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,

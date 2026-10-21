@@ -18,10 +18,10 @@
 namespace spcraft
 {
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCsrMatrix<IT, NT, OT>::cuCsrMatrix() noexcept = default;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCsrMatrix<IT, NT, OT>::cuCsrMatrix(const SPCSR& host)
 {
   // A constructor's destructor does not run if a transfer throws.
@@ -46,13 +46,13 @@ cuCsrMatrix<IT, NT, OT>::cuCsrMatrix(const SPCSR& host)
   *this = std::move(replacement);
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCsrMatrix<IT, NT, OT>::cuCsrMatrix(OT* row_ptr_, IT* col_id_, NT* val_, OT nnz_, IT m_, IT n_)
     : row_ptr(row_ptr_), col_id(col_id_), val(val_), nnz(nnz_), m(m_), n(n_), memowned(false)
 {
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCsrMatrix<IT, NT, OT>::cuCsrMatrix(cuCsrMatrix<IT, NT, OT>&& rhs) noexcept
     : row_ptr(rhs.row_ptr),
       col_id(rhs.col_id),
@@ -65,7 +65,7 @@ cuCsrMatrix<IT, NT, OT>::cuCsrMatrix(cuCsrMatrix<IT, NT, OT>&& rhs) noexcept
   rhs.Reset();
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCsrMatrix<IT, NT, OT>& cuCsrMatrix<IT, NT, OT>::operator=(cuCsrMatrix<IT, NT, OT>&& rhs) noexcept
 {
   if (this != &rhs) {
@@ -84,10 +84,10 @@ cuCsrMatrix<IT, NT, OT>& cuCsrMatrix<IT, NT, OT>::operator=(cuCsrMatrix<IT, NT, 
   return *this;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCsrMatrix<IT, NT, OT>::~cuCsrMatrix() { SafeDelete(memowned, row_ptr, col_id, val); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void cuCsrMatrix<IT, NT, OT>::Allocate(OT require_nnz, IT nRows, IT nCols)
 {
   if constexpr (std::is_signed_v<IT>) {
@@ -113,7 +113,7 @@ void cuCsrMatrix<IT, NT, OT>::Allocate(OT require_nnz, IT nRows, IT nCols)
   std::tie(row_ptr, col_id, val) = replacement;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCsrMatrix<IT, NT, OT> cuCsrMatrix<IT, NT, OT>::Clone() const
 {
   cuCsrMatrix<IT, NT, OT> res;
@@ -135,7 +135,7 @@ cuCsrMatrix<IT, NT, OT> cuCsrMatrix<IT, NT, OT>::Clone() const
   return res;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void cuCsrMatrix<IT, NT, OT>::Reset()
 {
   row_ptr = nullptr;
@@ -147,7 +147,7 @@ void cuCsrMatrix<IT, NT, OT>::Reset()
   memowned = false;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSR cuCsrMatrix<IT, NT, OT>::ToHost() const
 {
   SPCSR res;
@@ -170,14 +170,14 @@ SPCSR cuCsrMatrix<IT, NT, OT>::ToHost() const
   return res;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSR cuCsrMatrix<IT, NT, OT>::View() const { return SPCSR(row_ptr, col_id, val, nnz, m, n); }
 
 /*******************************************************************************
  *                               Static Members                                *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 std::tuple<OT*, IT*, NT*> cuCsrMatrix<IT, NT, OT>::SafeAllocate(IT m, OT nnz)
 {
   if constexpr (std::is_signed_v<IT>) {
@@ -216,7 +216,7 @@ std::tuple<OT*, IT*, NT*> cuCsrMatrix<IT, NT, OT>::SafeAllocate(IT m, OT nnz)
   return std::make_tuple(r, c, v);
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void cuCsrMatrix<IT, NT, OT>::SafeDelete(bool memowned, OT* row_ptr, IT* col_id, NT* val)
 {
   if (memowned) {

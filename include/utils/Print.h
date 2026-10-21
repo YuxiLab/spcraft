@@ -18,13 +18,13 @@
 namespace spcraft
 {
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 class CsrMatrix;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 class CscMatrix;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 class CooMatrix;
 
 /// Print up to count elements of a valid std::vector, DenseVector, or Eigen vector.
@@ -156,7 +156,7 @@ class SparseMatrixPreview
 /// Print a zero-based sparse subblock; counts are clipped at the matrix edges.
 /// Missing entries appear as '.', stored zeros as '0', and duplicates as '{a, b}'.
 /// The matrix must be valid and its storage host-accessible.
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void PrintMatrix(const SPCSR& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
                  std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
@@ -171,7 +171,7 @@ void PrintMatrix(const SPCSR& matrix, std::int64_t row, std::int64_t col, std::i
 }
 
 /// CSC overload of the sparse subblock printer, with the same bounds and storage requirements.
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void PrintMatrix(const SPCSC& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
                  std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {
@@ -186,7 +186,7 @@ void PrintMatrix(const SPCSC& matrix, std::int64_t row, std::int64_t col, std::i
 }
 
 /// COO overload; entries need not be sorted and duplicate coordinates are preserved.
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void PrintMatrix(const SPCOO& matrix, std::int64_t row, std::int64_t col, std::int64_t rows,
                  std::int64_t cols, std::string_view name, std::ostream& out = std::cout)
 {

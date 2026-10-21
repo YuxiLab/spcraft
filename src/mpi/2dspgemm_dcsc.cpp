@@ -10,7 +10,7 @@
 
 namespace spcraft
 {
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPDCSC& A, const DISTSPDCSC& B)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,

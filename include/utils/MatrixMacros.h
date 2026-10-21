@@ -1,11 +1,6 @@
 #pragma once
 
 // Matrix shortcuts require the corresponding type to be declared or included.
-// Use the default variant on declarations that provide OT = IT, not on definitions.
-#define SP_VEC_TEMP template <class IT, class NT>
-#define SP_MAT_TEMP template <class IT, class NT, class OT>
-#define SP_MAT_TEMP_DEFAULT template <class IT, class NT, class OT = IT>
-#define SP_SR_MAT_TEMP template <class SemiRing, class IT, class NT, class OT>
 #define SPCSC CscMatrix<IT, NT, OT>
 #define SPDCSC DcscMatrix<IT, NT, OT>
 #define SPCSR CsrMatrix<IT, NT, OT>

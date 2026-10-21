@@ -5,13 +5,13 @@
 namespace spcraft
 {
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 class CscMatrix;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 class CsrMatrix;
 
-SP_VEC_TEMP
+template <class IT, class NT>
 class DenseVector;
 
 struct EigenComparison {
@@ -24,10 +24,10 @@ struct EigenComparison {
   double multiply_seconds = 0.0;
 };
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPND EigenComparison CompareSpMVWithEigen(const SPCSR& a, const SPDVEC& x, const SPDVEC& y, NT tol);
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPND EigenComparison CompareSpGEMMWithEigen(const SPCSC& a, const SPCSC& b, const SPCSC& c, NT tol);
 
 }  // namespace spcraft

@@ -9,7 +9,7 @@
 
 namespace spcraft
 {
-SP_VEC_TEMP
+template <class IT, class NT>
 struct TupleEntry {
   /*****************************************************************************
    *                               Data Members                                *
@@ -27,7 +27,7 @@ struct TupleEntry {
  * SpGEMM returns entries sorted by column, then row, retaining structural zeros.
  * malloc/free own the storage of trivial Entry values.
  */
-SP_MAT_TEMP_DEFAULT
+template <class IT, class NT, class OT = IT>
 class CooMatrix
 {
  public:

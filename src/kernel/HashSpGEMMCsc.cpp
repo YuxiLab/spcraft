@@ -19,7 +19,7 @@ namespace
 // Note: this is symbolic phase of hash-based spgemm. It determines the EXACT nnz of a single column in 
 // output C matrix. 
 // for per column variable we use IT, for the prefx sum variables we use OT.
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 V<IT> HashSpGEMMCscSymbolicPhase(const SPCSC& A, const SPCSC& B, const V<OT>& flops_prefixsum)
 {
   constexpr IT kMinCapacity = 16;
@@ -53,7 +53,7 @@ V<IT> HashSpGEMMCscSymbolicPhase(const SPCSC& A, const SPCSC& B, const V<OT>& fl
   return counts;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 V<OT> HashSpGEMMCscEstimateFlops(const SPCSC& A, const SPCSC& B)
 {
   V<OT> flops(B.n);
@@ -75,7 +75,7 @@ V<OT> HashSpGEMMCscEstimateFlops(const SPCSC& A, const SPCSC& B)
  * @brief Fill preallocated COO column slices using the symbolic NNZ offsets.
  * Entries are sorted by row within each column; structural zeros are retained.
  */
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const V<OT>& offsets, SPCOO& result)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,
@@ -124,7 +124,7 @@ void HashSPGEMMCscNumericPhase(const SPCSC& A, const SPCSC& B, const V<OT>& offs
 
 }  // namespace
 
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 SPND SPCOO OmpHashSpGEMM(const SPCSC& A, const SPCSC& B)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,

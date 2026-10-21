@@ -13,7 +13,7 @@ namespace spcraft
  * Link SPCraft for float, double, or bool values with (IT, OT) widths
  * (32, 32), (32, 64), or (64, 64), using signed fixed-width integer types.
  */
-SP_MAT_TEMP_DEFAULT
+template <class IT, class NT, class OT = IT>
 class CsrMatrix
 {
  public:

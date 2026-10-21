@@ -60,7 +60,7 @@ struct PageRankResult {
  * @param adjacency Square CSR adjacency matrix with non-negative values.
  * @return P^T in CSR, with at most adjacency.nnz entries.
  */
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPND SPCSR pagerank_operator(const SPCSR& adjacency)
 {
   static_assert(std::is_floating_point_v<NT>, "PageRank requires a floating-point value type");

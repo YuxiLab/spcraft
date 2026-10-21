@@ -55,7 +55,7 @@ namespace spcraft
  * @throws std::invalid_argument on a non-square matrix, a size mismatch, or
  *         options outside their valid ranges.
  */
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 CgResult<NT> cg_openmp(const SPCSR& A, const SPDVEC& b, SPDVEC& x,
                        const CgOptions<NT>& options = CgOptions<NT>{})
 {

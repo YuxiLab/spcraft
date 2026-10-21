@@ -13,16 +13,16 @@
 namespace spcraft
 {
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPDCSC::DistSpDCSC() noexcept = default;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPDCSC::DistSpDCSC(GridPtr grid, IT global_m, IT global_n) : commgrid(std::move(grid))
 {
   Allocate(OT{0}, global_m, global_n, IT{0});
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPDCSC::DistSpDCSC(GridPtr grid, MatrixType&& data, IT global_m, IT global_n) : commgrid(std::move(grid))
 {
   const std::pair<IT, IT> dims = detail::DistLocalDimensions(commgrid, global_m, global_n);
@@ -34,10 +34,10 @@ DISTSPDCSC::DistSpDCSC(GridPtr grid, MatrixType&& data, IT global_m, IT global_n
   local = std::move(data);
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPDCSC::DistSpDCSC(DISTSPDCSC&& rhs) noexcept { *this = std::move(rhs); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPDCSC& DISTSPDCSC::operator=(DISTSPDCSC&& rhs) noexcept
 {
   if (this != &rhs) {
@@ -50,13 +50,13 @@ DISTSPDCSC& DISTSPDCSC::operator=(DISTSPDCSC&& rhs) noexcept
   return *this;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPDCSC::~DistSpDCSC() = default;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void DISTSPDCSC::Allocate(OT count, IT stored_columns) { Allocate(count, m, n, stored_columns); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void DISTSPDCSC::Allocate(OT count, IT global_m, IT global_n, IT stored_columns)
 {
   const std::pair<IT, IT> dims = detail::DistLocalDimensions(commgrid, global_m, global_n);
@@ -67,7 +67,7 @@ void DISTSPDCSC::Allocate(OT count, IT global_m, IT global_n, IT stored_columns)
   n = global_n;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPDCSC DISTSPDCSC::Clone() const
 {
   DISTSPDCSC result;
@@ -77,7 +77,7 @@ DISTSPDCSC DISTSPDCSC::Clone() const
   return result;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void DISTSPDCSC::Reset() noexcept
 {
   local.Reset();
@@ -86,7 +86,7 @@ void DISTSPDCSC::Reset() noexcept
   n = 0;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPDCSC::LocalRows() const
 {
   if (!commgrid) return IT{0};
@@ -94,7 +94,7 @@ IT DISTSPDCSC::LocalRows() const
   return rows;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPDCSC::LocalCols() const
 {
   if (!commgrid) return IT{0};
@@ -102,7 +102,7 @@ IT DISTSPDCSC::LocalCols() const
   return cols;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPDCSC::GlobalRow(IT local_row) const
 {
   if constexpr (std::is_signed_v<IT>) {
@@ -113,7 +113,7 @@ IT DISTSPDCSC::GlobalRow(IT local_row) const
   return row;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPDCSC::GlobalCol(IT local_col) const
 {
   if constexpr (std::is_signed_v<IT>) {
@@ -124,7 +124,7 @@ IT DISTSPDCSC::GlobalCol(IT local_col) const
   return col;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPDCSC::LocalRow(IT global_row) const
 {
   if (!commgrid) throw std::logic_error("Distributed matrix has no grid");
@@ -132,7 +132,7 @@ IT DISTSPDCSC::LocalRow(IT global_row) const
   return row;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPDCSC::LocalCol(IT global_col) const
 {
   if (!commgrid) throw std::logic_error("Distributed matrix has no grid");
@@ -140,7 +140,7 @@ IT DISTSPDCSC::LocalCol(IT global_col) const
   return col;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 int DISTSPDCSC::Owner(IT global_row, IT global_col) const
 {
   if (!commgrid) throw std::logic_error("Distributed matrix has no grid");
@@ -159,14 +159,14 @@ int DISTSPDCSC::Owner(IT global_row, IT global_col) const
   return commgrid->RankAt(row, col);
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 bool DISTSPDCSC::Owns(IT global_row, IT global_col) const
 {
   const int owner = Owner(global_row, global_col);
   return owner == commgrid->Rank();
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 int64_t DISTSPDCSC::GlobalNnz() const
 {
   if (!commgrid) throw std::logic_error("Distributed matrix has no grid");

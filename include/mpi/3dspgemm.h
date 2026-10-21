@@ -24,11 +24,11 @@ namespace spcraft
  * Link SPCraft for PlusTimesRing<float/double> and signed (IT, OT) widths
  * (32, 32), (32, 64), or (64, 64). All grid owners must die before MPI_Finalize.
  */
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 SPND DistSpCOO<IT, NT, OT> Mpi3DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B, const CommGrid3D& g);
 
 //! DCSC input overload with the same ownership, shape, and collective requirements.
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 SPND DISTSPCOO Mpi3DSummaSpGEMM(const DISTSPDCSC& A, const DISTSPDCSC& B, const CommGrid3D& g);
 
 }  // namespace spcraft

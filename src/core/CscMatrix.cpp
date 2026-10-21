@@ -20,16 +20,16 @@ namespace spcraft
  *                                Constructors                                 *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSC::CscMatrix() noexcept = default;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSC::CscMatrix(OT* col_ptr_, IT* row_id_, NT* val_, OT nnz_, IT m_, IT n_)
     : col_ptr(col_ptr_), row_id(row_id_), val(val_), nnz(nnz_), m(m_), n(n_), memowned(false)
 {
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSC::CscMatrix(SPCSC&& rhs) noexcept
     : col_ptr(rhs.col_ptr),
       row_id(rhs.row_id),
@@ -42,7 +42,7 @@ SPCSC::CscMatrix(SPCSC&& rhs) noexcept
   rhs.Reset();
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSC& SPCSC::operator=(SPCSC&& rhs) noexcept
 {
   if (this != &rhs) {
@@ -59,10 +59,10 @@ SPCSC& SPCSC::operator=(SPCSC&& rhs) noexcept
   return *this;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSC::~CscMatrix() { SafeDelete(memowned, col_ptr, row_id, val); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPCSC::Allocate(OT require_nnz, IT nRows, IT nCols)
 {
   if constexpr (std::is_signed_v<IT>) {
@@ -89,7 +89,7 @@ void SPCSC::Allocate(OT require_nnz, IT nRows, IT nCols)
 /*******************************************************************************
  *                              Member Functions                               *
  ******************************************************************************/
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSC SPCSC::Clone() const
 {
   SPCSC res;
@@ -106,7 +106,7 @@ SPCSC SPCSC::Clone() const
   return res;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPCSC::Reset()
 {
   col_ptr = nullptr;
@@ -122,7 +122,7 @@ void SPCSC::Reset()
  *                               Static Members                                *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 std::tuple<OT*, IT*, NT*> SPCSC::SafeAllocate(IT n, OT nnz)
 {
   if constexpr (std::is_signed_v<IT>) {
@@ -156,7 +156,7 @@ std::tuple<OT*, IT*, NT*> SPCSC::SafeAllocate(IT n, OT nnz)
   return std::make_tuple(c, r, v);
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPCSC::SafeDelete(bool memowned, OT* col_ptr, IT* row_id, NT* val)
 {
   // The pointers are by value, so nulling them here would be a dead store.

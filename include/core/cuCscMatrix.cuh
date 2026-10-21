@@ -28,7 +28,7 @@ namespace spcraft
  * Allocation and transfer failures throw because constructors cannot return
  * CUDA error codes. Destruction ignores CUDA errors.
  */
-SP_MAT_TEMP_DEFAULT
+template <class IT, class NT, class OT = IT>
 class cuCscMatrix
 {
  public:

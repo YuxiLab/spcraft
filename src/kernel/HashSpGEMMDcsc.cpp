@@ -143,7 +143,7 @@ V<IT> HashSpGEMMDcscSymbolicPhase(const SPDCSC& A, const SPDCSC& B, const V<OT>&
 /**
  * @brief Accumulate and sort each stored B column into its reserved COO slice.
  */
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 void HashSpGEMMDcscNumericPhase(const SPDCSC& A, const SPDCSC& B, const V<OT>& offsets,
                                 const DcscColumnLookup<IT, NT, OT>& lookup, SPCOO& result)
 {
@@ -201,7 +201,7 @@ void HashSpGEMMDcscNumericPhase(const SPDCSC& A, const SPDCSC& B, const V<OT>& o
  * and numeric accumulation. Rows may be unsorted or repeated; structural zeros
  * are retained. Work/output prefixes use int64_t, with OT-checked output storage.
  */
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 SPND SPCOO OmpHashSpGEMM(const SPDCSC& A, const SPDCSC& B)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,

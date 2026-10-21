@@ -18,7 +18,7 @@ namespace spcraft
  * may be unsorted or repeated. A shaped empty matrix has nzc == nnz == 0.
  * Like the other host containers, buffers store implicit-lifetime value types.
  */
-SP_MAT_TEMP_DEFAULT
+template <class IT, class NT, class OT = IT>
 class DcscMatrix
 {
  public:

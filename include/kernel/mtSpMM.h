@@ -14,7 +14,7 @@ namespace spcraft
  * @brief Reference OpenMP SpMM.
  *
  */
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 void spmm_openmp(const SPCSR& A, const NT* B, NT* C, std::size_t dense_columns)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,

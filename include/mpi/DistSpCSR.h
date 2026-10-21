@@ -13,7 +13,7 @@ namespace spcraft
 /**
  * @brief Distributed CSR matrix.
  */
-SP_MAT_TEMP_DEFAULT
+template <class IT, class NT, class OT = IT>
 class DistSpCSR
 {
  public:

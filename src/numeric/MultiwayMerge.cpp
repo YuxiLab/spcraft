@@ -66,7 +66,7 @@ void VisitSplit(const std::vector<SPCOO>& inputs, const SplitOffsets<OT>& bounds
  * @param n Number of columns in the output.
  * @return An owning COO matrix with sorted, unique coordinates; zeros are retained.
  */
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 SPND SPCOO OmpMultiwayMerge(const std::vector<SPCOO>& inputs, IT m, IT n)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,

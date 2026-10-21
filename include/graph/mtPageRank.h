@@ -44,7 +44,7 @@ namespace spcraft
  * @throws std::invalid_argument on a non-square operator, a size mismatch, or
  *         options outside their valid ranges.
  */
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 PageRankResult<NT> pagerank_openmp(const SPCSR& op, SPDVEC& rank,
                                    const PageRankOptions<NT>& options = PageRankOptions<NT>{})
 {

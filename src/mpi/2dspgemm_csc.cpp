@@ -76,7 +76,7 @@ std::vector<BlockInfo<IT, OT>> GatherLocalMatInfo(const MPI_Comm mpi_comm, IT m,
 
 }  // namespace
 
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 SPND DISTSPCOO Mpi2DSummaSpGEMM(const DISTSPCSC& A, const DISTSPCSC& B)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>, "Semiring and Matrix type mismatch");

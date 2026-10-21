@@ -32,26 +32,26 @@ namespace spcraft
  *                                Constructors                                 *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCOO::CooMatrix() noexcept = default;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCOO::CooMatrix(TupleEntry<IT, NT>* entries_, OT count, IT rows, IT columns)
     : entries(entries_), nnz(count), m(rows), n(columns), memowned(false)
 {
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCOO::CooMatrix(CooMatrix&& rhs) noexcept
     : entries(rhs.entries), nnz(rhs.nnz), m(rhs.m), n(rhs.n), memowned(rhs.memowned)
 {
   rhs.Reset();
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCOO::~CooMatrix() { SafeDelete(memowned, entries); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCOO& SPCOO::operator=(SPCOO&& rhs) noexcept
 {
   if (this != &rhs) {
@@ -66,7 +66,7 @@ SPCOO& SPCOO::operator=(SPCOO&& rhs) noexcept
   return *this;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCOO::CooMatrix(const std::string& filename)
 {
   std::ifstream ifs(filename);
@@ -98,7 +98,7 @@ SPCOO::CooMatrix(const std::string& filename)
  *                              Member Functions                               *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPCOO::Allocate(OT count, IT rows, IT columns)
 {
   Entry* replacement = SafeAllocate(count, rows, columns);
@@ -110,7 +110,7 @@ void SPCOO::Allocate(OT count, IT rows, IT columns)
   memowned = true;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCOO SPCOO::Clone() const
 {
   SPCOO ret;
@@ -124,7 +124,7 @@ SPCOO SPCOO::Clone() const
   return ret;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPCOO::Reset() noexcept
 {
   entries = nullptr;
@@ -133,7 +133,7 @@ void SPCOO::Reset() noexcept
   memowned = false;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSC SPCOO::ToCsc() const
 {
   SPCSC csc;
@@ -173,7 +173,7 @@ SPCSC SPCOO::ToCsc() const
   return csc;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCSR SPCOO::ToCsr() const
 {
   SPCSR csr(nnz, m, n);
@@ -216,7 +216,7 @@ SPCSR SPCOO::ToCsr() const
  *                               Static Members                                *
  ******************************************************************************/
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 typename SPCOO::Entry* SPCOO::SafeAllocate(OT count, IT rows, IT columns)
 {
   static_assert(std::is_trivially_copyable_v<Entry>, "CooMatrix entries must be trivially copyable");
@@ -246,7 +246,7 @@ typename SPCOO::Entry* SPCOO::SafeAllocate(OT count, IT rows, IT columns)
   return result;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void SPCOO::SafeDelete(bool owned, Entry* entries) noexcept
 {
   if (!owned || entries == nullptr) return;

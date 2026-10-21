@@ -16,16 +16,16 @@
 namespace spcraft
 {
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCooMatrix<IT, NT, OT>::cuCooMatrix() noexcept = default;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCooMatrix<IT, NT, OT>::cuCooMatrix(Entry* entries_, OT count, IT rows, IT columns)
     : entries(entries_), nnz(count), m(rows), n(columns), memowned(false)
 {
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCooMatrix<IT, NT, OT>::cuCooMatrix(const SPCOO& host)
 {
   // A local owner also frees device storage when an upload throws.
@@ -40,14 +40,14 @@ cuCooMatrix<IT, NT, OT>::cuCooMatrix(const SPCOO& host)
   *this = std::move(replacement);
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCooMatrix<IT, NT, OT>::cuCooMatrix(cuCooMatrix&& rhs) noexcept
     : entries(rhs.entries), nnz(rhs.nnz), m(rhs.m), n(rhs.n), memowned(rhs.memowned)
 {
   rhs.Reset();
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCooMatrix<IT, NT, OT>& cuCooMatrix<IT, NT, OT>::operator=(cuCooMatrix&& rhs) noexcept
 {
   if (this != &rhs) {
@@ -62,10 +62,10 @@ cuCooMatrix<IT, NT, OT>& cuCooMatrix<IT, NT, OT>::operator=(cuCooMatrix&& rhs) n
   return *this;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCooMatrix<IT, NT, OT>::~cuCooMatrix() { SafeDelete(memowned, entries); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void cuCooMatrix<IT, NT, OT>::Allocate(OT count, IT rows, IT columns)
 {
   Entry* replacement = SafeAllocate(count, rows, columns);
@@ -77,7 +77,7 @@ void cuCooMatrix<IT, NT, OT>::Allocate(OT count, IT rows, IT columns)
   memowned = true;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 cuCooMatrix<IT, NT, OT> cuCooMatrix<IT, NT, OT>::Clone() const
 {
   cuCooMatrix result;
@@ -90,7 +90,7 @@ cuCooMatrix<IT, NT, OT> cuCooMatrix<IT, NT, OT>::Clone() const
   return result;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void cuCooMatrix<IT, NT, OT>::Reset()
 {
   entries = nullptr;
@@ -100,7 +100,7 @@ void cuCooMatrix<IT, NT, OT>::Reset()
   memowned = false;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCOO cuCooMatrix<IT, NT, OT>::ToHost() const
 {
   SPCOO result;
@@ -113,10 +113,10 @@ SPCOO cuCooMatrix<IT, NT, OT>::ToHost() const
   return result;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 SPCOO cuCooMatrix<IT, NT, OT>::View() const { return SPCOO(entries, nnz, m, n); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 typename cuCooMatrix<IT, NT, OT>::Entry* cuCooMatrix<IT, NT, OT>::SafeAllocate(OT count, IT rows, IT columns)
 {
   static_assert(std::is_trivially_copyable_v<Entry>);
@@ -144,7 +144,7 @@ typename cuCooMatrix<IT, NT, OT>::Entry* cuCooMatrix<IT, NT, OT>::SafeAllocate(O
   return replacement;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void cuCooMatrix<IT, NT, OT>::SafeDelete(bool owned, Entry* entries)
 {
   if (owned && entries) cudaFree(entries);

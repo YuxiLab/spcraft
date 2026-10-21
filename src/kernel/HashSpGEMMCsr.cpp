@@ -7,7 +7,7 @@
 namespace spcraft
 {
 
-SP_SR_MAT_TEMP
+template <class SemiRing, class IT, class NT, class OT>
 SPND SPCOO OmpHashSpGEMM(const SPCSR& A, const SPCSR& B)
 {
   static_assert(std::is_same_v<typename SemiRing::ValueType, NT>,

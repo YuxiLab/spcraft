@@ -71,7 +71,7 @@ inline sparse_status_t MklSparseMv<double>(sparse_matrix_t handle, matrix_descr 
  * for the lifetime of this handle. Handle construction and optimization are intended
  * to happen outside timed SpMV loops.
  */
-SP_MAT_TEMP_DEFAULT
+template <class IT, class NT, class OT = IT>
 class MklCsrSpmv
 {
   static_assert(std::is_same_v<IT, MKL_INT>, "MklCsrSpmv requires column indices matching MKL_INT");

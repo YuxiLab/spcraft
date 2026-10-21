@@ -22,13 +22,13 @@ namespace spcraft
  *                                Constructors                                 *
  ******************************************************************************/
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPDVEC::DenseVector() noexcept = default;
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPDVEC::DenseVector(NT* val_, IT size) : val(val_), n(size), memowned(false) {}
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPDVEC::DenseVector(IT size)
 {
   val = SafeAllocate(size);
@@ -36,7 +36,7 @@ SPDVEC::DenseVector(IT size)
   memowned = true;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPDVEC::DenseVector(IT size, NT initval)
 {
   val = SafeAllocate(size);
@@ -48,10 +48,10 @@ SPDVEC::DenseVector(IT size, NT initval)
   }
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPDVEC::DenseVector(SPDVEC&& rhs) noexcept : val(rhs.val), n(rhs.n), memowned(rhs.memowned) { rhs.Reset(); }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPDVEC& SPDVEC::operator=(SPDVEC&& rhs) noexcept
 {
   if (this != &rhs) {
@@ -64,13 +64,13 @@ SPDVEC& SPDVEC::operator=(SPDVEC&& rhs) noexcept
   return *this;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 SPDVEC::~DenseVector() { SafeDelete(memowned, val); }
 /*******************************************************************************
  *                              Member Functions                               *
  ******************************************************************************/
 
-SP_VEC_TEMP
+template <class IT, class NT>
 void SPDVEC::Allocate(IT size)
 {
   NT* replacement = SafeAllocate(size);
@@ -81,7 +81,7 @@ void SPDVEC::Allocate(IT size)
 }
 
 //! return a deep copy instance with owned memory.
-SP_VEC_TEMP
+template <class IT, class NT>
 SPDVEC SPDVEC::Clone() const
 {
   SPDVEC ret(n);  //! own-memoried inst with uninit memory.
@@ -92,7 +92,7 @@ SPDVEC SPDVEC::Clone() const
   return ret;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 void SPDVEC::Reset() noexcept
 {
   val = nullptr;
@@ -100,7 +100,7 @@ void SPDVEC::Reset() noexcept
   memowned = false;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 void SPDVEC::Random(int seed)
 {
   static_assert(std::is_arithmetic_v<NT>, "DenseVector::Random requires an arithmetic value type");
@@ -122,7 +122,7 @@ void SPDVEC::Random(int seed)
 /*******************************************************************************
  *                               Static Members                                *
  ******************************************************************************/
-SP_VEC_TEMP
+template <class IT, class NT>
 NT* SPDVEC::SafeAllocate(IT size)
 {
   // size should be >= 0
@@ -141,7 +141,7 @@ NT* SPDVEC::SafeAllocate(IT size)
   return ptr;
 }
 
-SP_VEC_TEMP
+template <class IT, class NT>
 void SPDVEC::SafeDelete(bool owned, NT* ptr) noexcept
 {
   if (owned && ptr != nullptr) std::free(ptr);

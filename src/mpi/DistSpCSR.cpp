@@ -13,16 +13,16 @@
 namespace spcraft
 {
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPCSR::DistSpCSR() noexcept = default;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPCSR::DistSpCSR(GridPtr grid, IT global_m, IT global_n) : commgrid(std::move(grid))
 {
   Allocate(OT{0}, global_m, global_n);
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPCSR::DistSpCSR(GridPtr grid, MatrixType&& data, IT global_m, IT global_n) : commgrid(std::move(grid))
 {
   const std::pair<IT, IT> dims = detail::DistLocalDimensions(commgrid, global_m, global_n);
@@ -34,10 +34,10 @@ DISTSPCSR::DistSpCSR(GridPtr grid, MatrixType&& data, IT global_m, IT global_n) 
   local = std::move(data);
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPCSR::DistSpCSR(DISTSPCSR&& rhs) noexcept { *this = std::move(rhs); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPCSR& DISTSPCSR::operator=(DISTSPCSR&& rhs) noexcept
 {
   if (this != &rhs) {
@@ -50,13 +50,13 @@ DISTSPCSR& DISTSPCSR::operator=(DISTSPCSR&& rhs) noexcept
   return *this;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPCSR::~DistSpCSR() = default;
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void DISTSPCSR::Allocate(OT count) { Allocate(count, m, n); }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void DISTSPCSR::Allocate(OT count, IT global_m, IT global_n)
 {
   const std::pair<IT, IT> dims = detail::DistLocalDimensions(commgrid, global_m, global_n);
@@ -67,7 +67,7 @@ void DISTSPCSR::Allocate(OT count, IT global_m, IT global_n)
   n = global_n;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 DISTSPCSR DISTSPCSR::Clone() const
 {
   DISTSPCSR result;
@@ -77,7 +77,7 @@ DISTSPCSR DISTSPCSR::Clone() const
   return result;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 void DISTSPCSR::Reset() noexcept
 {
   local.Reset();
@@ -86,7 +86,7 @@ void DISTSPCSR::Reset() noexcept
   n = 0;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPCSR::LocalRows() const
 {
   if (!commgrid) return IT{0};
@@ -94,7 +94,7 @@ IT DISTSPCSR::LocalRows() const
   return rows;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPCSR::LocalCols() const
 {
   if (!commgrid) return IT{0};
@@ -102,7 +102,7 @@ IT DISTSPCSR::LocalCols() const
   return cols;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPCSR::GlobalRow(IT local_row) const
 {
   if constexpr (std::is_signed_v<IT>) {
@@ -113,7 +113,7 @@ IT DISTSPCSR::GlobalRow(IT local_row) const
   return row;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPCSR::GlobalCol(IT local_col) const
 {
   if constexpr (std::is_signed_v<IT>) {
@@ -124,7 +124,7 @@ IT DISTSPCSR::GlobalCol(IT local_col) const
   return col;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPCSR::LocalRow(IT global_row) const
 {
   if (!commgrid) throw std::logic_error("Distributed matrix has no grid");
@@ -132,7 +132,7 @@ IT DISTSPCSR::LocalRow(IT global_row) const
   return row;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 IT DISTSPCSR::LocalCol(IT global_col) const
 {
   if (!commgrid) throw std::logic_error("Distributed matrix has no grid");
@@ -140,7 +140,7 @@ IT DISTSPCSR::LocalCol(IT global_col) const
   return col;
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 int DISTSPCSR::Owner(IT global_row, IT global_col) const
 {
   if (!commgrid) throw std::logic_error("Distributed matrix has no grid");
@@ -159,14 +159,14 @@ int DISTSPCSR::Owner(IT global_row, IT global_col) const
   return commgrid->RankAt(row, col);
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 bool DISTSPCSR::Owns(IT global_row, IT global_col) const
 {
   const int owner = Owner(global_row, global_col);
   return owner == commgrid->Rank();
 }
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 int64_t DISTSPCSR::GlobalNnz() const
 {
   if (!commgrid) throw std::logic_error("Distributed matrix has no grid");

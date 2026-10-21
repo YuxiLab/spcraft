@@ -18,7 +18,7 @@ namespace spcraft
  * Clone() copies device storage; ToHost() downloads; View() borrows device storage.
  * Allocation and transfer failures throw; destruction ignores CUDA errors.
  */
-SP_MAT_TEMP_DEFAULT
+template <class IT, class NT, class OT = IT>
 class cuCooMatrix
 {
  public:

@@ -59,7 +59,7 @@ namespace spcraft
  * @throws std::invalid_argument on a non-square matrix, a size mismatch, or
  *         options outside their valid ranges.
  */
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 PowerIterationResult<NT> power_iteration_openmp(
     const SPCSR& A, SPDVEC& x, const PowerIterationOptions<NT>& options = PowerIterationOptions<NT>{})
 {

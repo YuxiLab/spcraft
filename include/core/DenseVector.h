@@ -12,7 +12,7 @@ namespace spcraft
  * Memory allocated by this class is host memory. Use the pointer constructor
  * to wrap externally managed memory, including CUDA device memory.
  */
-SP_VEC_TEMP
+template <class IT, class NT>
 class DenseVector
 {
  public:

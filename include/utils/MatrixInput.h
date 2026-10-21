@@ -9,7 +9,7 @@
 namespace spcraft
 {
 
-SP_MAT_TEMP
+template <class IT, class NT, class OT>
 class CooMatrix;
 
 struct MatrixInput {
@@ -25,7 +25,7 @@ struct MatrixInput {
 MatrixInput ParseMatrixInput(int argc, const char* const* argv, const char* description);
 
 // The compiled reader supports the same six type combinations as the examples.
-SP_MAT_TEMP_DEFAULT
+template <class IT, class NT, class OT = IT>
 CooMatrix<IT, NT, OT> ReadMatrixInput(const std::string& path);
 
 }  // namespace spcraft
