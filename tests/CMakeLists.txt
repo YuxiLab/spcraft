@@ -12,6 +12,7 @@ add_subdirectory(utils)
 add_subdirectory(semiring)
 add_subdirectory(matrix_generator)
 add_subdirectory(report)
+add_subdirectory(solver)
 
 # Benchmark helper tests are registered by benchmarks/ after their dependencies exist.
 

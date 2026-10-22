@@ -23,6 +23,9 @@
 #include "linear_algebra/mtConjugateGradient.h"
 #include "linear_algebra/mtPowerIteration.h"
 #include "numeric/mtMultiwayMerge.h"
+#include "solver/scalar/Lu.h"
+#include "solver/supernodal/Lu.h"
+#include "solver/mt/Lu.h"
 
 #include "matrix_generator/MatrixGenerator.h"
 #include "report/BenchmarkReport.h"

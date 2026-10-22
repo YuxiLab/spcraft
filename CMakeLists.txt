@@ -32,6 +32,7 @@ option(SPCRAFT_BUILD_DOWNSTREAM "Build tests, examples, benchmarks and Python bi
 option(SPCRAFT_BUILD_EXAMPLES "Build SPCraft examples" ${PROJECT_IS_TOP_LEVEL})
 option(SPCRAFT_BUILD_PYTHON "Build the optional Python bindings" OFF)
 option(SPCRAFT_BUILD_BENCHMARKS "Build SPCraft benchmarks" OFF)
+option(SPCRAFT_BUILD_SOLVER_ASSIGNMENTS "Build unfinished solver assignment acceptance tests" OFF)
 option(SPCRAFT_FETCH_DEPENDENCIES "Download dependencies missing from the installation" ON)
 option(SPCRAFT_INSTALL "Install the library and CMake package metadata" OFF)
 if(SPCRAFT_INSTALL AND SPCRAFT_FETCH_DEPENDENCIES)

@@ -2,6 +2,10 @@
 
 This is a teaching-oriented sparse computation library. It aims to provide a light-weight but clear-documented sparse kernel, sparse algorithm library with visualization and teaching tutorials.
 
+The [three-week sparse LU assignments](docs/solver/README.md) provide scalar,
+supernodal, and multithreaded solver interfaces with student TODOs and opt-in
+acceptance tests under `include/solver/`, `src/solver/`, and `tests/solver/`.
+
 At the ground layer, the library will focus on implementing the basic sparse matrix storage, sparse matrix kernel ( SpMV, SpMM, etc.) as well as reproducing some classic papers in the sparse computation community.
 
 Please send email to `yuxihong@iu.edu` if you have any questions.
