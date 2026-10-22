@@ -1,0 +1,16 @@
+{
+  "superlu_mt": {
+    "commit": "f2e50bfcbb7b20ef304c84cf92c038c283019863",
+    "url": "https://github.com/xiaoyeli/superlu_mt.git"
+  },
+  "pastix": {
+    "commit": "ac716d6259eb014cd8874a3f0f4c77f6d5d2f6c2",
+    "url": "https://gitlab.inria.fr/solverstack/pastix.git",
+    "submodules": [
+      " 3f74c7935db26c118bae695a16b02fa83f1aeac0 cmake_modules/morse_cmake (heads/master)",
+      " 088ad4230d5783d9d6ac4ed0ff95e146e0a7087b spm (088ad42)",
+      " 3f74c7935db26c118bae695a16b02fa83f1aeac0 spm/cmake_modules/morse_cmake (heads/master)"
+    ]
+  },
+  "cxxopts_header_sha256": "80c35bb692f44a4cae5fc47f3a2dbe7138fa268f26340f5ab556d8fd07edbb6d"
+}

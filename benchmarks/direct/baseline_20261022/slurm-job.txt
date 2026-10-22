@@ -1,0 +1,6 @@
+JobID             State ExitCode    Elapsed        NodeList  AllocCPUS     MaxRSS
+------------ ---------- -------- ---------- --------------- ---------- ----------
+129327        COMPLETED      0:0   00:01:15         lair-g3         32
+129327.batch  COMPLETED      0:0   00:01:15         lair-g3         32         9M
+129327.exte+  COMPLETED      0:0   00:01:15         lair-g3         32         1M
+129327.0      COMPLETED      0:0   00:01:14         lair-g3         32    131464K

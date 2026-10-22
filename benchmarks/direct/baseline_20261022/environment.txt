@@ -1,0 +1,82 @@
+lair-g3
+Thu Oct 22 13:34:13 UTC 2026
+Architecture:                            x86_64
+CPU op-mode(s):                          32-bit, 64-bit
+Address sizes:                           52 bits physical, 57 bits virtual
+Byte Order:                              Little Endian
+CPU(s):                                  128
+On-line CPU(s) list:                     0-127
+Vendor ID:                               AuthenticAMD
+Model name:                              AMD EPYC 9354 32-Core Processor
+CPU family:                              25
+Model:                                   17
+Thread(s) per core:                      2
+Core(s) per socket:                      32
+Socket(s):                               2
+Stepping:                                1
+Frequency boost:                         enabled
+CPU max MHz:                             3800.2410
+CPU min MHz:                             1500.0000
+BogoMIPS:                                6500.38
+Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good amd_lbr_v2 nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba perfmon_v2 ibrs ibpb stibp ibrs_enhanced vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local user_shstk avx512_bf16 clzero irperf xsaveerptr rdpru wbnoinvd amd_ppin cppc amd_ibpb_ret arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif x2avic v_spec_ctrl vnmi avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq la57 rdpid overflow_recov succor smca fsrm flush_l1d debug_swap ibpb_exit_to_user
+Virtualization:                          AMD-V
+L1d cache:                               2 MiB (64 instances)
+L1i cache:                               2 MiB (64 instances)
+L2 cache:                                64 MiB (64 instances)
+L3 cache:                                512 MiB (16 instances)
+NUMA node(s):                            2
+NUMA node0 CPU(s):                       0-31,64-95
+NUMA node1 CPU(s):                       32-63,96-127
+Vulnerability Gather data sampling:      Not affected
+Vulnerability Indirect target selection: Not affected
+Vulnerability Itlb multihit:             Not affected
+Vulnerability L1tf:                      Not affected
+Vulnerability Mds:                       Not affected
+Vulnerability Meltdown:                  Not affected
+Vulnerability Mmio stale data:           Not affected
+Vulnerability Reg file data sampling:    Not affected
+Vulnerability Retbleed:                  Not affected
+Vulnerability Spec rstack overflow:      Mitigation; Safe RET
+Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:                Mitigation; Enhanced / Automatic IBRS; IBPB conditional; STIBP always-on; PBRSB-eIBRS Not affected; BHI Not affected
+Vulnerability Srbds:                     Not affected
+Vulnerability Tsa:                       Vulnerable: Clear CPU buffers attempted, no microcode
+Vulnerability Tsx async abort:           Not affected
+Vulnerability Vmscape:                   Mitigation; IBPB before exit to userspace
+gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
+Copyright (C) 2021 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+cmake version 3.22.1
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+Cpus_allowed_list:	40-55,104-119
+728598f981ceabf0a867d46c5508d830bd235f0581d53b048e246be6409a8b70  packages/liblapacke-dev_3.10.0-2ubuntu1_amd64.deb
+fe522bf86cbca3888304cf49b62f24ba2334967310609a30ee857642fe8ce978  packages/liblapacke_3.10.0-2ubuntu1_amd64.deb
+e262307284db6f4c0c07e9fd2fe715585f05c114c6aa58029201bb690b487c32  packages/libmetis-dev_5.1.0.dfsg-7build2_amd64.deb
+357ce72c2d3698feeb54212edfadd334e06789458cece8d61636e2dadb2fb080  packages/libmetis5_5.1.0.dfsg-7build2_amd64.deb
+d56741c612d1eaff3af1f70fef0f33c5c5cb1ed249601a7022854501efbc7c9c  packages/libtmglib3_3.10.0-2ubuntu1_amd64.deb
+{
+  "superlu_mt": {
+    "commit": "f2e50bfcbb7b20ef304c84cf92c038c283019863",
+    "url": "https://github.com/xiaoyeli/superlu_mt.git"
+  },
+  "pastix": {
+    "commit": "ac716d6259eb014cd8874a3f0f4c77f6d5d2f6c2",
+    "url": "https://gitlab.inria.fr/solverstack/pastix.git",
+    "submodules": [
+      " 3f74c7935db26c118bae695a16b02fa83f1aeac0 cmake_modules/morse_cmake (heads/master)",
+      " 088ad4230d5783d9d6ac4ed0ff95e146e0a7087b spm (088ad42)",
+      " 3f74c7935db26c118bae695a16b02fa83f1aeac0 spm/cmake_modules/morse_cmake (heads/master)"
+    ]
+  },
+  "cxxopts_header_sha256": "80c35bb692f44a4cae5fc47f3a2dbe7138fa268f26340f5ab556d8fd07edbb6d"
+}
+893c75821dae900846903c2216adced4527a287956af23a42b5f5496cd5b5d8d  harness/benchmarks/direct/BenchmarkMatrix.h
+e49056ca03bb0ab7cc5cbdfef7a69df539e8fa5f8101497aa54e468d27408096  harness/benchmarks/direct/run_baselines.py
+c2aa7562b305b3d6861f7592be7aa59ee71b4a441c488f4ab2c895f74abdae25  harness/benchmarks/direct/build_and_run.sh
+40acc6fbdac04fc2349402d6e4dc44f10baa89eed7f0453f064c0434507f667a  harness/benchmarks/direct/CMakeLists.txt
+2a416586c665dec6342ae74201b28b79ff86a64d624dff683df5ccc0aca5915e  harness/benchmarks/superlu_mt/SparseLUBenchmark.cpp
+67b2a6e76de850a36f51f0b1ffbce6bea349856a212d68470040de6b3bb4389f  harness/benchmarks/pastix/SparseLUBenchmark.cpp

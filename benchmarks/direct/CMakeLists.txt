@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.18)
+project(SpCraftDirectBaselines LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(OpenMP REQUIRED COMPONENTS CXX)
+find_package(PASTIX REQUIRED CONFIG)
+find_path(CXXOPTS_INCLUDE_DIR cxxopts.hpp REQUIRED)
+find_path(SUPERLU_MT_INCLUDE_DIR slu_mt_ddefs.h PATH_SUFFIXES superlu_mt REQUIRED)
+find_library(SUPERLU_MT_LIBRARY superlu_mt_OPENMP REQUIRED)
+
+add_executable(superlu_lu_baseline ../superlu_mt/SparseLUBenchmark.cpp)
+target_include_directories(superlu_lu_baseline PRIVATE "${SUPERLU_MT_INCLUDE_DIR}")
+target_include_directories(superlu_lu_baseline PRIVATE "${CXXOPTS_INCLUDE_DIR}")
+target_compile_definitions(superlu_lu_baseline PRIVATE __OPENMP)
+target_link_libraries(superlu_lu_baseline PRIVATE "${SUPERLU_MT_LIBRARY}" OpenMP::OpenMP_CXX)
+
+add_executable(pastix_lu_baseline ../pastix/SparseLUBenchmark.cpp)
+target_include_directories(pastix_lu_baseline PRIVATE "${CXXOPTS_INCLUDE_DIR}")
+target_link_libraries(pastix_lu_baseline PRIVATE PASTIX::pastix)
