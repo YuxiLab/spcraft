@@ -92,7 +92,7 @@
     {
       "name": "macos-openmp",
       "displayName": "macOS + OpenMP + MPI (RelWithDebInfo)",
-      "description": "Apple Clang with libomp and MPI; set OpenMP_ROOT to the libomp installation prefix",
+      "description": "Apple Clang with libomp and MPI; exposes compile commands for clangd. Set OpenMP_ROOT to the libomp installation prefix",
       "inherits": "base",
       "condition": {
         "type": "equals",
@@ -100,6 +100,7 @@
         "rhs": "Darwin"
       },
       "cacheVariables": {
+        "CMAKE_PROJECT_SPCraft_INCLUDE": "${sourceDir}/cmake/ExposeCompileCommands.cmake",
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_C_COMPILER": "cc",
         "CMAKE_CXX_COMPILER": "c++",

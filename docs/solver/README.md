@@ -5,6 +5,12 @@ factorization, and shared-memory panel scheduling. The C++ assignment directorie
 contain interfaces and TODO stubs, **not reference implementations**. Calling
 an unfinished function throws `std::logic_error` with its assignment ID.
 
+Start with the [student implementation checklist](implementation-order.md),
+which lists the recommended function order, prerequisites, and checks. Numbered
+Part comments inside each `.cpp` function guide its implementation stages.
+For a live task list with source navigation, use the included
+[Neovim solver-progress plugin](../../nvim/solver-progress.nvim/README.md).
+
 | Week | Implementation | Instructions | Acceptance target |
 |---|---|---|---|
 | 1 | `include/solver/scalar/`, `src/solver/scalar/` | [Scalar LU](week1.md) | `test_solver_scalar` |

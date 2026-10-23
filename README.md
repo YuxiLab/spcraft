@@ -95,6 +95,9 @@ prefix containing `include/omp.h` and `lib/libomp.dylib`. OpenMP is required by
 this preset, and MPI compiler wrappers must be on `PATH`. Configuration fails
 if either dependency cannot be found. Build output goes to
 `build/macos-openmp`.
+The preset also exposes its compilation database through
+`build/compile_commands.json` for clangd, including Antigravity's clangd extension.
+An existing database from another setup is preserved with a warning.
 
 ## Neovim profiling and experiments
 

@@ -2,8 +2,15 @@
 
 ## Native CMake builds
 
-When using the native `macos-openmp` preset, keep its compilation database active
-and add the CUDA headers needed by the editor's `SPCRAFT_USE_CUDA=1` definition:
+Select the `macos-openmp` configure preset in Antigravity or another CMake-aware
+editor, then configure the project. The preset creates the relative link
+`build/compile_commands.json -> macos-openmp/compile_commands.json`, matching
+the database location in `.clangd`. Reconfiguration keeps it current as sources
+are added. An existing database belonging to another build or parsing setup is
+preserved with a warning instead of being overwritten.
+
+For CUDA host declarations, add the headers needed by the editor's
+`SPCRAFT_USE_CUDA=1` definition:
 
 ```sh
 python3 scripts/setup_macos_clangd.py --native-headers --check
@@ -16,7 +23,8 @@ preserving the active database and editor rules. It saves the original config in
 verified downloads. Include paths are relative to the active compilation commands;
 rerun after changing the build directory.
 `--check` verifies the MPI CSC SUMMA source, `utils.h`, and `cuCsrMatrix.cuh`.
-Restart clangd in Neovim with `:LspRestart clangd` after setup.
+Restart the editor's clangd language server after changing the active database.
+In Neovim, use `:LspRestart clangd`.
 
 These headers support host declarations only; parsing `.cu` implementations needs
 the Linux environment described below. Native CMake builds keep their configured

@@ -21,22 +21,7 @@ CompileFlags:
     - "-I../../include"
     - "-I../.."
     - "-isystem"
-    - "../../../../spack/opt/spack/linux-skylake/cuda-13.1.1-7eh4oy34imytzlffcpoaztgllkdba7u7/include"
-    - "-isystem"
-    - "/home/yuxihong/workspace/spack/opt/spack/linux-skylake/intel-oneapi-mkl-2025.3.1-h6mrhazfywblt7ijtnkwikql4jhzfxwv/mkl/2025.3/include"
-    - "-isystem"
-    - "../../../../spack/opt/spack/linux-skylake/cxxopts-3.3.1-ixpr5mxbmphlagz4udynp7omfgiswobb/include"
-    - "-isystem"
     - "_deps/fast_matrix_market-src/include"
-    - "-isystem"
-    - "../../../../spack/opt/spack/linux-skylake/benchmark-1.9.1-gl3t75nrnfs2vnmw2xja35b4dvfg5prp/include"
-    - "-isystem"
-    - "../../../../spack/opt/spack/linux-skylake/googletest-1.17.0-e3vmwqimw3dl7yfhpwsclist6hnzh7h7/include"
-    # GoogleTest's source checkout nests headers one level deeper than its install.
-    - "-isystem"
-    - "../../../../spack/opt/spack/linux-skylake/googletest-1.17.0-e3vmwqimw3dl7yfhpwsclist6hnzh7h7/googletest/include"
-    - "-isystem"
-    - "../../../../spack/opt/spack/linux-skylake/openmpi-5.0.10-eh2jmlykluppu2lbstr4bbay3enkxac2/include"
     - "-isystem"
     - "_deps/fmt-src/include"
     - "-isystem"
@@ -144,12 +129,6 @@ CompileFlags:
     - "--expt-relaxed-constexpr"
     - "-forward-unknown-to-host-compiler"
     - "-Werror=cross-execution-space-call"
-
----
-# Match the configured compiler instead of guessing the newest GCC installation.
-CompileFlags:
-  Add:
-    - "--gcc-install-dir=../../../../../../../usr/lib/gcc/x86_64-linux-gnu/14"
 
 # BEGIN SPCraft native CUDA host headers
 ---

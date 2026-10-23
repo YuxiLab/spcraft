@@ -6,6 +6,11 @@ navigation. The personal configuration uses `hongyx11/oh-my-overseer.nvim`,
 which also manages local and remote experiments. Run
 `:OverseerRun` from the repository or one of its subdirectories.
 
+For the solver assignments, the included
+[solver-progress.nvim plugin](../nvim/solver-progress.nvim/README.md) provides
+`:SolverProgress`: an ordered sidebar with implementation status and jumps to
+each function. It refreshes as you save and does not execute builds or tests.
+
 ## Actions
 
 | Task | What it does |
@@ -35,6 +40,7 @@ The installed NvChad configuration uses Space as its leader key:
 | Shortcut | Action |
 | --- | --- |
 | F1 | Open the OMO experiment panel; select experiments and options there |
+| Space sp | Toggle the solver implementation progress sidebar |
 | Space cC | Configure, build and run |
 | Space cR | Build and run |
 | Space cb | Build |
