@@ -26,7 +26,12 @@ Factors<IT, NT, OT> Factorize(const CscMatrix<IT, NT, OT>& A, const LuSymbolic<I
 template <class IT, class NT, class OT>
 void ForwardSolve(const CscMatrix<IT, NT, OT>& lower, const DenseVector<IT, NT>& rhs, DenseVector<IT, NT>& y)
 {
-  // TODO(W1.3): see docs/solver/week1.md and the header contract.
+  // TODO(W1.3), Part 1: validate the triangular solve's buffers.
+  // 1. Require square lower and n-element rhs/y buffers, with storage when n>0.
+  //    Reject invalid dimensions.
+  // 2. Require distinct rhs/y buffers and reject overlapping input/output storage.
+  // 3. Check the CSC triangular structure. A missing/nonfinite/nonunit diagonal
+  //    is a malformed unit-lower factor and must produce runtime_error.
   throw std::logic_error("W1.3 ForwardSolve: implement unit-lower CSC substitution");
 }
 

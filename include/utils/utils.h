@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utils/MakeSure.h"
 #include "utils/Print.h"
 #include "utils/MatrixInput.h"
 #include "utils/MatrixMacros.h"
