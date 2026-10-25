@@ -1,0 +1,63 @@
+% Included by dense-lu.md through Pandoc; keep this authored source in docs/solver.
+\begin{tikzpicture}[
+  x=1cm,y=-1cm,
+  font=\small,
+  flow/.style={-{Stealth[length=2mm]},line width=0.8pt},
+  operation/.style={anchor=north west,align=left,text width=6.5cm}
+]
+  % Partition the mathematical working matrix before eliminating column k.
+  \fill[black!5] (0,0) rectangle (5.1,1.5);
+  \fill[black!3] (0,1.5) rectangle (1.5,5.1);
+  \fill[orange!28] (1.5,1.5) rectangle (2.3,2.3);
+  \fill[blue!13] (2.3,1.5) rectangle (5.1,2.3);
+  \fill[teal!18] (1.5,2.3) rectangle (2.3,5.1);
+  \fill[violet!10] (2.3,2.3) rectangle (5.1,5.1);
+  \draw[muted,line width=0.5pt] (0,0) rectangle (5.1,5.1);
+  \draw[muted] (1.5,0) -- (1.5,5.1);
+  \draw[muted] (2.3,0) -- (2.3,5.1);
+  \draw[muted] (0,1.5) -- (5.1,1.5);
+  \draw[muted] (0,2.3) -- (5.1,2.3);
+  \draw[accent,line width=1pt] (1.5,1.5) rectangle (5.1,5.1);
+
+  \node[font=\small\bfseries,text=ink] at (2.55,-1.15)
+    {Current matrix before step $k$};
+  \node at (0.75,-0.45) {$j<k$};
+  \node at (1.9,-0.45) {$j=k$};
+  \node at (3.7,-0.45) {$j>k$};
+  \node[anchor=east] at (-0.15,0.75) {$i<k$};
+  \node[anchor=east] at (-0.15,1.9) {$i=k$};
+  \node[anchor=east] at (-0.15,3.7) {$i>k$};
+
+  \node at (0.75,0.75) {$U_{11}$};
+  \node at (1.9,0.75) {$u_{12}$};
+  \node at (3.7,0.75) {$U_{13}$};
+  \node at (0.75,1.9) {$0$};
+  \node at (0.75,3.7) {$0$};
+  \node[font=\large] at (1.9,1.9) {$p$};
+  \node[text=blue!65!black] at (3.7,1.9) {$r_j$};
+  \node[text=teal!65!black] at (1.9,3.7) {$c_i$};
+  \node[text=violet!70!black] at (3.7,3.7) {$S_{ij}$};
+  \draw[flow,teal!65!black,dashed] (2.05,3.7) -- (3.25,3.7);
+  \draw[flow,blue!65!black,dashed] (3.7,2.1) -- (3.7,3.4);
+
+  \node[operation] at (5.7,0)
+    {\textcolor{muted}{Gray: completed columns and rows.}\\
+     Work now uses the outlined block.};
+  \node[operation] at (5.7,1.4)
+    {\textbf{1. Check the pivot}\\
+     $p=a^{(k)}_{kk}$. Reject an invalid pivot\\
+     before any division.};
+  \node[operation] at (5.7,2.9)
+    {\textbf{2. Form the multipliers}\\
+     $\ell_{ik}=c_i/p$, for each $i>k$.\\
+     These values become column $k$ of L.};
+  \node[operation] at (5.7,4.4)
+    {\textbf{3. Update every trailing entry}\\
+     $S_{ij}\leftarrow S_{ij}-\ell_{ik}r_j$, $i,j>k$.\\
+     The pivot row supplies $r_j$ to each row.};
+
+  \node[anchor=north,align=center,text width=12.8cm] at (5.5,6)
+    {$p$: pivot \quad $\mathbf c$: column below it \quad
+     $\mathbf r$: row to its right \quad $S$: trailing matrix\\[4pt]
+     Whole-block update: $S\leftarrow S-(\mathbf c/p)\mathbf r$.};
+\end{tikzpicture}

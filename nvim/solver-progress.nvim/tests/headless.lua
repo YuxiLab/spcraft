@@ -29,32 +29,35 @@ local function run()
     vim.fn.mkdir(vim.fn.fnamemodify(root .. "/" .. relative, ":h"), "p")
     vim.fn.writefile(vim.fn.readfile(repository .. "/" .. relative), root .. "/" .. relative)
   end
-  copy("docs/solver/implementation-order.md")
+  copy("docs/solver/README.md")
   -- Own our numerical placeholders so these tests still work after students implement LU.
   local stages = {
+    dense = { "ForwardSolve", "BackwardSolve", "RightLookingFactorize", "Solve" },
     scalar = { "FactorColumn", "Factorize", "ForwardSolve", "BackwardSolve", "Solve" },
     supernodal = { "AssemblePanel", "UpdatePanel", "FactorPanel", "Factorize", "Solve" },
     mt = { "BuildTaskGraph", "Factorize" },
   }
-  local weeks = { scalar = 1, supernodal = 2, mt = 3 }
+  local assignment_groups = { dense = 0, scalar = 1, supernodal = 2, mt = 3 }
   for stage, functions in pairs(stages) do
     local directory = root .. "/src/solver/" .. stage
     vim.fn.mkdir(directory, "p")
     local lines = {}
     for index, name in ipairs(functions) do
       lines[#lines + 1] = "void " .. name .. "() {"
-      lines[#lines + 1] = ('  throw std::logic_error("W%d.%d %s: implement");'):format(weeks[stage], index, name)
+      lines[#lines + 1] = ('  throw std::logic_error("W%d.%d %s: implement");'):format(assignment_groups[stage], index, name)
       lines[#lines + 1] = "}"
     end
-    vim.fn.writefile(lines, directory .. "/Lu.cpp")
+    local filename = stage == "dense" and "ScalarLU.cpp" or "Lu.cpp"
+    vim.fn.writefile(lines, directory .. "/" .. filename)
   end
   local project = scanner.project(root)
-  assert(#project.tasks == 12 and project.todo == 12, "all twelve scaffold tasks")
-  assert(project.tasks[1].id == "W1.3" and project.tasks[3].id == "W1.1", "guide order, not source order")
-  assert(project.tasks[12].id == "W3.2", "last task")
+  assert(#project.tasks == 16 and project.todo == 16, "all sixteen scaffold tasks")
+  assert(project.tasks[1].id == "W0.1" and project.tasks[4].id == "W0.4", "dense prerequisites first")
+  assert(project.tasks[5].id == "W1.3" and project.tasks[7].id == "W1.1", "guide order, not source order")
+  assert(project.tasks[16].id == "W3.2", "last task")
 
-  vim.cmd("cd " .. vim.fn.fnameescape(root .. "/src/solver/scalar"))
-  vim.cmd("edit Lu.cpp")
+  vim.cmd("cd " .. vim.fn.fnameescape(root .. "/src/solver/dense"))
+  vim.cmd("edit ScalarLU.cpp")
   local source_buf = vim.api.nvim_get_current_buf()
   vim.cmd("SolverProgress")
   local dashboard = vim.api.nvim_get_current_buf()
@@ -67,7 +70,7 @@ local function run()
     end
     error("Dashboard text missing: " .. fragment)
   end
-  local selected_row = row_with("W1.3 scalar::ForwardSolve")
+  local selected_row = row_with("W0.1 dense::ForwardSolve")
   assert(vim.api.nvim_win_get_cursor(0)[1] == selected_row, "next task initially selected")
 
   local function mapping(key)
@@ -82,22 +85,22 @@ local function run()
   assert(current_line:find("void ForwardSolve", 1, true), "Enter selects function definition")
   local source_lines = vim.api.nvim_buf_get_lines(source_buf, 0, -1, false)
   for line, text in ipairs(source_lines) do
-    if text:find('throw std::logic_error("W1.3 ', 1, true) then
+    if text:find('throw std::logic_error("W0.1 ', 1, true) then
       source_lines[line] = "  return; // Test fixture only, not a numerical implementation."
     end
   end
   vim.api.nvim_buf_set_lines(source_buf, 0, -1, false, source_lines)
   assert(scanner.project(root).done == 1, "loaded unsaved edits are scanned")
   vim.cmd("write")
-  assert(select(2, row_with("W1.3 scalar::ForwardSolve")):find("[done", 1, true), "save refreshes sidebar")
-  row_with("1/12 implemented")
+  assert(select(2, row_with("W0.1 dense::ForwardSolve")):find("[done", 1, true), "save refreshes sidebar")
+  row_with("1/16 implemented")
 
   vim.api.nvim_set_current_win(dashboard_win)
-  selected_row = row_with("W1.3 scalar::ForwardSolve")
+  selected_row = row_with("W0.1 dense::ForwardSolve")
   vim.api.nvim_win_set_cursor(0, { selected_row, 0 })
   mapping("d")()
-  assert(vim.api.nvim_buf_get_name(0) == root .. "/docs/solver/implementation-order.md", "guide navigation")
-  assert(vim.api.nvim_get_current_line():find("scalar::ForwardSolve", 1, true), "guide navigation selects matching row")
+  assert(vim.api.nvim_buf_get_name(0) == root .. "/docs/solver/README.md", "guide navigation")
+  assert(vim.api.nvim_get_current_line():find("dense::ForwardSolve", 1, true), "guide navigation selects matching row")
 
   local mt = root .. "/src/solver/mt/Lu.cpp"
   vim.fn.delete(mt)

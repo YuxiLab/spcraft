@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "core/CscMatrix.h"
+#include "core/DenseMatrix.h"
 #include "core/DenseVector.h"
 
 namespace spcraft::solver

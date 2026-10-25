@@ -5,6 +5,22 @@
   },
   "tasks": [
     {
+      "label": "Solver: Build README PDF (Pandoc)",
+      "type": "process",
+      "command": "/usr/bin/make",
+      "args": ["-C", "${workspaceFolder}/docs/solver", "DOC=README", "pdf"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "Solver: Build foundations PDF (Pandoc)",
+      "type": "process",
+      "command": "/usr/bin/make",
+      "args": ["-C", "${workspaceFolder}/docs/solver", "pdf"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    },
+    {
       "label": "Configure",
       "type": "process",
       "command": "cmake",

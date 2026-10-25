@@ -73,6 +73,25 @@ language rules and diagnostic settings remain in effect.
 
 ## Editors
 
+In Zed, associate CUDA extensions with its built-in C++ support in
+`~/.config/zed/settings.json`:
+
+```json
+{
+  "file_types": {
+    "C++": ["cu", "cuh"]
+  }
+}
+```
+
+To retain a native CMake database for ordinary C++ while enabling CUDA navigation,
+run `python3 scripts/setup_macos_clangd.py --cuda-files --check`. This generates a
+separate Linux/CUDA parsing database and adds managed `.clangd` fragments selecting
+it only for `.cu` and `.cuh` files. It also supplies CUDA host headers to native
+C++ commands. The existing `build/compile_commands.json` is preserved. Re-run the
+command after regenerating `.clangd` or adding files. In Zed's command palette,
+run **editor: restart language server** to reload clangd.
+
 Restart Neovim to reload clangd after setup. Its existing clangd configuration
 already attaches to C++ and CUDA buffers. No Neovim configuration change is needed.
 

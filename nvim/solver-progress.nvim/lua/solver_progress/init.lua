@@ -2,7 +2,7 @@ local M = {}
 local options = { width = 66, auto_open = false }
 local views = {}
 local namespace = vim.api.nvim_create_namespace("solver_progress")
-local guide_relative = "/docs/solver/implementation-order.md"
+local guide_relative = "/docs/solver/README.md"
 
 local function find_root(start)
   local directory = vim.fn.resolve(vim.fn.fnamemodify(start, ":p"))
@@ -47,7 +47,10 @@ local function render(view)
     " Implemented = stub removed; numerical tests unverified.",
     "",
   }
-  local labels = { scalar = "Week 1: scalar LU", supernodal = "Week 2: supernodal LU", mt = "Week 3: parallel LU" }
+  local labels = {
+    dense = "Stage 0: dense LU", scalar = "Stage 1: scalar LU",
+    supernodal = "Stage 2: supernodal LU", mt = "Stage 3: parallel LU",
+  }
   local highlights = { done = "DiagnosticOk", work = "DiagnosticWarn", todo = "Comment", missing = "DiagnosticError" }
   local row_highlights = {}
   local previous_stage
@@ -203,7 +206,7 @@ function M.setup(opts)
   local group = vim.api.nvim_create_augroup("SolverProgress", { clear = true })
   vim.api.nvim_create_autocmd("BufWritePost", {
     group = group,
-    pattern = { "*/src/solver/*/Lu.cpp", "*/docs/solver/implementation-order.md" },
+    pattern = { "*/src/solver/*/Lu.cpp", "*/src/solver/dense/ScalarLU.cpp", "*/docs/solver/README.md" },
     callback = M.refresh,
   })
   vim.api.nvim_create_autocmd("BufEnter", {

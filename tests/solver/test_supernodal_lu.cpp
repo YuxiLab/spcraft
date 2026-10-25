@@ -22,6 +22,29 @@ TEST(SupernodalLu, GenuineBlocksAndPermutedSolve)
   CheckSolution(x, 2);
 }
 
+TEST(SupernodalLu, NonsymmetricMapsAndReusableSolve)
+{
+  // 1. Check distinct lower/upper maps, a width-two panel, and both permutations.
+  for (bool permuted : {false, true}) {
+    const auto A = MakeNonsymmetricMatrix(permuted);
+    const auto original = Dense(A);
+    const auto plan = MakeNonsymmetricBlockPlan(permuted);
+    const auto factors = supernodal::Factorize(A, plan);
+    ASSERT_EQ(factors.status.code, LuCode::Success);
+    CheckBlocks(A, factors);
+    auto b = MakeRhs(A);
+    Vector x(4);
+    const std::vector<Value> rhs(b.val, b.val + 4);
+    supernodal::Solve(factors, b, x);
+    CheckSolution(x);
+    EXPECT_EQ(std::vector<Value>(b.val, b.val + 4), rhs);
+    for (Index i = 0; i < 4; ++i) b[i] *= 2;
+    supernodal::Solve(factors, b, x);
+    CheckSolution(x, 2);
+    EXPECT_EQ(Dense(A), original);
+  }
+}
+
 TEST(SupernodalLu, EmptyAndRejectedPivot)
 {
   Matrix empty;

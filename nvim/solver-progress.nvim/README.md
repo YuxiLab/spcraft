@@ -2,21 +2,22 @@
 
 An SPCraft assignment sidebar with the recommended implementation order, progress
 counts, the next unfinished function, and source/guide navigation. It reads the
-tables in `docs/solver/implementation-order.md`, so the guide owns the order.
+tables in `docs/solver/README.md`, so the guide owns the order.
 No third-party Neovim plugins, Tree-sitter parsers, or build tools are required.
 Use Neovim 0.9 or newer.
 
 ```text
 Solver implementation progress
-[#####...............] 3/12 implemented
-1 in progress | 8 TODO | 0 missing
+[####................] 3/16 implemented
+1 in progress | 12 TODO | 0 missing
 
-Week 1: scalar LU
-   1 [done   ] W1.3 scalar::ForwardSolve
-   2 [done   ] W1.4 scalar::BackwardSolve
-   3 [done   ] W1.1 scalar::FactorColumn
->  4 [work   ] W1.2 scalar::Factorize
-   5 [todo   ] W1.5 scalar::Solve
+Stage 0: dense LU
+   1 [done   ] W0.1 dense::ForwardSolve
+   2 [done   ] W0.2 dense::BackwardSolve
+   3 [done   ] W0.3 dense::RightLookingFactorize
+>  4 [work   ] W0.4 dense::Solve
+Stage 1: scalar LU
+   5 [todo   ] W1.3 scalar::ForwardSolve
 ...
 ```
 
@@ -71,7 +72,7 @@ stored in the plugin itself.
 | `q` | Close the sidebar. |
 | `:SolverProgressRefresh` | Refresh an open sidebar from another window. |
 
-The sidebar refreshes automatically after saving a solver `Lu.cpp` or the
+The sidebar refreshes automatically after saving a solver `Lu.cpp`, dense `ScalarLU.cpp`, or the
 implementation-order guide, and when you return to the sidebar. It never builds
 or runs the solver, and does not write progress state into your source files.
 The toggle works from the sidebar or the source window beside it, preserving
@@ -94,7 +95,7 @@ placeholder while work is unfinished; remove the placeholder when you finish.
 The detailed `TODO(W…)` instructional comments can stay in place.
 
 **`done` means implementation present, not numerical correctness or passing tests.**
-Run the week's acceptance tests and additional kernel checks before submitting.
+Run the stage's acceptance tests and additional kernel checks before submitting.
 The plugin does not evaluate conditional compilation or arbitrary C++ semantics.
 
 ## Verify the plugin

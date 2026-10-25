@@ -13,13 +13,16 @@ struct Factors {
   LuStatus<IT> status;
 };
 
-//! Reusable private scratch; size values and marked to n, then clear touched.
+//! Owning reusable scratch; call Resize(n) before factorization.
 template <class IT, class NT>
 struct Workspace {
-  DenseVector<IT, NT> values;
-  std::vector<IT> inverse_order;  //!< old -> new, constructed once by Factorize.
-  std::vector<unsigned char> marked;
-  std::vector<IT> touched;
+  DenseVector<IT, NT> values;         //!< Dense accumulator for the current column.
+  std::vector<IT> inverse_order;      //!< old -> new; Factorize fills the chosen permutation.
+  std::vector<unsigned char> marked;  //!< Flags rows already added to touched.
+  std::vector<IT> touched;            //!< Rows to clear after processing the current column.
+
+  //! Prepare n zeroed values/markers, an identity permutation, and empty touched.
+  void Resize(IT n);
 };
 
 /**

@@ -6,13 +6,13 @@ namespace spcraft::solver::supernodal
 {
 
 /**
- * @brief One numerical supernode, using existing owning dense-vector buffers.
+ * @brief One numerical supernode, using owning column-major dense matrices.
  *
  * Let w=last-first, r=rows.size(), c=columns.size(). All blocks are column-major:
- * diagonal has w*w entries, lower has r*w entries, upper has w*c entries.
+ * diagonal is w-by-w, lower is r-by-w, and upper is w-by-c.
  * Before factorization they hold the updated A11/A21/A12 cross. Afterwards,
  * diagonal packs strict-lower L11 (unit diagonal implicit) and upper U11;
- * lower holds L21 and upper holds U12. Dense buffer lengths use OT.
+ * lower holds L21 and upper holds U12. Dense offsets and strides use OT.
  */
 template <class IT, class NT, class OT = IT>
 struct Panel {
@@ -20,9 +20,9 @@ struct Panel {
   IT last = 0;
   std::vector<IT> rows;
   std::vector<IT> columns;
-  DenseVector<OT, NT> diagonal;
-  DenseVector<OT, NT> lower;
-  DenseVector<OT, NT> upper;
+  DenseMatrix<IT, NT, OT> diagonal;
+  DenseMatrix<IT, NT, OT> lower;
+  DenseMatrix<IT, NT, OT> upper;
 };
 
 template <class IT, class NT, class OT = IT>
@@ -37,7 +37,7 @@ struct Factors {
 template <class IT, class NT, class OT = IT>
 struct Workspace {
   Panel<IT, NT, OT> panel;
-  DenseVector<OT, NT> product;
+  DenseMatrix<IT, NT, OT> product;
 };
 
 //! W2.1: allocate/zero the cross for panel s and gather entries of P^T*A*P.

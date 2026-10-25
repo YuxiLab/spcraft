@@ -5,7 +5,7 @@ include(GNUInstallDirs)
 #################################################################
 # Compiler options
 #################################################################
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -110,7 +110,7 @@ target_include_directories(SPCraft
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
-target_compile_features(SPCraft PUBLIC cxx_std_20)
+target_compile_features(SPCraft PUBLIC cxx_std_23)
 target_link_libraries(SPCraft
 	PUBLIC
 		$<BUILD_INTERFACE:Boost::preprocessor>

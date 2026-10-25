@@ -1,0 +1,46 @@
+% !LW recipe = Solver notes (Pandoc + latexmk)
+% Generated body: edit docs/solver/<name>.md, then make -C docs/solver DOC=<name> pdf.
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{needspace}
+\usepackage[most]{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\definecolor{ink}{HTML}{20364A}
+\definecolor{accent}{HTML}{235B70}
+\definecolor{muted}{HTML}{58636E}
+\definecolor{paperblue}{HTML}{F2F6F8}
+\AtBeginDocument{\hypersetup{pdfsubject={SpCraft solver learning path},pdfauthor={SpCraft}}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlength{\emergencystretch}{2em}
+\linespread{1.03}
+\raggedbottom
+\titleformat{\section}{\large\bfseries\color{ink}}{}{0pt}{}
+\titlespacing*{\section}{0pt}{15pt}{7pt}
+\titleformat{\subsection}{\normalsize\bfseries\color{ink}}{}{0pt}{}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+\newtcolorbox{exercise}{colback=paperblue,colframe=accent,boxrule=0pt,
+  borderline west={2pt}{0pt}{accent},arc=0pt,left=9pt,right=9pt,
+  top=6pt,bottom=6pt,before skip=9pt,after skip=5pt,
+  fonttitle=\bfseries,coltitle=accent,title=Exercise,
+  colbacktitle=paperblue,attach title to upper={\quad}}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{muted}\textsc{SpCraft / Solver learning path}}
+\fancyhead[R]{\small\color{muted}Solver notes}
+\fancyfoot[L]{\small\color{muted}Dense, sparse, and parallel LU}
+\fancyfoot[R]{\small\color{muted}\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0pt}
+\makeatletter
+\renewcommand{\maketitle}{%
+  {\color{accent}\small\bfseries SPCRAFT}\par
+  \vspace{1pt}%
+  {\huge\bfseries\color{ink}\@title}\par
+  \vspace{8pt}%
+}
+\makeatother
+\AtBeginEnvironment{longtable}{\footnotesize\setlength{\tabcolsep}{3pt}}
+\let\solvercontents\tableofcontents
+\renewcommand{\tableofcontents}{\solvercontents\clearpage\thispagestyle{fancy}}

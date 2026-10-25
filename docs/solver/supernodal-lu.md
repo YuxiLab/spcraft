@@ -1,11 +1,19 @@
-# Week 2: serial supernodal LU
+# Serial supernodal LU
 
 Goal: perform elimination using dense blocks inside a sparse structure. Reuse
-Week 1's mathematical conventions, but implement a real block factorization.
+the scalar stage's mathematical conventions, but implement a real block factorization.
 
 Implement W2.1–W2.5 in `src/solver/supernodal/Lu.cpp`. The supplied plan partitions
 ordered columns into supernodes and lists every source panel read by each node.
 See `include/solver/supernodal/Lu.h` for exact buffer layouts.
+
+Each panel block is a `DenseMatrix`: diagonal w-by-w, lower r-by-w, and upper
+w-by-c. Use its two-dimensional access and leading dimension; the row/column
+maps still translate between local entries and global ordered coordinates.
+
+Before coding, derive the block equations in [foundations](foundations.md) and
+trace [the dense cross](worked-example.md#2-one-dense-cross-diagonal-lu-and-two-triangular-solves).
+Use the [isolated block tests](checkpoints.md#supernodal-checkpoints) in task order.
 
 ## Tasks
 
@@ -29,7 +37,7 @@ See `include/solver/supernodal/Lu.h` for exact buffer layouts.
    The instructor guarantees structural closure and dependency completeness.
    Call assembly, updates, and panel factorization as distinct stages.
 5. **W2.5 `Solve`**: implement serial block forward/backward substitution using
-   L11/L21 and U11/U12, with the same permutation convention as Week 1. Remember
+   L11/L21 and U11/U12, with the same permutation convention as the scalar stage. Remember
    that the packed diagonal contains U's diagonal, not L's implicit ones.
 
 Begin with readable dense loops. Then use single-threaded BLAS for suitable
@@ -38,11 +46,12 @@ whole-matrix factorization and scalar-factor-then-pack implementation are not.
 
 ## Checks and submission
 
-Run `test_solver_supernodal` / CTest label `solver-week2`. The supplied case has
-a width-two diagonal panel. Add a width-one partition comparison, a diagonal
-block of width greater than two, malformed panel bounds, a failure inside a
-panel after its first column, and a nonidentity-permutation solve. Compare
-against Week 1 or an independent reference with tolerances, not bitwise equality.
+Run `test_solver_supernodal` / CTest label `solver-supernodal`. Supplied tests include
+a width-two panel, separate assembly/update/factor checks, a later failed pivot,
+and a nonsymmetric case with different lower/upper maps and a permuted solve.
+Add a width-one partition comparison, a diagonal block of width greater than
+two, malformed panel bounds, and tolerance-boundary failures. Compare
+against the scalar stage or an independent reference with tolerances, not bitwise equality.
 
 Submit code and a short report with:
 
@@ -53,6 +62,7 @@ Submit code and a short report with:
   the effect of panel width. Identify time spent gathering/scattering separately
   from useful dense arithmetic.
 
-Read SuperLU_MT's `pdgstrf_panel_bmod.c` and PaStiX's `SolverCblk`/`SolverBlok`
-descriptors and `core_zgetrfsp.c`. Explain how a panel differs from a single CSC
-column and why dense block work can be faster despite storing some zeros.
+Follow [source-guide lessons C and D](source-reading.md#lesson-c-supernodes-panels-and-dense-arithmetic).
+Explain how a structural supernode differs from a numerical panel, how PaStiX
+describes blocks, and why dense work can help despite storing some zeros. Draw
+the actual leading dimensions before comparing BLAS calls or transpose flags.

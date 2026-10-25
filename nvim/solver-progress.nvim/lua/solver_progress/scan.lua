@@ -142,7 +142,7 @@ end
 
 function M.project(root)
   root = vim.fn.resolve(vim.fn.fnamemodify(root, ":p")):gsub("/$", "")
-  local guide = root .. "/docs/solver/implementation-order.md"
+  local guide = root .. "/docs/solver/README.md"
   local content = read_source(guide)
   if not content then
     error("Implementation guide not found: " .. guide)
@@ -155,10 +155,11 @@ function M.project(root)
     local order, qualified, id = line:match("^|%s*(%d+)%s*|%s*`([%w_:]+)`%s*/%s*(W%d+%.%d+)%s*|")
     if order then
       local stage, name = qualified:match("^([%w_]+)::([%w_]+)$")
-      if stage ~= "scalar" and stage ~= "supernodal" and stage ~= "mt" then
+      if stage ~= "dense" and stage ~= "scalar" and stage ~= "supernodal" and stage ~= "mt" then
         error("Unknown solver stage in guide: " .. qualified)
       end
-      local file = root .. "/src/solver/" .. stage .. "/Lu.cpp"
+      local filename = stage == "dense" and "ScalarLU.cpp" or "Lu.cpp"
+      local file = root .. "/src/solver/" .. stage .. "/" .. filename
       if sources[file] == nil then
         sources[file] = read_source(file) or false
       end

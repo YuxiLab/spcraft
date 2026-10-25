@@ -1,5 +1,10 @@
 # SuperLU_MT and PaStiX as SpCraft references
 
+For a guided implementation and reading course, start with
+[the sparse LU learning path](solver/README.md). It connects scalar elimination,
+block kernels, and scheduling to the source files discussed here, then studies
+the symbolic analysis and pivot policies omitted from the initial exercises.
+
 The initial source checkouts and CPU baselines are described in
 [the baseline harness](../benchmarks/direct/README.md). This note records the
 design differences that matter when choosing SpCraft's first implementation.

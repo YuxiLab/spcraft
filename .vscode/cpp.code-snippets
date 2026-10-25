@@ -1,0 +1,53 @@
+{
+  "Loop over i": {
+    "scope": "cpp",
+    "prefix": "fori",
+    "body": [
+      "for (${1:IT} ${2:i} = 0; ${2:i} < ${3:n}; ++${2:i}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Forward index loop; edit type, index, bound, then body."
+  },
+  "Loop over j": {
+    "scope": "cpp",
+    "prefix": "forj",
+    "body": [
+      "for (${1:IT} ${2:j} = 0; ${2:j} < ${3:n}; ++${2:j}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Forward j loop for nested matrix loops."
+  },
+  "Loop over k": {
+    "scope": "cpp",
+    "prefix": "fork",
+    "body": [
+      "for (${1:IT} ${2:k} = 0; ${2:k} < ${3:n}; ++${2:k}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Forward k loop for elimination steps or inner products."
+  },
+  "Reverse index loop": {
+    "scope": "cpp",
+    "prefix": "forr",
+    "body": [
+      "for (${1:IT} ${2:i} = ${3:n}; ${2:i} > 0;) {",
+      "\t--${2:i};",
+      "\t$0",
+      "}"
+    ],
+    "description": "Visit n-1 down to 0; an empty range performs no iterations."
+  },
+  "Range-based loop": {
+    "scope": "cpp",
+    "prefix": "forrange",
+    "body": [
+      "for (${1:const auto&} ${2:item} : ${3:items}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Range loop; edit reference type, element, container, then body."
+  }
+}

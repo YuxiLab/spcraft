@@ -31,6 +31,29 @@ TEST(MtLu, FactorizationAcrossThreadCounts)
   }
 }
 
+TEST(MtLu, RepeatedNonsymmetricFactorization)
+{
+  // 1. Repeat a nonsymmetric problem to expose scheduler state retained across runs.
+  for (int threads : {1, 2, 4}) {
+    mt::Options<Value> options;
+    options.threads = threads;
+    for (int run = 0; run < 3; ++run) {
+      const bool permuted = run % 2 != 0;
+      const auto A = MakeNonsymmetricMatrix(permuted);
+      const auto original = Dense(A);
+      const auto plan = MakeNonsymmetricBlockPlan(permuted);
+      const auto factors = mt::Factorize(A, plan, options);
+      ASSERT_EQ(factors.status.code, LuCode::Success);
+      CheckBlocks(A, factors);
+      auto b = MakeRhs(A);
+      Vector x(4);
+      supernodal::Solve(factors, b, x);
+      CheckSolution(x);
+      EXPECT_EQ(Dense(A), original);
+    }
+  }
+}
+
 TEST(MtLu, IndependentBranchesJoinBeforeParent)
 {
   Matrix A;

@@ -25,7 +25,7 @@ template <class IT, class OT>
 TaskGraph<IT, OT> BuildTaskGraph(const SupernodalSymbolic<IT, OT>& symbolic);
 
 /**
- * @brief W3.2: factor ready panels concurrently using Week 2 numerical kernels.
+ * @brief W3.2: factor ready panels concurrently using the supernodal numerical kernels.
  *
  * Allocate the output panel vector before starting workers; never resize it
  * concurrently. Each panel has one writer and its own Workspace. Consume factors
@@ -37,7 +37,7 @@ TaskGraph<IT, OT> BuildTaskGraph(const SupernodalSymbolic<IT, OT>& symbolic);
  * unusable factors. Concurrent failures report the smallest failed ordered
  * pivot column. Catch worker exceptions and rethrow after joining; exceptions
  * must not escape an OpenMP region. Use serial execution when OpenMP is disabled.
- * The result is the SAME factor representation as Week 2; reuse its serial Solve.
+ * The result is the SAME factor representation as the supernodal stage; reuse its serial Solve.
  * Validation and numeric failure semantics match supernodal::Factorize.
  */
 template <class IT, class NT, class OT>

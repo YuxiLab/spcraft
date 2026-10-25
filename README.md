@@ -2,15 +2,27 @@
 
 This is a teaching-oriented sparse computation library. It aims to provide a light-weight but clear-documented sparse kernel, sparse algorithm library with visualization and teaching tutorials.
 
-The [three-week sparse LU assignments](docs/solver/README.md) provide scalar,
-supernodal, and multithreaded solver interfaces with student TODOs and opt-in
-acceptance tests under `include/solver/`, `src/solver/`, and `tests/solver/`.
+The [LU learning path](docs/solver/README.md) starts with dense elimination and
+triangular solves, then builds sparse scalar, supernodal, and multithreaded solvers
+through student TODOs and opt-in checkpoint tests. Worked examples and source-reading lessons connect
+the implementation to SuperLU_MT and PaStiX, including symbolic analysis,
+pivoting, and refinement.
 
 At the ground layer, the library will focus on implementing the basic sparse matrix storage, sparse matrix kernel ( SpMV, SpMM, etc.) as well as reproducing some classic papers in the sparse computation community.
 
 Please send email to `yuxihong@iu.edu` if you have any questions.
 
 [Yuxi Hong](https://hongyx11.github.io/)
+
+## C++ standard and dense indexing
+
+The host library and its consumers require C++23. `DenseMatrix` supports
+`A[row, col]` for element access; `A(row, col)` remains available. Dense vectors
+use `y[i]`. All indices are zero-based, and matrix indexing respects the
+column-major leading dimension. These operators access individual elements;
+NumPy's colon slice syntax is not part of C++.
+
+Optional CUDA sources retain their C++20 setting and can use `A(row, col)`.
 
 ## Spack dependencies and installation
 

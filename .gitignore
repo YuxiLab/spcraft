@@ -25,6 +25,9 @@ compile_commands.json
 # IDE & Editor settings
 .vscode/*
 !.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/cpp.code-snippets
 .idea/
 *.swp
 *~
@@ -53,6 +56,9 @@ _skbuild/
 venv/
 
 # Latex & Quarto build directories
+/docs/obj/
+/docs/pdf/
+/docs/video/
 obj/
 **/obj/
 output/

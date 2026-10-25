@@ -52,6 +52,57 @@ inline SupernodalSymbolic<Index> MakeBlockPlan()
   return plan;
 }
 
+inline Matrix MakeNonsymmetricMatrix(bool permuted = false)
+{
+  // Construct the worked example's original matrix from its ordered B. This
+  // fixture has different lower/upper maps and a U entry that cancels to zero.
+  // 1. Choose the old-to-new map corresponding to order={2,0,3,1}, or identity.
+  const Index inverse[] = {1, 3, 0, 2};
+  const Value ordered[4][4] = {{8, 0, 2, 0}, {2, 10, 0.5, 3},
+                              {0, 2, 12, 1.6}, {4, 0, 4, 16.25}};
+  Matrix A;
+  A.Allocate(12, 4, 4);
+  // 2. Visit original rows in ascending order so every CSC column is canonical.
+  Index position = 0;
+  A.col_ptr[0] = 0;
+  for (Index col = 0; col < 4; ++col) {
+    for (Index row = 0; row < 4; ++row) {
+      const Index i = permuted ? inverse[row] : row;
+      const Index j = permuted ? inverse[col] : col;
+      if (ordered[i][j] != Value{0}) {
+        A.row_id[position] = row;
+        A.val[position] = ordered[i][j];
+        ++position;
+      }
+    }
+    A.col_ptr[col + 1] = position;
+  }
+  return A;
+}
+
+inline LuSymbolic<Index> MakeNonsymmetricScalarPlan(bool permuted = false)
+{
+  // 1. Supply the ordered factors' structure, including the cancelled U(1,2).
+  LuSymbolic<Index> plan;
+  plan.n = 4;
+  if (permuted) plan.order = {2, 0, 3, 1};
+  plan.lower_col_ptr = {0, 3, 5, 7, 8};
+  plan.lower_row_id = {0, 1, 3, 1, 2, 2, 3, 3};
+  plan.upper_col_ptr = {0, 1, 2, 5, 8};
+  plan.upper_row_id = {0, 1, 0, 1, 2, 1, 2, 3};
+  return plan;
+}
+
+inline SupernodalSymbolic<Index> MakeNonsymmetricBlockPlan(bool permuted = false)
+{
+  // 1. Keep the same ordered B while optionally changing original coordinates.
+  SupernodalSymbolic<Index> plan;
+  plan.scalar = MakeNonsymmetricScalarPlan(permuted);
+  plan.panels = {{0, 1, {1, 3}, {2}, {}}, {1, 2, {2}, {2, 3}, {0}},
+                 {2, 4, {}, {}, {0, 1}}};
+  return plan;
+}
+
 inline LuSymbolic<Index> MakeZeroPivotPlan()
 {
   LuSymbolic<Index> plan;
@@ -82,6 +133,18 @@ inline Vector MakeRhs()
   Vector b(4);
   const Value values[] = {11, 19, 29, 41};  // A * (1,2,3,4)^T in original coordinates.
   std::copy(std::begin(values), std::end(values), b.val);
+  return b;
+}
+
+inline Vector MakeRhs(const Matrix& A)
+{
+  // 1. Form b=A*x_true in original coordinates for x_true[i]=i+1.
+  Vector b(A.m, Value{0});
+  for (Index col = 0; col < A.n; ++col) {
+    for (Index p = A.col_ptr[col]; p < A.col_ptr[col + 1]; ++p) {
+      b[A.row_id[p]] += A.val[p] * (col + 1);
+    }
+  }
   return b;
 }
 
@@ -132,23 +195,26 @@ inline void CheckBlocks(const Matrix& A, const supernodal::Factors<Index, Value>
   for (const auto& panel : factors.panels) {
     const Index width = panel.last - panel.first;
     ASSERT_GT(width, 0);
-    ASSERT_EQ(panel.diagonal.n, width * width);
-    ASSERT_EQ(panel.lower.n, static_cast<Index>(panel.rows.size()) * width);
-    ASSERT_EQ(panel.upper.n, width * static_cast<Index>(panel.columns.size()));
+    ASSERT_EQ(panel.diagonal.m, width);
+    ASSERT_EQ(panel.diagonal.n, width);
+    ASSERT_EQ(panel.lower.m, static_cast<Index>(panel.rows.size()));
+    ASSERT_EQ(panel.lower.n, width);
+    ASSERT_EQ(panel.upper.m, width);
+    ASSERT_EQ(panel.upper.n, static_cast<Index>(panel.columns.size()));
     for (Index col = 0; col < width; ++col) {
       for (Index row = 0; row < width; ++row) {
         const auto index = panel.first + row + (panel.first + col) * A.n;
         if (row == col) lower[index] = 1;
-        if (row > col) lower[index] = panel.diagonal.val[row + col * width];
-        if (row <= col) upper[index] = panel.diagonal.val[row + col * width];
+        if (row > col) lower[index] = panel.diagonal(row, col);
+        if (row <= col) upper[index] = panel.diagonal(row, col);
       }
       for (size_t row = 0; row < panel.rows.size(); ++row) {
-        lower[panel.rows[row] + (panel.first + col) * A.n] = panel.lower.val[row + col * panel.rows.size()];
+        lower[panel.rows[row] + (panel.first + col) * A.n] = panel.lower(static_cast<Index>(row), col);
       }
     }
     for (size_t col = 0; col < panel.columns.size(); ++col) {
       for (Index row = 0; row < width; ++row) {
-        upper[panel.first + row + panel.columns[col] * A.n] = panel.upper.val[row + col * width];
+        upper[panel.first + row + panel.columns[col] * A.n] = panel.upper(row, static_cast<Index>(col));
       }
     }
   }

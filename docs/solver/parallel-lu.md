@@ -1,11 +1,14 @@
-# Week 3: dependency-driven multithreaded LU
+# Dependency-driven multithreaded LU
 
-Goal: schedule the Week 2 numerical kernels concurrently while preserving their
+Goal: schedule the supernodal numerical kernels concurrently while preserving their
 data dependencies and storage lifetimes. The numerical representation stays the
-same, and the serial Week 2 `Solve` is reused.
+same, and the serial supernodal `Solve` is reused.
 
 Implement W3.1–W3.2 in `src/solver/mt/Lu.cpp` following
-`include/solver/mt/Lu.h`. Do not replace the Week 2 kernels with another solver.
+`include/solver/mt/Lu.h`. Do not replace the supernodal kernels with another solver.
+
+Draw both graphs in [the worked example](worked-example.md#4-dependencies-and-the-boundary-of-the-learning-model).
+Predict their available concurrency, then follow the [parallel checkpoints](checkpoints.md#parallel-checkpoints).
 
 ## Tasks
 
@@ -17,7 +20,7 @@ Implement W3.1–W3.2 in `src/solver/mt/Lu.cpp` following
 2. **W3.2 `Factorize`**: allocate the complete output panel vector before launching
    workers. Execute only panels whose contributors have successfully completed.
    Each active panel owns a workspace and is the sole writer of its output slot.
-   Invoke the Week 2 assembly/update/factor sequence. Publish completion only
+   Invoke the supernodal assembly/update/factor sequence. Publish completion only
    after the numerical data is visible, then make successors eligible.
 
 A synchronized ready queue is sufficient. Use the existing OpenMP wrapper for
@@ -40,10 +43,10 @@ thread settings unexpectedly.
 
 ## Checks and submission
 
-Run `test_solver_mt` / CTest label `solver-week3`. Check thread counts 1,2,4,8,
+Run `test_solver_mt` / CTest label `solver-mt`. Check thread counts 1,2,4,8,
 the provided fork/join graph, invalid edges, and pivot failure without deadlock.
 Add repeated runs, multiple independent subtrees, an empty graph/matrix, and a
-numerical comparison with Week 2. Supplied numerical tests establish results;
+numerical comparison with the supernodal stage. Supplied numerical tests establish results;
 you must also explain why no consumer can observe incomplete panel data.
 
 For performance, use instructor-supplied plans with both broad concurrency and
@@ -61,7 +64,10 @@ Submit code and a short report with:
   imbalance, and critical-path limits. A slowdown is a valid measured result.
 - A description of failure propagation and your deadlock checks.
 
-Read SuperLU_MT's `pxgstrf_scheduler.c` and PaStiX's dynamic worker in
-`sopalin/sequential_zgetrf.c`. Compare your conservative ready-only schedule with
-SuperLU_MT's pipelining and PaStiX's queues/work stealing. Neither advanced feature
-is required here; parallel triangular solves, MPI, and GPUs are also outside scope.
+Follow [source-guide lesson E](source-reading.md#lesson-e-workers-publication-and-different-update-ownership).
+Compare ready-only execution with SuperLU_MT's pipelining and PaStiX's queues
+and stealing. Trace update ownership before comparing counters: a path that
+pushes updates into later blocks needs a different write protocol from your
+private destination cross. Then continue to Stages 4–6 in the sequence for
+symbolic analysis, pivoting, and accuracy/performance. Advanced scheduling,
+parallel triangular solves, MPI, and GPUs remain outside the required implementation.

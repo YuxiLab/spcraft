@@ -18,6 +18,10 @@ add_executable(test_dense_vector test_DenseVector.cpp)
 target_link_libraries(test_dense_vector PRIVATE SPCraftTestMain SPCraft)
 gtest_discover_tests(test_dense_vector TEST_PREFIX dense_vector. DISCOVERY_MODE PRE_TEST)
 
+add_executable(test_dense_matrix test_DenseMatrix.cpp)
+target_link_libraries(test_dense_matrix PRIVATE SPCraftTestMain SPCraft)
+gtest_discover_tests(test_dense_matrix TEST_PREFIX dense_matrix. DISCOVERY_MODE PRE_TEST)
+
 add_executable(test_sparse_vector test_SparseVector.cpp)
 target_link_libraries(test_sparse_vector PRIVATE SPCraftTestMain SPCraft)
 gtest_discover_tests(test_sparse_vector TEST_PREFIX sparse_vector. DISCOVERY_MODE PRE_TEST)

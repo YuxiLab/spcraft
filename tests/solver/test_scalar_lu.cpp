@@ -3,6 +3,32 @@
 namespace spcraft::solver::test
 {
 
+TEST(ScalarWorkspace, ResizeInitializesAndResetsScratch)
+{
+  scalar::Workspace<Index, Value> workspace;
+  for (Index n : {4, 4, 7, 2, 0}) {
+    workspace.Resize(n);
+    ASSERT_EQ(workspace.values.size(), n);
+    ASSERT_EQ(workspace.inverse_order.size(), n);
+    ASSERT_EQ(workspace.marked.size(), n);
+    EXPECT_TRUE(workspace.values.memowned);
+    EXPECT_TRUE(workspace.touched.empty());
+    EXPECT_GE(workspace.touched.capacity(), n);
+    for (Index i = 0; i < n; ++i) {
+      EXPECT_EQ(workspace.values[i], Value{0});
+      EXPECT_EQ(workspace.inverse_order[i], i);
+      EXPECT_EQ(workspace.marked[i], 0);
+      workspace.values[i] = Value{3};
+      workspace.inverse_order[i] = n - i - 1;
+      workspace.marked[i] = 1;
+      workspace.touched.push_back(i);
+    }
+  }
+  EXPECT_THROW(workspace.Resize(Index{-1}), std::invalid_argument);
+  EXPECT_EQ(workspace.values.size(), 0);
+  EXPECT_TRUE(workspace.touched.empty());
+}
+
 TEST(ScalarLu, FillPermutationAndReusableSolve)
 {
   for (bool permuted : {false, true}) {
@@ -21,6 +47,29 @@ TEST(ScalarLu, FillPermutationAndReusableSolve)
     for (Index i = 0; i < b.n; ++i) b.val[i] *= 2;
     scalar::Solve(factors, b, x);
     CheckSolution(x, 2);
+  }
+}
+
+TEST(ScalarLu, NonsymmetricMapsAndReusableSolve)
+{
+  // 1. Test both coordinate orders against the original nonsymmetric system.
+  for (bool permuted : {false, true}) {
+    const auto A = MakeNonsymmetricMatrix(permuted);
+    const auto original = Dense(A);
+    const auto plan = MakeNonsymmetricScalarPlan(permuted);
+    const auto factors = scalar::Factorize(A, plan);
+    ASSERT_EQ(factors.status.code, LuCode::Success);
+    CheckProduct(A, plan.order, Dense(factors.lower), Dense(factors.upper));
+    auto b = MakeRhs(A);
+    Vector x(4);
+    const std::vector<Value> rhs(b.val, b.val + 4);
+    scalar::Solve(factors, b, x);
+    CheckSolution(x);
+    EXPECT_EQ(std::vector<Value>(b.val, b.val + 4), rhs);
+    for (Index i = 0; i < 4; ++i) b[i] *= 2;
+    scalar::Solve(factors, b, x);
+    CheckSolution(x, 2);
+    EXPECT_EQ(Dense(A), original);
   }
 }
 
