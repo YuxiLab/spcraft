@@ -59,6 +59,11 @@ permutations belong to a driver, and which belong inside a triangular kernel?
 
 ## Lesson B: scalar work, SPA, and structural discovery
 
+The [sparse LU scaffold](scalar-lu.md#superlu-mt-source-map) splits one column
+into `ScatterColumn`, `UpdateColumn`, and `StoreColumn`. Complete their independent
+checkpoints before combining them in `FactorColumn`. `ClearColumn` preserves
+the ordering map while resetting numerical scratch between columns.
+
 Read after W1.1/W1.2/W1.5. Follow
 [`pdgstrf_column_bmod.c`](https://github.com/xiaoyeli/superlu_mt/blob/f2e50bfcbb7b20ef304c84cf92c038c283019863/SRC/pdgstrf_column_bmod.c)
 for numerical updates and

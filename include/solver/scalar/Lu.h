@@ -16,17 +16,42 @@ struct Factors {
 //! Owning reusable scratch; call Resize(n) before factorization.
 template <class IT, class NT>
 struct Workspace {
+  /*****************************************************************************
+   *                                Data Members                                *
+   *****************************************************************************/
   DenseVector<IT, NT> values;         //!< Dense accumulator for the current column.
   std::vector<IT> inverse_order;      //!< old -> new; Factorize fills the chosen permutation.
   std::vector<unsigned char> marked;  //!< Flags rows already added to touched.
   std::vector<IT> touched;            //!< Rows to clear after processing the current column.
 
+  /*****************************************************************************
+   *                              Member Functions                              *
+   *****************************************************************************/
   //! Prepare n zeroed values/markers, an identity permutation, and empty touched.
   void Resize(IT n);
+
+  //! Clear touched numerical scratch without changing inverse_order or storage.
+  void ClearColumn();
 };
 
+// Scatter original column old_col into ordered accumulator rows.
+// The workspace is initialized and clean; inverse_order maps original rows to ordered rows.
+template <class IT, class NT, class OT>
+void ScatterColumn(const CscMatrix<IT, NT, OT>& A, IT old_col, Workspace<IT, NT>& workspace);
+
+// Apply completed L columns to accumulator column j using its planned U row indices.
+// Read earlier factors only; preserve their storage and the permutation map.
+template <class IT, class NT, class OT>
+void UpdateColumn(IT j, const Factors<IT, NT, OT>& factors, Workspace<IT, NT>& workspace);
+
+// Check the updated pivot and write column j into preallocated CSC factors.
+// Keep planned numerical zeros. Leave workspace cleanup and overall status to the caller.
+template <class IT, class NT, class OT>
+LuStatus<IT> StoreColumn(IT j, Factors<IT, NT, OT>& factors, const Workspace<IT, NT>& workspace,
+                         const LuOptions<NT>& options = {});
+
 /**
- * @brief W1.1: compute ordered column j with a left-looking sparse accumulator.
+ * @brief Compute ordered column j with a left-looking sparse accumulator.
  *
  * The caller allocates L/U from symbolic and initializes workspace. Columns
  * before j are complete; only column j and workspace may be written. Scatter
@@ -40,7 +65,7 @@ LuStatus<IT> FactorColumn(const CscMatrix<IT, NT, OT>& A, const LuSymbolic<IT, O
                           const LuOptions<NT>& options = {});
 
 /**
- * @brief W1.2: validate, allocate factors, and factor columns in order.
+ * @brief Validate, allocate factors, and factor columns in order.
  *
  * A is square, finite, canonical CSC. Validate dimensions, CSC bounds, triangular
  * symbolic patterns, permutation, and finite nonnegative tolerance; throw
@@ -54,19 +79,19 @@ template <class IT, class NT, class OT>
 Factors<IT, NT, OT> Factorize(const CscMatrix<IT, NT, OT>& A, const LuSymbolic<IT, OT>& symbolic,
                               const LuOptions<NT>& options = {});
 
-//! W1.3: solve L*y=rhs in ordered coordinates; L's unit diagonal is explicit.
+//! Solve L*y=rhs in ordered coordinates; L's unit diagonal is explicit.
 //! rhs and y must be distinct n-element vectors; do not change L or rhs.
 template <class IT, class NT, class OT>
 void ForwardSolve(const CscMatrix<IT, NT, OT>& lower, const DenseVector<IT, NT>& rhs, DenseVector<IT, NT>& y);
 
-//! W1.4: solve U*x=rhs in ordered coordinates; reject zero/nonfinite diagonals.
+//! Solve U*x=rhs in ordered coordinates; reject zero/nonfinite diagonals.
 //! rhs and x must be distinct n-element vectors; do not change U or rhs.
 template <class IT, class NT, class OT>
 void BackwardSolve(const CscMatrix<IT, NT, OT>& upper, const DenseVector<IT, NT>& rhs,
                    DenseVector<IT, NT>& x);
 
 /**
- * @brief W1.5: solve A*x=b with permutation, forward solve, and backward solve.
+ * @brief Solve A*x=b with permutation, forward solve, and backward solve.
  *
  * Gather rhs[i]=b[order[i]], solve L*U*z=rhs, scatter x[order[i]]=z[i]. Empty
  * order is identity. b and x are distinct preallocated n-element vectors.

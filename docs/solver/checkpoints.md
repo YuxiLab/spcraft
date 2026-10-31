@@ -2,7 +2,7 @@
 
 These checkpoints follow [the implementation sequence](README.md).
 The tests are targets for student code: the unfinished numerical functions still
-throw their W-tagged exceptions. Expected failures are not skipped or converted
+throw placeholder exceptions. Expected failures are not skipped or converted
 to passes. Test discovery or successful compilation does not establish correctness.
 
 ## Prepare the local build
@@ -37,6 +37,18 @@ The Python checker uses exact fractions and supplied answers; it checks products
 traces, and coordinate mappings, not an implementation of LU. `LearningFixtures`
 checks the nonsymmetric fixture and its known factors. `ScalarWorkspace` checks
 the existing scratch initialization. These can pass before any W exercise works.
+
+## Extension checkpoints after the core
+
+Finish the current core targets first. The [extension guide](extensions.md#checkpoints)
+lists commands for the separate `test_solver_extensions` target. Its independent
+fixture test passes immediately; analysis, pivoting, solve, and refinement checks
+remain acceptance exercises. Each new function has an active placeholder.
+
+```bash
+cmake --build build/solver-learning --target test_solver_extensions
+build/solver-learning/bin/test_solver_extensions --gtest_filter='ExtensionFixtures.*'
+```
 
 ## Dense checkpoints
 
@@ -76,6 +88,28 @@ overflow from finite inputs and the exported wider index/offset types.
 After this stage passes, keep its tests while adding sparse LU.
 
 ## Scalar checkpoints
+
+First check the supplied sparse-column infrastructure and example factors:
+
+```bash
+build/solver-learning/bin/test_solver_scalar --gtest_filter='SparseColumnWorkspace.*:SparseColumnFixtures.*'
+```
+
+Then implement and check each phase independently. These tests supply their own
+inputs and factor storage, so no other unfinished numerical phase is needed:
+
+```bash
+build/solver-learning/bin/test_solver_scalar --gtest_filter='SparseScatterColumn.*'
+build/solver-learning/bin/test_solver_scalar --gtest_filter='SparseUpdateColumn.*'
+build/solver-learning/bin/test_solver_scalar --gtest_filter='SparseStoreColumn.*'
+```
+
+The [4-by-4 sparse example](scalar-lu.md#toy-example-fill-in-a-4-by-4-matrix)
+shows the expected accumulator `{1,15/4,-1/4,-1/4}` after updating column 1.
+The update test poisons unfinished factor values with NaNs: only completed L
+columns and the current U column's planned row indices may be read.
+`StoreColumn` returns a column status without changing the driver-owned status
+or clearing scratch. `FactorColumn` owns cleanup on every exit.
 
 Build `test_solver_scalar` after each change. Run just the selected exercise:
 

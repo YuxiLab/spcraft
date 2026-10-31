@@ -1,4 +1,5 @@
 {
+  "editor.fontSize": 20,
   "[cpp]": {
     "editor.tabCompletion": "onlySnippets",
     "editor.snippetSuggestions": "top",
@@ -10,11 +11,17 @@
   "latex-workshop.latex.recipes": [
     {
       "name": "latexmk",
-      "tools": ["latexmk"]
+      "tools": [
+        "latexmk"
+      ]
     },
     {
       "name": "Solver notes (Pandoc + latexmk)",
-      "tools": ["solver-pandoc", "latexmk", "solver-publish"]
+      "tools": [
+        "solver-pandoc",
+        "latexmk",
+        "solver-publish"
+      ]
     }
   ],
   "latex-workshop.latex.tools": [
@@ -37,7 +44,12 @@
     {
       "name": "solver-pandoc",
       "command": "/usr/bin/make",
-      "args": ["-C", "%DIR%/../solver", "DOC=%DOCFILE%", "tex"],
+      "args": [
+        "-C",
+        "%DIR%/../solver",
+        "DOC=%DOCFILE%",
+        "tex"
+      ],
       "env": {
         "PATH": "/Library/TeX/texbin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
       }
@@ -45,7 +57,12 @@
     {
       "name": "solver-publish",
       "command": "/usr/bin/make",
-      "args": ["-C", "%DIR%/../solver", "DOC=%DOCFILE%", "publish"],
+      "args": [
+        "-C",
+        "%DIR%/../solver",
+        "DOC=%DOCFILE%",
+        "publish"
+      ],
       "env": {
         "PATH": "/Library/TeX/texbin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
       }

@@ -4,6 +4,8 @@
 #include <boost/preprocessor/seq/elem.hpp>
 #include <boost/preprocessor/seq/for_each_product.hpp>
 
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -37,32 +39,76 @@ void Workspace<IT, NT>::Resize(IT n)
   }
 }
 
-// clang-format off
+template <class IT, class NT>
+void Workspace<IT, NT>::ClearColumn()
+{
+  // Reset one column's accumulator while keeping its ordering map reusable.
+  // 1. Zero values and markers only at rows recorded in touched.
+  // 2. Empty touched; preserve inverse_order, capacity, and the owned buffer.
+  for (IT row : touched) {
+    values[row] = NT{0};
+    marked[row] = 0;
+  }
+  touched.clear();
+}
+
 template <class IT, class NT, class OT>
-LuStatus<IT> FactorColumn(
-  const CscMatrix<IT, NT, OT>& A,      // input sparse matrix in CSC format, read-only during factorization
-  const LuSymbolic<IT, OT>& symbolic,  // precomputed symbolic LU: fill-in patterns and row/col pivot order
-  IT j,                                // index (IT = matrix coords) of the factor column currently being computed
-  Factors<IT, NT, OT>& factors,         // output storage for numerical L and U factors plus permutation vectors
-  Workspace<IT, NT>& workspace,         // reusable scratch memory: touched list, accumulator, inverse_order, etc.
-  const LuOptions<NT>& options)         // numeric factorization settings: pivoting strategy, tolerance, thresholds
-// clang-format on
+void ScatterColumn(const CscMatrix<IT, NT, OT>& A, IT old_col, Workspace<IT, NT>& workspace)
+{
+  // Load one original CSC column into the sparse accumulator's ordered rows.
+  // Assume clean workspace, a valid old_col, and an initialized inverse_order.
+  // 1. Visit positions p from A.col_ptr[old_col] to A.col_ptr[old_col+1].
+  //    Use OT for p; map each A.row_id[p] through inverse_order to obtain row i.
+  // 2. Store A.val[p] in values[i] and record i in touched only once.
+  //    Mark structural entries even when their numerical value is zero.
+  // Comment out the placeholder exception after implementing this function.
+  throw std::logic_error("ScatterColumn: implement ordered CSC scatter");
+}
+
+template <class IT, class NT, class OT>
+void UpdateColumn(IT j, const Factors<IT, NT, OT>& factors, Workspace<IT, NT>& workspace)
+{
+  // Apply earlier L columns to the current accumulator, as a scalar left-looking update.
+  // Assume preallocated factor patterns and completed columns before j.
+  // 1. Visit planned U(k,j) row indices k<j in increasing k.
+  //    Read the updated values[k] as U(k,j), including when it is zero.
+  // 2. Traverse strict-lower entries L(i,k) and subtract L(i,k)*values[k] from values[i].
+  //    Skip L's unit diagonal and mark newly touched rows reached through fill.
+  // 3. Finish each contributor before reading the next U coefficient.
+  //    Leave the updated column in workspace; preserve all factor values and maps.
+  // Comment out the placeholder exception after implementing this function.
+  
+  throw std::logic_error("UpdateColumn: implement sparse left-looking updates");
+}
+
+template <class IT, class NT, class OT>
+LuStatus<IT> StoreColumn(IT j, Factors<IT, NT, OT>& factors, const Workspace<IT, NT>& workspace,
+                         const LuOptions<NT>& options)
+{
+  // Store one completed accumulator column into the supplied CSC factor slots.
+  // Assume valid patterns, completed updates, and a finite nonnegative tolerance.
+  // 1. Read values[j] as U(j,j) and check the pivot before any division.
+  //    Return ZeroPivot at j if it is nonfinite or abs(pivot)<=options.pivot_tolerance.
+  // 2. Copy values[i] into every planned U(i,j) slot, including numerical zeros.
+  // 3. Store L(j,j)=1 and values[i]/pivot in planned lower slots for i>j.
+  // 4. Return Success with pivot_column=-1 after the column is stored.
+  //    Write only column j; preserve workspace and leave factors.status to Factorize.
+  // Comment out the placeholder exception after implementing this function.
+  throw std::logic_error("StoreColumn: implement pivot checking and sparse factor storage");
+}
+
+template <class IT, class NT, class OT>
+LuStatus<IT> FactorColumn(const CscMatrix<IT, NT, OT>& A, const LuSymbolic<IT, OT>& symbolic, IT j,
+                          Factors<IT, NT, OT>& factors, Workspace<IT, NT>& workspace,
+                          const LuOptions<NT>& options)
 {
   // Compute column j of B=P^T*A*P using a left-looking accumulator.
   // Assume validated patterns, allocated factors, and completed columns before j.
-  // 1. Reset workspace and restore inverse_order if order is nonempty.
-  //    Resize resets the map to identity; keep scratch private to this column.
-  // 2. Scatter A's column order[j] into values using inverse_order for its rows.
-  //    Mark each touched row once, including rows first reached by later updates.
-  // 3. Visit planned U(k,j) entries for k<j in increasing k.
-  //    Store values[k], then subtract L(i,k)*U(k,j) from rows i>k, skipping L's diagonal.
-  // 4. Test values[j] as the pivot before division; report ZeroPivot at j on failure.
-  //    Reject a nonfinite pivot or abs(pivot)<=options.pivot_tolerance.
-  //    Otherwise store U(j,j), L(j,j)=1, and the planned lower multipliers, including zeros.
-  // 5. Clear values and markers at touched rows on every exit, then empty touched.
-  //    Return the column status; Factorize owns the overall factorization status.
-  workspace.Resize(A.m);
-
+  // 1. Select old_col=symbolic.order[j], or j when order is empty.
+  //    Resize belongs to Factorize; preserve the existing inverse_order here.
+  // 2. Call ScatterColumn, UpdateColumn, then StoreColumn for this column.
+  // 3. Call ClearColumn on success, pivot failure, and exceptions after scattering.
+  //    Return StoreColumn's status; Factorize owns the overall factors.status.
   // Comment out the placeholder exception after implementing this function.
   throw std::logic_error("W1.1 FactorColumn: implement sparse left-looking elimination");
 }
@@ -77,7 +123,7 @@ Factors<IT, NT, OT> Factorize(const CscMatrix<IT, NT, OT>& A, const LuSymbolic<I
   // 2. Validate triangular symbolic patterns and the permutation.
   //    Require sorted unique rows, one diagonal per column, and representable offsets.
   // 3. Allocate L/U from the supplied patterns and copy the order.
-  //    Initialize workspace and its inverse map without changing A or symbolic.
+  //    Call Resize once, then set inverse_order[order[i]]=i when order is nonempty.
   // 4. Call FactorColumn for each ordered column j from first to last.
   //    On ZeroPivot, return its status with unusable partial factors immediately.
   // 5. Mark Success with pivot_column=-1 after every column completes.
@@ -133,6 +179,10 @@ template struct Workspace<int32_t, double>;
 template struct Workspace<int64_t, double>;
 
 #define SPCRAFT_DEFINE_SCALAR_LU_TYPES(IT, NT, OT)                                                    \
+  template void ScatterColumn(const CscMatrix<IT, NT, OT>&, IT, Workspace<IT, NT>&);                  \
+  template void UpdateColumn(IT, const Factors<IT, NT, OT>&, Workspace<IT, NT>&);                     \
+  template LuStatus<IT> StoreColumn(IT, Factors<IT, NT, OT>&, const Workspace<IT, NT>&,               \
+                                    const LuOptions<NT>&);                                            \
   template LuStatus<IT> FactorColumn(const CscMatrix<IT, NT, OT>&, const LuSymbolic<IT, OT>&, IT,     \
                                      Factors<IT, NT, OT>&, Workspace<IT, NT>&, const LuOptions<NT>&); \
   template Factors<IT, NT, OT> Factorize(const CscMatrix<IT, NT, OT>&, const LuSymbolic<IT, OT>&,     \

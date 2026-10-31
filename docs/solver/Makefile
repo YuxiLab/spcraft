@@ -1,6 +1,7 @@
 PANDOC ?= pandoc
 LATEXMK ?= latexmk
 DOC ?= foundations
+VIDEO_VARIANT ?= right-looking
 export PATH := /Library/TeX/texbin:/opt/homebrew/bin:$(PATH)
 
 SOLVER_DOCS := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
@@ -25,7 +26,7 @@ tex: $(TEX)
 publish: $(PDF)
 
 video:
-	node "$(REPO_ROOT)/scripts/render_lu_video.mjs"
+	node "$(REPO_ROOT)/scripts/render_lu_video.mjs" --variant "$(VIDEO_VARIANT)"
 
 $(TEX): $(SOURCE) $(HEADER) $(FILTER) $(FIGURES) $(SOLVER_DOCS)/Makefile
 	mkdir -p "$(OBJ_DIR)"

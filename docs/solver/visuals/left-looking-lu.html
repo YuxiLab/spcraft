@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Left-looking LU: gather one column at a time</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e9eef2; color: #20364a; font: 16px system-ui, sans-serif; }
+    main { max-width: 1320px; margin: 24px auto; padding: 0 18px; }
+    canvas { display: block; width: 100%; height: auto; background: #fbfcfd; box-shadow: 0 8px 40px #20364a18; }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 18px 0; }
+    button, select { border: 1px solid #b6c7d0; border-radius: 5px; padding: 10px 16px; font: inherit; }
+    button { background: #235b70; color: white; cursor: pointer; }
+    input { flex: 1; accent-color: #235b70; min-width: 100px; }
+    output { font-variant-numeric: tabular-nums; }
+    p { line-height: 1.6; }
+    a { color: #235b70; }
+    #description { min-height: 3.2em; }
+  </style>
+</head>
+<body>
+<main>
+  <canvas id="lesson" width="1920" height="1080" role="img" aria-label="Animated left-looking LU factorization of a four-by-four matrix. Earlier L columns update only the current column; future columns keep their original values." aria-describedby="description"></canvas>
+  <div class="controls">
+    <button id="play" type="button">Play</button>
+    <label for="chapter">Jump to</label><select id="chapter"></select>
+    <label for="time">Timeline</label>
+    <input id="time" type="range" min="0" step="0.01" value="0">
+    <output id="clock" for="time">0:00</output>
+  </div>
+  <p id="description" aria-live="polite"></p>
+  <p>Indices start at zero. Teal cells hold completed L multipliers; blue cells hold completed U entries.
+    Amber marks the current column and the active scalar; gray columns still contain the original A.
+    This example uses no row pivoting. Explanations appear on screen; there is no audio.
+    <a href="right-looking-lu.html">Compare right-looking LU</a> · <a href="../dense-lu.md">Algorithm guide</a>.</p>
+</main>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('lesson'), ctx = canvas.getContext('2d');
+  const A = [[4,2,2,2],[2,5,3,3],[2,3,6,4],[2,3,4,7]];
+  const clone = matrix => matrix.map(row => [...row]);
+  const P = clone(A), scenes = [];
+  const colors = { ink: '#20364a', muted: '#617482', accent: '#235b70', grid: '#cbd6de',
+    background: '#fbfcfd', blue: '#dcebf8', teal: '#d7efe8', amber: '#ffe2a7',
+    highlight: '#b07216', future: '#edf1f4' };
+  const format = value => value === 0.5 ? '1/2' : String(Number(value.toFixed(5)));
+  let cursor = 0;
+  function add(kind, seconds, detail, mutate = () => {}) {
+    const before = clone(P);
+    mutate();
+    scenes.push({kind, start: cursor, seconds, before, after: clone(P), ...detail});
+    cursor += seconds;
+  }
+  add('intro', 7, { title: 'Build A = L U, one column at a time.',
+    lines: ['Start from a copy of A. Finish columns from left to right.',
+      'For the current column j, look left at completed L columns.',
+      'Gather their contributions before checking the new pivot.'],
+    equation: 'load column  →  gather earlier updates  →  check pivot  →  divide',
+    caption: 'We use the same matrix as the right-looking lesson. The final factors agree; the timing of updates changes.' });
+  for (let j = 0; j < 4; ++j) {
+    add('load', 4, {j, title: `Start column j = ${j} from A.`,
+      lines: [`The amber column begins as A[:, ${j}].`,
+        j ? `Columns 0 through ${j-1} already store L and U.` : 'There are no earlier columns to gather yet.',
+        j < 3 ? 'Columns to the right still contain their original entries.' : 'This is the final column.'],
+      equation: `w = A[:, ${j}] = [${A.map(row => format(row[j])).join(', ')}]`,
+      caption: 'w names the current column in the packed buffer. It is shown enlarged beside the matrix; it is not a second copy.' });
+    for (let k = 0; k < j; ++k) {
+      const coefficient = P[k][j];
+      add('source', 3.5, {j, k, coefficient,
+        title: `Look left: use completed column k = ${k}.`,
+        lines: [`Read U[${k}, ${j}] = w[${k}] = ${format(coefficient)}.`,
+          'Earlier source columns have already updated this value.',
+          `Use L[i, ${k}] to update every row i > ${k} in column ${j}.`],
+        equation: `w[i] ← w[i] − L[i, ${k}] × U[${k}, ${j}]     (i > ${k})`,
+        caption: k === 0 ? 'L has an implicit unit diagonal. The coefficient w[k] becomes U[k,j]; keep it instead of eliminating it.' :
+          `Use the updated coefficient ${format(coefficient)}, not the original A[${k}, ${j}] = ${format(A[k][j])}. Source order matters.` });
+      for (let i = k+1; i < 4; ++i) {
+        const old = P[i][j], multiplier = P[i][k], next = old-multiplier*coefficient;
+        add('update', 2.6, {j, k, i, old, multiplier, coefficient, next,
+          title: `Gather one scalar update into w[${i}].`,
+          lines: [`Read L[${i}, ${k}] = ${format(multiplier)} from the teal source cell.`,
+            `Multiply by U[${k}, ${j}] = ${format(coefficient)} from this column.`,
+            `Subtract only from entry (${i}, ${j}).`],
+          equation: `w[${i}] ← w[${i}] − L[${i}, ${k}] × U[${k}, ${j}]`,
+          calculation: `${format(old)} − (${format(multiplier)} × ${format(coefficient)}) = ${format(next)}`,
+          caption: i < j ? 'This entry lies above the current diagonal. It is being prepared as a U coefficient for a later source update.' :
+            i === j ? 'The diagonal must gather earlier contributions too. Check the pivot only after all source columns have been applied.' :
+            'This lower entry is still an unscaled coefficient. Divide by the current pivot after gathering every earlier column.'
+        }, () => { P[i][j] = next; });
+      }
+    }
+    const pivot = P[j][j];
+    add('pivot', 3, {j, pivot, title: `Check the updated pivot U[${j}, ${j}].`,
+      lines: [`The diagonal is now ${format(pivot)} after all earlier contributions.`,
+        'Require a finite pivot with |pivot| > tolerance.',
+        j < 3 ? 'Then normalize only the entries below this diagonal.' : 'There are no entries below the last pivot.'],
+      equation: `U[${j}, ${j}] = w[${j}] = ${format(pivot)}`,
+      caption: 'This no-pivot example has four valid pivots equal to 4. A rejected pivot must stop factorization before division.' });
+    for (let i = j+1; i < 4; ++i) {
+      const old = P[i][j], multiplier = old/pivot;
+      add('multiplier', 2.8, {j, i, old, pivot, multiplier,
+        title: `Store the multiplier L[${i}, ${j}].`,
+        lines: [`Divide the gathered entry ${format(old)} by the pivot ${format(pivot)}.`,
+          `Store L[${i}, ${j}] = ${format(multiplier)} below the diagonal.`,
+          'These multipliers will serve columns visited later.'],
+        equation: `L[${i}, ${j}] = w[${i}] / U[${j}, ${j}]`,
+        calculation: `${format(old)} / ${format(pivot)} = ${format(multiplier)}`,
+        caption: 'Only the lower portion is divided. The diagonal and all entries above it belong to U.'
+      }, () => { P[i][j] = multiplier; });
+    }
+    add('commit', 3, {j, title: `Column ${j} is complete.`,
+      lines: ['On and above the diagonal: finalized U entries.',
+        'Below the diagonal: finalized L multipliers.',
+        j < 3 ? `Advance to column ${j+1}; gather its updates when it is reached.` : 'All four columns now hold the packed factors.'],
+      equation: 'packed column = U above and on diagonal + L below diagonal',
+      caption: j < 3 ? 'The columns on the right have not been updated. Left-looking LU delays their work until they become current.' :
+        'Supply the diagonal ones of L implicitly. They do not occupy the diagonal of the packed buffer.' });
+  }
+  const L = P.map((row,i) => row.map((v,j) => i === j ? 1 : i > j ? v : 0));
+  const U = P.map((row,i) => row.map((v,j) => i <= j ? v : 0));
+  add('packed', 7, {title: 'Read two factors from one buffer.',
+    lines: ['The blue triangle, including the diagonal, is U.',
+      'The teal triangle is L; supply ones on its diagonal.',
+      'The small matrices show the separate mathematical factors.'],
+    equation: 'A = L U', caption: 'These are exactly the factors from the right-looking example. Only the order of arithmetic and data access differs.' });
+  add('verify', 7, {title: 'Check the result: L × U returns A.',
+    lines: ['For example, reconstruct entry A[2, 3]:',
+      '(1/2 × 2) + (1/2 × 2) + (1 × 2) + (0 × 4) = 4.',
+      'All 16 reconstructed entries match the original matrix.'],
+    equation: 'L U = A     •     maximum reconstruction error = 0',
+    caption: 'The HTML checks every displayed subtraction, every division, the untouched future columns, and the final reconstruction.' });
+  add('recap', 8, {title: 'Why it is called left-looking.',
+    lines: ['Choose one current column j.',
+      'Look left to completed columns k = 0, …, j − 1.',
+      'Gather their updates, check the pivot, then store L.',
+      'Repeat for the next column.'],
+    equation: 'current column ← original column − earlier L-column contributions',
+    caption: 'Right-looking pushes updates into future columns immediately. Left-looking gathers those same updates into the column being factored.' });
+  const duration = cursor;
+  function selfCheck() {
+    const expectedU = [[4,2,2,2],[0,4,2,2],[0,0,4,2],[0,0,0,4]];
+    const reconstructed = L.map(row => U[0].map((_,j) => row.reduce((sum,v,k) => sum+v*U[k][j],0)));
+    if (JSON.stringify(reconstructed) !== JSON.stringify(A) || JSON.stringify(U) !== JSON.stringify(expectedU)) throw Error('L*U must equal A.');
+    let updates = 0, multipliers = 0;
+    for (const scene of scenes) {
+      for (let i=0;i<4;++i) for (let col=0;col<4;++col) {
+        if (scene.j !== undefined && col > scene.j && scene.after[i][col] !== A[i][col]) throw Error('A future column was changed early.');
+        if (scene.before[i][col] !== scene.after[i][col] && col !== scene.j) throw Error('A write escaped the current column.');
+      }
+      if (scene.kind === 'update') {
+        ++updates;
+        if (scene.coefficient !== scene.before[scene.k][scene.j] || scene.multiplier !== scene.before[scene.i][scene.k] ||
+          scene.next !== scene.old-scene.multiplier*scene.coefficient || scene.after[scene.i][scene.j] !== scene.next) throw Error('Incorrect scalar update.');
+      }
+      if (scene.kind === 'multiplier') {
+        ++multipliers;
+        if (scene.multiplier !== scene.old/scene.pivot || scene.after[scene.i][scene.j] !== scene.multiplier) throw Error('Incorrect division.');
+      }
+      if (scene.kind === 'pivot' && (!Number.isFinite(scene.pivot) || scene.pivot <= 0)) throw Error('Invalid pivot.');
+    }
+    if (updates !== 14 || multipliers !== 6) throw Error('Missing scalar operations.');
+    return {duration, scenes: scenes.length, pivots: 4, multipliers, scalarUpdates: updates,
+      reconstructsInput: true, futureColumnsUntouched: true, writesOnlyCurrentColumn: true, L, U};
+  }
+  function text(value,x,y,size=30,color=colors.ink,align='left',weight=400) {
+    ctx.font = `${weight} ${size}px Arial, sans-serif`;
+    ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = color;
+    ctx.fillText(value,x,y);
+  }
+  function wrapped(value,x,y,width,size=30,lineHeight=42,color=colors.ink,weight=400) {
+    ctx.font = `${weight} ${size}px Arial, sans-serif`;
+    let line = '', count = 0;
+    for (const word of value.split(' ')) {
+      const next = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(next).width > width) { text(line,x,y+count++*lineHeight,size,color,'left',weight); line=word; }
+      else line=next;
+    }
+    text(line,x,y+count++*lineHeight,size,color,'left',weight);
+    return count*lineHeight;
+  }
+  function cell(value,x,y,size,fill,selected=false) {
+    ctx.fillStyle=fill; ctx.fillRect(x,y,size,size);
+    ctx.strokeStyle=selected ? colors.highlight : colors.grid; ctx.lineWidth=selected ? 4 : 1;
+    ctx.strokeRect(x,y,size,size);
+    text(format(value),x+size/2,y+size*0.64,size*0.43,colors.ink,'center');
+  }
+  function arrow(x1,y1,x2,y2,progress) {
+    ctx.strokeStyle=colors.accent; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    const a=Math.atan2(y2-y1,x2-x1);
+    ctx.beginPath(); ctx.moveTo(x2-13*Math.cos(a-0.5),y2-13*Math.sin(a-0.5)); ctx.lineTo(x2,y2);
+    ctx.lineTo(x2-13*Math.cos(a+0.5),y2-13*Math.sin(a+0.5)); ctx.stroke();
+    ctx.fillStyle=colors.accent; ctx.beginPath(); ctx.arc(x1+(x2-x1)*progress,y1+(y2-y1)*progress,6,0,Math.PI*2); ctx.fill();
+  }
+  function smallMatrix(values,x,y,label,lower) {
+    text(label,x,y-22,25,colors.ink,'left',600);
+    values.forEach((row,i) => row.forEach((v,j) => cell(v,x+j*50,y+i*50,50,(lower ? i>j : i<=j) ? (lower ? colors.teal : colors.blue) : '#ffffff')));
+  }
+  function render(time) {
+    const t=Math.max(0,Math.min(time,duration));
+    let index=scenes.findIndex(s => t < s.start+s.seconds);
+    if (index < 0) index=scenes.length-1;
+    const scene=scenes[index], progress=Math.min(1,(t-scene.start)/scene.seconds), changed=progress>=0.54;
+    const values=changed ? scene.after : scene.before;
+    const j=scene.j, final=j===undefined && scene.kind!=='intro';
+    ctx.fillStyle=colors.background; ctx.fillRect(0,0,1920,1080);
+    text('SPCRAFT  /  DENSE LU',90,65,23,colors.accent,'left',600);
+    text('Left-looking LU: gather one column at a time',90,133,51,colors.ink,'left',600);
+    text(j===undefined ? 'A = L U   /   NO ROW PIVOTING' : `CURRENT COLUMN j = ${j}   /   ${scene.k===undefined ? 'ZERO-BASED INDICES' : `SOURCE COLUMN k = ${scene.k}`}`,90,202,23,colors.muted);
+    text(`${index+1} / ${scenes.length}`,1830,65,23,colors.muted,'right');
+    const x=112,y=330,size=110;
+    text(final ? 'Packed L / U buffer' : 'Factor buffer (copied from A)',x,y-70,31,colors.ink,'left',600);
+    for (let c=0;c<4;++c) {
+      text(String(c),x+(c+0.5)*size,y-20,22,colors.muted,'center');
+      text(String(c),x-22,y+(c+0.6)*size,22,colors.muted,'right');
+    }
+    for (let i=0;i<4;++i) for (let c=0;c<4;++c) {
+      let fill=colors.future;
+      if (final || c<j || (c===j && scene.kind==='commit')) fill=i>c ? colors.teal : colors.blue;
+      else if (c===j) fill=colors.amber;
+      if (scene.kind==='multiplier' && c===j && i>j && (i<scene.i || (i===scene.i && changed))) fill=colors.teal;
+      const selected=(scene.kind==='update' && i===scene.i && c===scene.k) ||
+        (scene.kind==='pivot' && i===j && c===j) || (scene.kind==='source' && c===j && i===scene.k);
+      cell(values[i][c],x+c*size,y+i*size,size,fill,selected);
+    }
+    if (scene.kind==='update') arrow(x+(scene.k+1)*size+5,y+(scene.i+0.73)*size,672,y+(scene.i+0.73)*size,progress);
+    if (j!==undefined) {
+      text(`w = column ${j}`,680,260,30,colors.ink,'left',600);
+      for (let i=0;i<4;++i) {
+        let fill=colors.amber;
+        if (scene.kind==='commit' || (scene.kind==='multiplier' && (i<=j || i<scene.i || (i===scene.i && changed)))) fill=i>j ? colors.teal : colors.blue;
+        if (scene.k!==undefined && i<=scene.k) fill=colors.blue;
+        cell(values[i][j],680,y+i*size,size,fill,i===scene.i || (scene.kind==='pivot' && i===j) || (scene.kind==='source' && i===scene.k));
+        const label=i<j ? 'U' : i===j ? 'pivot' : (fill===colors.teal ? 'L' : 'pending L');
+        text(label,808,y+(i+0.58)*size,22,colors.muted);
+      }
+      if (scene.kind==='update') arrow(759,y+(scene.k+0.7)*size,759,y+(scene.i+0.25)*size,progress);
+    } else if (final) {
+      smallMatrix(L,680,330,'L: implicit unit diagonal',true);
+      smallMatrix(U,680,580,'U: includes diagonal',false);
+    } else {
+      text('Each column',680,365,29,colors.accent,'left',600);
+      text('stores U',680,412,29);
+      text('above + on',680,454,29);
+      text('the diagonal,',680,496,29);
+      text('and L below.',680,558,29);
+    }
+    let yy=285;
+    yy+=wrapped(scene.title,970,yy,845,40,50,colors.ink,600)+25;
+    for (const line of scene.lines) yy+=wrapped(line,970,yy,835,29,40)+18;
+    if (scene.calculation) {
+      text('SCALAR ARITHMETIC',970,Math.max(610,yy+20),22,colors.muted);
+      text(scene.calculation,970,Math.max(680,yy+90),46,colors.accent,'left',600);
+      text(changed ? 'stored in the current column' : 'read operands, then write the result',970,Math.max(724,yy+134),25,colors.muted);
+    }
+    const legends=[['Completed L',colors.teal],['Completed U',colors.blue],['Current',colors.amber],['Untouched A',colors.future]];
+    legends.forEach(([label,fill],n) => { ctx.fillStyle=fill; ctx.fillRect(112+n*210,806,22,22); text(label,143+n*210,824,21,colors.muted); });
+    wrapped(scene.equation,90,885,1740,32,42,colors.accent,500);
+    wrapped(scene.caption,90,954,1740,28,38);
+    ctx.fillStyle='#dce4e9'; ctx.fillRect(90,1035,1740,5);
+    ctx.fillStyle=colors.accent; ctx.fillRect(90,1035,1740*t/duration,5);
+    text('14 scalar subtractions  •  6 multiplier divisions  •  4 pivot checks',90,1070,20,colors.muted);
+    text('Only the current column is written',1830,1070,20,colors.muted,'right');
+    return {index,kind:scene.kind,time:t};
+  }
+  const slider=document.getElementById('time'), play=document.getElementById('play');
+  const clock=document.getElementById('clock'), chapter=document.getElementById('chapter'), description=document.getElementById('description');
+  slider.max=duration;
+  scenes.filter(s => ['intro','load','packed','verify','recap'].includes(s.kind)).forEach(s => {
+    const option=document.createElement('option'); option.value=s.start;
+    option.textContent=s.kind==='load' ? `Column ${s.j}` : ({intro:'Introduction',packed:'Final factors',verify:'Verify L × U',recap:'Recap'})[s.kind];
+    chapter.append(option);
+  });
+  let currentTime=0,playing=false,lastTimestamp=null,lastScene=-1;
+  const stamp=s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+  function update() {
+    const {index}=render(currentTime); slider.value=currentTime;
+    clock.value=`${stamp(currentTime)} / ${stamp(duration)}`;
+    if (index!==lastScene) {
+      const s=scenes[index]; description.textContent=`${s.title} ${s.lines.join(' ')} ${s.caption}`; lastScene=index;
+      const selected=[...chapter.options].filter(o => Number(o.value)<=currentTime).at(-1); chapter.value=selected.value;
+    }
+  }
+  function tick(timestamp) {
+    if (!playing) return;
+    if (lastTimestamp!==null) currentTime=Math.min(duration,currentTime+(timestamp-lastTimestamp)/1000);
+    lastTimestamp=timestamp; update();
+    if (currentTime<duration) requestAnimationFrame(tick);
+    else {playing=false;play.textContent='Replay';}
+  }
+  play.addEventListener('click',() => {
+    playing=!playing;lastTimestamp=null;
+    if (playing && currentTime>=duration) currentTime=0;
+    play.textContent=playing ? 'Pause' : 'Play';
+    if (playing) requestAnimationFrame(tick);
+  });
+  function seek(value) {currentTime=Number(value);lastTimestamp=null;update();}
+  slider.addEventListener('input',() => seek(slider.value));
+  chapter.addEventListener('change',() => seek(chapter.value));
+  window.luAnimation={render,selfCheck,duration,width:1920,height:1080,
+    scenes:scenes.map(({kind,start,seconds,j,k,i}) => ({kind,start,seconds,j,k,i}))};
+  selfCheck();update();
+})();
+</script>
+</body>
+</html>

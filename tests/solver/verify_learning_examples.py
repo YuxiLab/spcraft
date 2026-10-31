@@ -17,6 +17,49 @@ def subtract(a, b):
 
 
 class LearningExamples(unittest.TestCase):
+    def test_extension_pivots_fill_and_scaling(self):
+        a = matrix([[0, 2, 1, 0], [1, 3, 0, 0], [0, 0, 0, 4], [0, 0, 2, 5]])
+        row_order = [3, 2, 1, 0]
+        col_order = [2, 3, 0, 1]
+        lower = matrix([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0],
+                        ["1/2", "-5/8", 0, 1]])
+        upper = matrix([[2, 5, 0, 0], [0, 4, 0, 0], [0, 0, 1, 3], [0, 0, 0, 2]])
+        self.assertEqual(multiply(lower, upper), [[a[i][j] for j in col_order] for i in row_order])
+        x = matrix([[1], [2], [3], [4]])
+        rhs = matrix([[7], [7], [16], [26]])
+        y = matrix([[26], [16], [7], [4]])
+        z = matrix([[3], [4], [1], [2]])
+        self.assertEqual(multiply(a, x), rhs)
+        self.assertEqual(multiply(lower, y), [rhs[i] for i in row_order])
+        self.assertEqual(multiply(upper, z), y)
+        self.assertEqual(multiply(list(zip(*a)), x), matrix([[2], [8], [9], [32]]))
+        row_scales = list(map(F, [2, 3, 4, 5]))
+        col_scales = [F("1/2"), F(2), F(1), F("1/4")]
+        scaled = [[a[i][j] * row_scales[i] * col_scales[j] for j in range(4)] for i in range(4)]
+        scaled_lower = matrix([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0],
+                               ["1/5", "-5/16", 0, 1]])
+        scaled_upper = matrix([[10, "25/4", 0, 0], [0, 4, 0, 0],
+                               [0, 0, "3/2", 18], [0, 0, 0, 8]])
+        self.assertEqual(multiply(scaled_lower, scaled_upper),
+                         [[scaled[i][j] for j in col_order] for i in row_order])
+
+    def test_sparse_star_fill_and_factors(self):
+        a = matrix([[4, 1, 1, 1], [1, 4, 0, 0], [1, 0, 4, 0], [1, 0, 0, 4]])
+        lower = matrix([[1, 0, 0, 0], ["1/4", 1, 0, 0],
+                        ["1/4", "-1/15", 1, 0], ["1/4", "-1/15", "-1/14", 1]])
+        upper = matrix([[4, 1, 1, 1], [0, "15/4", "-1/4", "-1/4"],
+                        [0, 0, "56/15", "-4/15"], [0, 0, 0, "26/7"]])
+        self.assertEqual(multiply(lower, upper), a)
+        x = matrix([[1], [2], [3], [4]])
+        rhs = matrix([[13], [9], [13], [17]])
+        y = matrix([[13], ["23/4"], ["152/15"], ["104/7"]])
+        self.assertEqual(multiply(a, x), rhs)
+        self.assertEqual(multiply(lower, y), rhs)
+        self.assertEqual(multiply(upper, x), y)
+        self.assertEqual(subtract(matrix([[1], [4], [0], [0]]),
+                                  matrix([[0], ["1/4"], ["1/4"], ["1/4"]])),
+                         matrix([[1], ["15/4"], ["-1/4"], ["-1/4"]]))
+
     def test_scalar_factors_and_two_solves(self):
         a = matrix([[4, 1, 1], [2, 5, 0], [0, 1, 6]])
         lower = matrix([[1, 0, 0], ["1/2", 1, 0], [0, "2/9", 1]])

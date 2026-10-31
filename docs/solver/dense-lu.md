@@ -363,6 +363,12 @@ scalar update in the 4-by-4 example. To export the walkthrough as a captioned MP
 using Chrome and FFmpeg, run `make -C docs/solver video`. Temporary render files
 stay in `docs/obj`; the video is written to `docs/video/right-looking-lu.mp4`.
 
+The matching [left-looking walkthrough](visuals/left-looking-lu.html) follows the
+same matrix one column at a time, showing every gathered update, pivot check,
+and multiplier. Run `make -C docs/solver video VIDEO_VARIANT=left-looking` to
+create `docs/video/left-looking-lu.mp4`. Both HTML files have playback and timeline
+controls; their videos include the explanations on screen, without audio.
+
 ## Caller assumptions and numerical failures
 
 These internal library routines assume that callers supply a valid square

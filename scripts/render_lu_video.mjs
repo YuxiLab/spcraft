@@ -6,9 +6,12 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const html = join(root, 'docs/solver/visuals/right-looking-lu.html');
-const scratch = join(root, 'docs/obj/lu-video');
-const output = join(root, 'docs/video/right-looking-lu.mp4');
+const variantIndex = process.argv.indexOf('--variant');
+const variant = variantIndex < 0 ? 'right-looking' : process.argv[variantIndex + 1];
+if (!['right-looking', 'left-looking'].includes(variant)) throw new Error('--variant must be right-looking or left-looking.');
+const html = join(root, `docs/solver/visuals/${variant}-lu.html`);
+const scratch = join(root, 'docs/obj', variant === 'right-looking' ? 'lu-video' : `${variant}-lu-video`);
+const output = join(root, `docs/video/${variant}-lu.mp4`);
 const fps = Number(process.env.LU_VIDEO_FPS || 24);
 if (!Number.isFinite(fps) || fps < 1 || fps > 60) throw new Error('LU_VIDEO_FPS must be between 1 and 60.');
 
@@ -41,7 +44,7 @@ browser.on('exit', () => { browserExited = true; });
 try {
   let port;
   for (let attempt = 0; attempt < 100; ++attempt) {
-    if (browserExited) throw new Error('Chrome exited before its renderer became available; see docs/obj/lu-video/chrome.log.');
+    if (browserExited) throw new Error(`Chrome exited before its renderer became available; see ${scratch}/chrome.log.`);
     try {
       port = Number((await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]);
       break;
@@ -92,12 +95,18 @@ try {
   await writeFile(join(scratch, 'scenes.json'), JSON.stringify(scenes, null, 2) + '\n');
   console.log(`Verified ${checked.scalarUpdates} scalar updates, ${checked.multipliers} multipliers, and L*U=A.`);
 
-  for (const [name, time] of [
+  const previews = [
     ['intro', 2],
     ['multiplier', scenes.find(scene => scene.kind === 'multiplier').start + 1.8],
     ['update', scenes.find(scene => scene.kind === 'update').start + 1.6],
     ['packed', scenes.find(scene => scene.kind === 'packed').start + 3],
-  ]) {
+    ['verify', scenes.find(scene => scene.kind === 'verify').start + 3],
+    ['recap', scenes.find(scene => scene.kind === 'recap').start + 3],
+  ];
+  if (variant === 'left-looking') {
+    previews.push(['source', scenes.find(scene => scene.kind === 'source' && scene.k === 1 && scene.j === 2).start + 1]);
+  }
+  for (const [name, time] of previews) {
     const png = await evaluate(`window.luAnimation.render(${time}); document.getElementById('lesson').toDataURL('image/png').split(',')[1]`);
     await writeFile(join(scratch, `${name}.png`), Buffer.from(png, 'base64'));
   }
@@ -121,7 +130,7 @@ try {
     }
     encoder.stdin.end();
     const [code] = await encoding;
-    if (code !== 0) throw new Error('FFmpeg failed; see docs/obj/lu-video/ffmpeg.log.');
+    if (code !== 0) throw new Error(`FFmpeg failed; see ${scratch}/ffmpeg.log.`);
     console.log(`Saved ${output} (${checked.duration.toFixed(1)} seconds, ${fps} fps, 1920x1080).`);
   }
 } finally {

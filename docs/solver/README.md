@@ -5,7 +5,7 @@ elimination, serial supernodal factorization, and shared-memory panel scheduling
 Start with the LU foundations, then use the completed kernels to study the structure,
 pivoting, and runtime choices in SuperLU_MT and PaStiX. The C++ assignment directories
 contain interfaces and TODO stubs, **not reference implementations**. Calling
-an unfinished function throws `std::logic_error` with its assignment ID.
+an unfinished function throws `std::logic_error` naming the function or its original assignment ID.
 
 This README is the main guideline for the solver chapters. Follow the sequence
 below; assignment IDs do not determine implementation order.
@@ -18,6 +18,14 @@ For a live task list with source navigation, use the included
 | 1 | `include/solver/scalar/`, `src/solver/scalar/` | [Scalar LU](scalar-lu.md) | `test_solver_scalar` |
 | 2 | `include/solver/supernodal/`, `src/solver/supernodal/` | [Supernodal LU](supernodal-lu.md) | `test_solver_supernodal` |
 | 3 | `include/solver/mt/`, `src/solver/mt/` | [Parallel LU](parallel-lu.md) | `test_solver_mt` |
+
+After the core, continue with the [extension exercises](extensions.md):
+symbolic analysis in `src/solver/symbolic/Lu.cpp`, dynamic row-pivoted LU in
+`src/solver/pivoted/Lu.cpp`, and scaling/refinement in `src/solver/expert/Lu.cpp`.
+Their separate acceptance target is `test_solver_extensions`. The original
+core keeps its supplied-plan, no-pivot contracts, so finish it before starting
+the extensions. The new bodies remain exercises; they are not a working
+SuperLU_MT replacement.
 
 The stages are milestones, not deadlines. Learning C++, CSC storage, and
 OpenMP at the same time requires additional preparation. Work at a pace that
@@ -122,6 +130,8 @@ After W1.1/W1.2/W1.5, read lesson B. Keep production pivoting for Stage 5.
 
 - [ ] Implement and directly check `ForwardSolve`.
 - [ ] Implement and directly check `BackwardSolve`.
+- [ ] Implement `ScatterColumn`, `UpdateColumn`, and `StoreColumn` independently,
+  following the [SuperLU MT source map](scalar-lu.md#superlu-mt-source-map).
 - [ ] Implement `FactorColumn` using preallocated factors and reusable scratch.
 - [ ] Implement `Factorize` and verify factor reconstruction.
 - [ ] Implement `Solve` and pass `test_solver_scalar` / `solver-scalar`.
@@ -134,10 +144,9 @@ touched accumulator location once, including locations reached through fill,
 and clear it before the workspace is reused.
 
 `Workspace::Resize` initializes a new factorization and resets `inverse_order`
-to identity. The current partial W1.1 body calls it on every column. When
-implementing W1.1, reconcile that call with the once-built permutation: retain
-the initialized inverse map across columns and clear only numerical scratch.
-The direct permuted-column test detects an accidental identity reset.
+to identity. Call it once in the driver, then construct the chosen inverse map.
+`ClearColumn` resets touched numerical entries between columns without changing
+that map. The direct permuted-column test detects an accidental identity reset.
 
 Both factors are in ordered coordinates:
 
@@ -230,6 +239,10 @@ Prerequisite: the serial block solver works. Use a separate scratch program or
 notebook for these experiments; the required solver API continues to consume an
 immutable supplied plan. Follow source-guide lesson F.
 
+The experiments below now have [symbolic-analysis scaffolding](extensions.md#implementation-sequence).
+`AnalyzeNoPivotPattern` and `DetectSupernodes` produce the same plan types the
+existing numerical drivers consume.
+
 1. Write a small separate symbolic-elimination program using sets of structural
    positions. On the 3-by-3 example, for each
    pivot, connect its lower rows to its upper columns. Record new positions
@@ -249,13 +262,17 @@ immutable supplied plan. Follow source-guide lesson F.
 
 Exit evidence: input/fill patterns, two ordering comparisons, a proposed block
 partition, and a map from `LuSymbolic`/`SupernodalSymbolic` to the library analysis
-data. A small set-based symbolic experiment is sufficient; production ordering
-and symbolic algorithms are reading topics, not new requirements for W1–W3.
+data. A small set-based implementation is sufficient initially; the extensions
+are separate from the core acceptance requirements.
 
 ## Stage 5: learn why the libraries use different pivot policies
 
 Prerequisite: you can explain every no-pivot rejection and keep original,
 ordered, and local coordinates distinct. Follow source-guide lesson G.
+
+Use the separate [pivoted LU scaffold](../../include/solver/pivoted/Lu.h) after
+these hand calculations. It adds growing factor columns and independent row
+maps without changing the fixed-pattern core.
 
 1. Work by hand with `[[0,1],[1,0]]` and `[[epsilon,1],[1,1]]` for positive small
    epsilon. Track the multipliers with and without a row interchange. The
@@ -285,6 +302,10 @@ Follow source-guide lesson H. Reuse completed factors to compute a correction
 from `r=b-A*x`, solve `A*delta=r`, and update `x += delta` in a separate learning
 driver. Measure the original-system backward error before and after; refinement
 may stagnate and does not guarantee recovery from an unstable factorization.
+
+The [expert solve scaffold](../../include/solver/expert/Lu.h) turns these studies
+into later exercises with explicit scaling, refinement stop reasons, condition
+and error estimates, and numerical refactorization using saved analysis.
 
 For a larger experiment, obtain valid supplied plans first. The existing
 production-library benchmark harness supplies comparison workflows, not plans
