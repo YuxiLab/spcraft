@@ -42,13 +42,13 @@
     background: '#fbfcfd', blue: '#dcebf8', teal: '#d7efe8', violet: '#eeE7f7',
     amber: '#ffe2a7', highlight: '#b07216', zero: '#93a2ac' };
   const format = value => value === 0.5 ? '1/2' : String(Number(value.toFixed(5)));
-  let U = clone(A), L = identity(), cursor = 0;
+  let U = clone(A), L = identity(), lu = clone(A), cursor = 0;
   const scenes = [];
   function add(kind, seconds, detail = {}, mutate = () => {}) {
-    const before = clone(U), lowerBefore = clone(L);
+    const before = clone(U), lowerBefore = clone(L), packedBefore = clone(lu);
     mutate();
     const scene = { kind, start: cursor, seconds, before, after: clone(U), lowerBefore,
-      lowerAfter: clone(L), ...detail };
+      lowerAfter: clone(L), packedBefore, packedAfter: clone(lu), ...detail };
     scenes.push(scene);
     cursor += seconds;
   }
@@ -64,7 +64,7 @@
     add('pivot', 3, { k, pivot, title: `Check the current pivot (${k}, ${k}).`,
       lines: [`The updated diagonal is ${format(pivot)}.`, 'Check it before any division.',
         k === 3 ? 'No rows remain below this final pivot.' : 'Now use this row to eliminate entries below it.'],
-      equation: `pivot = U[${k}, ${k}] = ${format(pivot)}`,
+        equation: `pivot = lu[${k}, ${k}] = ${format(pivot)}    →    finite and |pivot| > tolerance`,
       caption: k === 0 ? 'Use the working matrix. Later pivots must include all previous trailing updates.' :
         `Pivot ${k} is read after the updates from every earlier pivot.` });
     for (let i = k + 1; i < 4; ++i) {
@@ -74,8 +74,8 @@
         lines: [`${format(coefficient)} ÷ ${format(pivot)} = ${format(multiplier)}.`,
           `Subtract this multiple of row ${k} from row ${i}.`, 'Keep the multiplier in L for later solves.'],
         equation: `L[${i}, ${k}] = ${format(coefficient)} / ${format(pivot)} = ${format(multiplier)}`,
-        caption: 'The mathematical coefficient becomes zero. The multiplier is retained separately; the entries to the right are updated next.'
-      }, () => { L[i][k] = multiplier; U[i][k] = 0; });
+        caption: 'Overwrite lu[i,k] with the multiplier. The mathematical U has a zero here; this buffer stores L instead.'
+      }, () => { L[i][k] = multiplier; U[i][k] = 0; lu[i][k] = multiplier; });
     }
     for (let i = k + 1; i < 4; ++i) {
       for (let j = k + 1; j < 4; ++j) {
@@ -87,16 +87,16 @@
             `Read U[${k}, ${j}] = ${format(rowValue)} from the pivot row.`,
             'Subtract their product from this trailing entry.'],
           calculation: `${format(old)} − (${format(multiplier)} × ${format(rowValue)})`,
-          equation: `U[${i}, ${j}] ← U[${i}, ${j}] − L[${i}, ${k}] × U[${k}, ${j}]`,
+          equation: `lu[${i}, ${j}] −= lu[${i}, ${k}] × lu[${k}, ${j}]`,
           caption: i === j ? 'Diagonal entries belong to the trailing update too. This updated value can become a later pivot.' :
             'Each write changes one scalar. Repeating these writes updates the entire trailing submatrix.'
-        }, () => { U[i][j] = next; });
+        }, () => { U[i][j] = next; lu[i][j] = next; });
       }
     }
   }
   add('factors', 6, { title: 'Elimination is complete.',
-    lines: ['The working matrix is now U.', 'The six multipliers form the lower part of L.', 'The original A is still unchanged.'],
-    equation: 'A = L U', caption: 'L remembers the row operations; U contains the triangular system left after elimination.' });
+    lines: ['The upper triangle now contains U.', 'The six stored multipliers form the lower part of L.', 'All four pivots passed: return Success.'],
+    equation: 'A = L U', caption: 'The cloned input has become packed L/U. L has an implicit diagonal of ones; A stays unchanged.' });
   add('packed', 7, { title: 'Store both factors in one allocation.',
     lines: ['Below the diagonal: L multipliers.', 'On and above the diagonal: U coefficients.', 'Supply L’s diagonal ones implicitly.'],
     equation: 'L storage: n(n − 1)/2     +     U storage: n(n + 1)/2     =     n²',
@@ -120,10 +120,20 @@
     if (updates.length !== 14 || updates.some(scene => scene.next !== scene.old - scene.multiplier * scene.rowValue)) {
       throw new Error('A scalar update is incorrect.');
     }
+    const reference = clone(A);
+    for (const scene of scenes) {
+      if (JSON.stringify(reference) !== JSON.stringify(scene.packedBefore)) throw new Error('Incorrect packed state before an operation.');
+      if (scene.kind === 'pivot' && (!Number.isFinite(reference[scene.k][scene.k]) || Math.abs(reference[scene.k][scene.k]) <= 0)) {
+        throw new Error('The example must have valid nonzero pivots.');
+      }
+      if (scene.kind === 'multiplier') reference[scene.i][scene.k] /= reference[scene.k][scene.k];
+      if (scene.kind === 'update') reference[scene.i][scene.j] -= reference[scene.i][scene.k] * reference[scene.k][scene.j];
+      if (JSON.stringify(reference) !== JSON.stringify(scene.packedAfter)) throw new Error('The animation diverges from RightLookingFactorize.');
+    }
     const x = [1,2,3,4], b = A.map(row => row.reduce((sum, value, i) => sum + value * x[i], 0));
     if (JSON.stringify(b) !== '[22,33,42,48]') throw new Error('The displayed solve example is incorrect.');
     return { duration, scenes: scenes.length, pivots: 4, multipliers: 6, scalarUpdates: updates.length,
-      reconstructsInput: true, expectedSolution: x };
+      reconstructsInput: true, matchesPackedImplementation: true, packedResult: reference, expectedSolution: x };
   }
   function text(value, x, y, size = 30, color = colors.ink, align = 'left', weight = 400) {
     ctx.font = `${weight} ${size}px Arial, sans-serif`;
@@ -168,14 +178,16 @@
       let fill = '#ffffff';
       if (role === 'lower' && i>j) fill = colors.teal;
       if (role === 'lower' && i===j) fill = '#edf2f4';
-      if (role === 'working' && scene.kind === 'packed') fill = i>j ? colors.teal : colors.blue;
+      if (role === 'working' && ['packed', 'factors', 'recap'].includes(scene.kind)) fill = i>j ? colors.teal : colors.blue;
       else if (role === 'working' && scene.k !== undefined) {
+        if (j<scene.k) fill = i>j ? colors.teal : colors.blue;
         if (i>scene.k && j>scene.k) fill = colors.violet;
         if (i===scene.k && j>scene.k) fill = colors.blue;
         if (j===scene.k && i>scene.k) fill = colors.teal;
         if (i===scene.k && j===scene.k) fill = colors.amber;
       }
       const selected = (role === 'working' && scene.kind === 'update' && i===scene.i && j===scene.j) ||
+        (role === 'working' && scene.kind === 'multiplier' && i===scene.i && j===scene.k) ||
         (role === 'lower' && (scene.kind === 'update' || scene.kind === 'multiplier') && i===scene.i && j===scene.k);
       if (selected) fill = colors.amber;
       ctx.fillStyle = fill; ctx.fillRect(x+j*cell, y+i*cell, cell, cell);
@@ -188,6 +200,8 @@
     if (role === 'working' && scene.kind === 'update') {
       const columnX = x+(scene.j+0.84)*cell;
       arrow(columnX, y+(scene.k+0.5)*cell+20, columnX, y+(scene.i+0.5)*cell-18, '#376d9b', progress);
+      const rowY = y+(scene.i+0.82)*cell;
+      arrow(x+(scene.k+0.5)*cell+22, rowY, x+(scene.j+0.5)*cell-20, rowY, colors.accent, progress);
     }
   }
   function render(time) {
@@ -196,7 +210,7 @@
     const scene = scenes[index < 0 ? scenes.length-1 : index];
     const progress = Math.min(1, (t-scene.start)/scene.seconds);
     const changed = progress >= 0.52;
-    let working = clone(changed ? scene.after : scene.before);
+    let working = clone(changed ? scene.packedAfter : scene.packedBefore);
     const lower = changed ? scene.lowerAfter : scene.lowerBefore;
     if (scene.kind === 'packed') working = U.map((row,i) => row.map((value,j) => i>j ? L[i][j] : value));
     if (scene.kind === 'verify') working = clone(A);
@@ -206,18 +220,24 @@
     text(scene.k === undefined ? 'A = L U' : `PIVOT k = ${scene.k}   /   ZERO-BASED INDICES`, 90, 202, 23, colors.muted);
     text(`${Math.min(scenes.length, (index < 0 ? scenes.length-1 : index)+1)} / ${scenes.length}`, 1815, 65, 23, colors.muted, 'right');
     const matrixLabel = scene.kind === 'packed' ? 'Packed L / U buffer' : scene.kind === 'verify' ? 'Reconstructed L × U' :
-      scene.kind === 'factors' || scene.kind === 'recap' ? 'U (complete)' :
-      scene.kind === 'intro' || scene.kind === 'why' ? 'Working copy of A' : 'U in progress';
+      scene.kind === 'factors' || scene.kind === 'recap' ? 'Packed L / U (complete)' :
+      scene.kind === 'intro' || scene.kind === 'why' ? 'lu = A.Clone()' : 'lu buffer (in place)';
     matrix(working, 112, 328, 110, matrixLabel, scene, 'working', progress);
     matrix(A, 1460, 296, 52, 'Original A (unchanged)', scene, 'original', progress);
-    matrix(lower, 1430, 620, 64, 'Recorded L (diagonal = 1)', scene, 'lower', progress);
+    matrix(lower, 1430, 620, 64, 'L decoded (diagonal = 1)', scene, 'lower', progress);
     let y = 295;
     y += wrapped(scene.title, 690, y, 635, 43, 53, colors.ink, 600) + 28;
     for (const line of scene.lines) y += wrapped(line, 690, y, 635, 29, 40) + 14;
     if (scene.kind === 'update') {
       text(scene.calculation, 690, Math.max(600, y+12), 45, colors.accent);
-      text(`= ${format(changed ? scene.next : scene.old)}`, 690, Math.max(678,y+85), 74, colors.ink, 'left', 600);
+      text(changed ? `= ${format(scene.next)}` : `${format(scene.old)} → ?`, 690, Math.max(678,y+85), 74, colors.ink, 'left', 600);
       text(changed ? 'updated value' : 'value before subtraction', 690, Math.max(724,y+130), 23, colors.muted);
+    }
+    if (scene.k !== undefined) {
+      [['pivot', colors.amber], ['U row', colors.blue], ['L column', colors.teal], ['trailing', colors.violet]].forEach(([label, fill], index) => {
+        ctx.fillStyle = fill; ctx.fillRect(112+index*123, 792, 16, 16);
+        text(label, 134+index*123, 806, 19, colors.muted);
+      });
     }
     const equation = scene.equation || 'A = L U';
     wrapped(equation, 90, 858, 1250, scene.kind === 'packed' ? 29 : 33, 43, colors.accent, 500);

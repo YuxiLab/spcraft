@@ -359,15 +359,48 @@ After completing them, compare their reconstructed factors and solutions against
 `RightLookingFactorize` on the same inputs. `Solve` works with all three results.
 
 The [interactive HTML walkthrough](visuals/right-looking-lu.html) animates every
-scalar update in the 4-by-4 example. To export the walkthrough as a captioned MP4
+scalar update in the 4-by-4 example using the same packed `lu` buffer as the code.
+To export the walkthrough as a captioned MP4
 using Chrome and FFmpeg, run `make -C docs/solver video`. Temporary render files
 stay in `docs/obj`; the video is written to `docs/video/right-looking-lu.mp4`.
+Every video frame is retained as a 1920-by-1080 PNG screenshot in
+`docs/obj/lu-video/frames/`; `capture-manifest.json` records the frame rate and count.
+The renderer checks each packed-buffer operation and verifies `L*U=A` before export.
 
 The matching [left-looking walkthrough](visuals/left-looking-lu.html) follows the
 same matrix one column at a time, showing every gathered update, pivot check,
 and multiplier. Run `make -C docs/solver video VIDEO_VARIANT=left-looking` to
 create `docs/video/left-looking-lu.mp4`. Both HTML files have playback and timeline
 controls; their videos include the explanations on screen, without audio.
+
+The [8-by-8 symbolic walkthrough](visuals/right-looking-lu-8x8.html) keeps three
+matrices on screen: teal L to the left of A, and blue U above A. KaTeX renders
+every formula and matrix entry. Lines partition A before and after the current
+pivot row and column. Yellow marks known factors, crossed terms mark removed
+contributions, and highlights follow the current entry. Each scalar write adds
+a persistent tilde; the active entry's superscript counts its updates. Run
+`make -C docs/solver video VIDEO_VARIANT=right-looking-8x8` to create
+`docs/video/right-looking-lu-8x8.mp4`; screenshots of every frame are retained in
+`docs/obj/right-looking-lu-8x8-video/frames/`.
+
+The matching [8-by-8 left-looking walkthrough](visuals/left-looking-lu-8x8.html)
+uses the same colors, layout, and tilde transitions. It gathers completed source
+columns into the current column, checks its pivot, and forms its multipliers;
+future columns retain their original entries until visited. Run
+`make -C docs/solver video VIDEO_VARIANT=left-looking-8x8` to create
+`docs/video/left-looking-lu-8x8.mp4`. The renderer checks source coefficients,
+column-local writes, untouched future columns, and agreement with the factors
+from right-looking LU. PNG frames are saved in
+`docs/obj/left-looking-lu-8x8-video/frames/`.
+
+The [8-by-8 up-looking walkthrough](visuals/up-looking-lu-8x8.html) gathers
+completed U rows into the current row. For each source row, it first divides
+the gathered coefficient by that row's checked pivot to obtain an L multiplier,
+then updates entries to its right. Future rows remain untouched. Run
+`make -C docs/solver video VIDEO_VARIANT=up-looking-8x8` to create
+`docs/video/up-looking-lu-8x8.mp4`; frame screenshots are saved in
+`docs/obj/up-looking-lu-8x8-video/frames/`. The renderer verifies row-local
+writes, source pivots, multiplier order, persistent tildes, and the final factors.
 
 ## Caller assumptions and numerical failures
 

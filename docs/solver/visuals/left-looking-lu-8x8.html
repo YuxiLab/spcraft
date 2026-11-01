@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>8 × 8 left-looking LU — gather the current column</title>
+  <link rel="stylesheet" href="assets/katex-0.19.1/katex.min.css">
+  <script src="assets/katex-0.19.1/katex.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f8fafc; color: #183248; font-family: Arial, sans-serif; }
+    #frame { width: 1920px; height: 1080px; position: relative; overflow: hidden; }
+    header { position: absolute; left: 190px; top: 90px; width: 880px; }
+    h1 { margin: 0 0 20px; font-size: 52px; font-weight: 600; }
+    header p { margin: 0 0 24px; font-size: 28px; color: #526879; }
+    .formula { font-size: 23px; }
+    .katex-display { margin: 0; text-align: left; }
+    .katex-display > .katex { text-align: left; }
+    .expansion { margin-top: 10px; font-size: 22px; line-height: 1.6; }
+    .expansion-row { white-space: nowrap; }
+    .calculation { margin-top: 12px; font-size: 24px; }
+    .note { margin-top: 10px; font-size: 21px; color: #687784; }
+    .cell .katex { font-size: 1em; }
+    [data-math] > .katex, .index > .katex { font-size: 1em; }
+    .matrix { position: absolute; width: 440px; height: 440px; }
+    .matrix h2 { position: absolute; top: -68px; left: 0; margin: 0; font-size: 30px; font-weight: 500; }
+    .matrix h2 .caption { margin-left: 12px; color: #526879; font-size: 21px; }
+    .cells { display: grid; grid-template-columns: repeat(8, 55px); grid-template-rows: repeat(8, 55px); border-top: 1px solid #cbd5df; border-left: 1px solid #cbd5df; }
+    .cell { display: flex; align-items: center; justify-content: center; border-right: 1px solid #cbd5df; border-bottom: 1px solid #cbd5df; background: var(--factor-fill,#fff); color: var(--factor-ink,#183248); font-size: 25px; }
+    .zero { color: #a5b2be; background: #fff; }
+    .selected-row { background: #ddf2eb; box-shadow: inset 0 2px #70b9a8, inset 0 -2px #70b9a8; }
+    .selected-column { background: #e1edf9; box-shadow: inset 2px 0 #7fa9d3, inset -2px 0 #7fa9d3; }
+    .source-column { box-shadow: inset 2px 0 #70b9a8, inset -2px 0 #70b9a8; }
+    .known { background: #fff3b0; color: var(--factor-ink,#687784); }
+    .l-source { background: #a7decc; color: #183248; box-shadow: inset 0 0 0 3px #087f72; }
+    .u-source { background: #bfd9f4; color: #183248; box-shadow: inset 0 0 0 3px #2566a8; }
+    .target { background: #ffe2a0; box-shadow: inset 0 0 0 3px #bb831a; }
+    #original .target .katex { font-size: 0.83em; }
+    .updated-target { background: #fff0b8; box-shadow: inset 0 0 0 4px #a97110; }
+    .pivot-divider { position: absolute; pointer-events: none; z-index: 2; background: #516879; }
+    .pivot-divider.vertical { top: 0; height: 440px; width: 2px; transform: translateX(-1px); }
+    .pivot-divider.horizontal { left: 0; width: 440px; height: 2px; transform: translateY(-1px); }
+    .pivot-divider.trailing-edge { background: #b78323; }
+    .index { position: absolute; font-size: 18px; color: #6a7e8d; text-align: center; }
+    .column-index { top: -26px; width: 55px; }
+    .row-index { left: -30px; width: 20px; height: 55px; display: flex; align-items: center; justify-content: center; }
+    .row-index.selected-index { color: #087f72; font-weight: bold; }
+    .column-index.selected-index { color: #2566a8; font-weight: bold; }
+    #lower { left: 370px; top: 590px; --factor-ink: #087f72; --factor-fill: #eff9f5; }
+    #upper { left: 1120px; top: 70px; --factor-ink: #2566a8; --factor-fill: #f0f6fc; }
+    #lower h2 { color: #087f72; }
+    #upper h2 { color: #2566a8; }
+    #original { left: 1120px; top: 590px; }
+    #connections { position: absolute; inset: 0; width: 1920px; height: 1080px; pointer-events: none; }
+    .controls { display: flex; align-items: center; gap: 16px; width: 1160px; margin: 20px auto; }
+    .controls button { padding: 9px 24px; font: inherit; }
+    .controls input { flex: 1; }
+  </style>
+</head>
+<body>
+<main id="frame" aria-label="Three 8-by-8 matrices showing left-looking LU. Earlier L columns update only the current column of A; future columns remain untouched.">
+  <header>
+    <h1>Left-looking <span data-math="LU"></span></h1>
+    <p id="phase"></p>
+    <div class="formula" id="identity"></div>
+    <div class="expansion" id="expansion"></div>
+    <div class="calculation" id="calculation"></div>
+    <div class="note" id="note"></div>
+  </header>
+  <section class="matrix" id="lower" aria-label="Lower triangular factor L"><h2><span data-math="L"></span></h2><div class="cells"></div></section>
+  <section class="matrix" id="upper" aria-label="Upper triangular factor U"><h2><span data-math="U"></span></h2><div class="cells"></div></section>
+  <section class="matrix" id="original" aria-label="Working matrix A, partitioned at the pivot; updated entries carry a tilde"><h2><span id="matrix-a-label" data-math="A"></span> <span class="caption">working entries</span></h2><div class="cells"></div>
+    <div id="pivot-left" class="pivot-divider vertical"></div>
+    <div id="pivot-right" class="pivot-divider vertical trailing-edge"></div>
+    <div id="pivot-top" class="pivot-divider horizontal"></div>
+    <div id="pivot-bottom" class="pivot-divider horizontal trailing-edge"></div>
+  </section>
+  <svg id="connections" viewBox="0 0 1920 1080" aria-hidden="true">
+    <defs>
+      <marker id="lower-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#087f72"/></marker>
+      <marker id="upper-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2566a8"/></marker>
+    </defs>
+    <path id="lower-path" fill="none" stroke="#087f72" stroke-width="3" stroke-dasharray="9 7" marker-end="url(#lower-arrow)"/>
+    <path id="upper-path" fill="none" stroke="#2566a8" stroke-width="3" stroke-dasharray="9 7" marker-end="url(#upper-arrow)"/>
+    <circle id="lower-dot" r="4" fill="#087f72"/>
+    <circle id="upper-dot" r="4" fill="#2566a8"/>
+  </svg>
+</main>
+<div class="controls">
+  <button id="play" type="button">Play</button>
+  <label for="timeline">Timeline</label>
+  <input id="timeline" type="range" min="0" step="0.01" aria-label="Animation timeline">
+</div>
+<script>
+(async () => {
+  const n=8, cache=new Map(), panels=new Map(), scenes=[];
+  let duration=0, lastKey='';
+  const math=(tex,displayMode=false)=>{
+    const key=`${displayMode}:${tex}`;
+    if (!cache.has(key)) cache.set(key,katex.renderToString(tex,{displayMode,throwOnError:true}));
+    return cache.get(key);
+  };
+  const lowerTerm=(r,c)=>`\\textcolor{#087f72}{l_{${r},${c}}}`;
+  const upperTerm=(r,c)=>`\\textcolor{#2566a8}{u_{${r},${c}}}`;
+  const product=(i,k,j)=>`${lowerTerm(i,k)}\\,${upperTerm(k,j)}`;
+  function add(kind,seconds,detail={}) {
+    scenes.push({kind,seconds,start:duration,...detail}); duration+=seconds;
+  }
+  add('intro',3);
+  for (let k=0;k<n;++k) {
+    add('load',0.8,{k,j:k});
+    for (let p=0;p<k;++p) {
+      add('source',1,{k,p,j:k});
+      for (let i=p+1;i<n;++i) add('update',k===1 && i<=3 ? 1.5 : 0.65,{k,p,i,j:k});
+    }
+    add('pivot',1.5,{k,i:k,j:k});
+    for (let i=k+1;i<n;++i) add('multiplier',0.8,{k,i,j:k});
+    add('commit',0.6,{k,j:k});
+  }
+  add('complete',5,{k:n});
+  document.querySelectorAll('[data-math]').forEach(element=>{element.innerHTML=math(element.dataset.math);});
+  for (const [id,name] of [['lower','l'],['upper','u'],['original','a']]) {
+    const panel=document.getElementById(id), grid=panel.querySelector('.cells');
+    const cells=[], rows=[], columns=[];
+    for (let r=0; r<n; ++r) for (let c=0; c<n; ++c) {
+      const cell=document.createElement('div');
+      const zero=(id==='lower' && r<c)||(id==='upper' && r>c);
+      const entry=zero?'0':id==='lower' && r===c?'1':`${name}_{${r},${c}}`;
+      const normal=math(entry), updated=math(`\\tilde{a}_{${r},${c}}`);
+      cell.innerHTML=normal; grid.appendChild(cell);
+      cells.push({cell,r,c,zero,normal,updated});
+    }
+    for (let r=0; r<n; ++r) {
+      const column=document.createElement('span'),row=document.createElement('span');
+      column.className='index column-index'; column.style.left=`${55*r}px`; column.innerHTML=math(String(r));
+      row.className='index row-index'; row.style.top=`${55*r}px`; row.innerHTML=math(String(r));
+      panel.append(column,row); rows.push(row); columns.push(column);
+    }
+    panels.set(id,{cells,rows,columns});
+  }
+  const identity=document.getElementById('identity'), expansion=document.getElementById('expansion');
+  const calculation=document.getElementById('calculation'), note=document.getElementById('note');
+  const lowerPath=document.getElementById('lower-path'),upperPath=document.getElementById('upper-path');
+  const lowerDot=document.getElementById('lower-dot'),upperDot=document.getElementById('upper-dot');
+  function known(id,r,c,scene,changed=false) {
+    const {kind,k,p,i}=scene;
+    if (id==='lower') {
+      if (r===c) return true;
+      if (r<c || k===undefined) return false;
+      return c<k || (c===k && (kind==='commit' || (kind==='multiplier' && r<=i)));
+    }
+    if (id!=='upper' || r>c || k===undefined) return false;
+    if (c<k) return true;
+    if (c>k) return false;
+    return r<=k && updatesApplied(r,c,scene,changed)>=r;
+  }
+  function updatesApplied(r,c,scene,changed) {
+    const {kind,k,p,i}=scene;
+    if (kind==='intro') return 0;
+    if (c<k || kind==='complete') return Math.min(r,c);
+    if (c>k || kind==='load') return 0;
+    if (kind==='source') return Math.min(p,r);
+    if (kind==='update') return Math.min(p,r)+Number(r>p && (r<i || (r===i && changed)));
+    return Math.min(k,r);
+  }
+  function residual(r,c,count) {
+    return count===0?`a_{${r},${c}}`:`\\tilde{a}_{${r},${c}}^{(${count})}`;
+  }
+  function expansionFor(scene,changed) {
+    const {p,i,j}=scene;
+    const terms=Array.from({length:n},(_,r)=>{
+      const term=`l_{${i},${r}}\\,u_{${r},${j}}`;
+      const current=`\\boxed{${product(i,p,j)}}`;
+      return r<p?`\\cancel{${term}}`:r===p?(changed?`\\cancel{${current}}`:current):term;
+    });
+    return [terms.slice(0,4),terms.slice(4)].map((group,line)=>
+      `<div class="expansion-row">${math((line===0?`${residual(i,j,updatesApplied(i,j,scene,changed))} = `:'+ ')+group.join(' + '))}</div>`).join('');
+  }
+  function updateScene(scene,changed) {
+    const {kind,k,p,i,j}=scene, active=i!==undefined, column=k!==undefined && kind!=='complete';
+    const source=p!==undefined?p:k;
+    const labels={intro:'Start',load:'Load column',source:'Look left',pivot:'Pivot check',multiplier:'Multiplier',update:'Gather',commit:'Column complete',complete:'Complete'};
+    document.getElementById('phase').innerHTML=`${math(String.raw`8\times8`)} &nbsp; · &nbsp; ${kind==='update'&&changed?'Gathered':labels[kind]}${column?` ${math(`k=${k}`)}`:''}${p!==undefined?` &nbsp; · &nbsp; ${math(`p=${p}`)}`:''}${active?` &nbsp; · &nbsp; ${math(`(${i},${j})`)}`:''}`;
+    document.getElementById('original').querySelector('.caption').innerHTML=column?'current column '+math(`k=${k}`):kind==='intro'?'input matrix':'updated entries';
+    const hasUpdates=kind==='complete' || k>1 || (k===1 && (kind!=='load' && kind!=='source') && (kind!=='update' || i>1 || changed));
+    document.getElementById('matrix-a-label').innerHTML=math(hasUpdates?String.raw`\widetilde A`:'A');
+    for (const [id,position] of [['pivot-left',k*55],['pivot-right',(k+1)*55],['pivot-top',k*55],['pivot-bottom',(k+1)*55]]) {
+      const divider=document.getElementById(id);
+      divider.style.display=column?'':'none';
+      divider.style[id==='pivot-left'||id==='pivot-right'?'left':'top']=`${position}px`;
+    }
+    for (const [id,panel] of panels) {
+      for (const {cell,r,c,zero,normal,updated} of panel.cells) {
+        const classes=['cell'];
+        if (zero) classes.push('zero');
+        if (known(id,r,c,scene,changed)) classes.push('known');
+        if (active && (id==='lower'||id==='original') && r===i) classes.push('selected-row');
+        if (column && (id==='upper'||id==='original') && c===k) classes.push('selected-column');
+        if (p!==undefined && id==='lower' && c===p && r>=p) classes.push('source-column');
+        if (active && kind!=='pivot' && id==='lower' && r===i && c===source) classes.push('l-source');
+        if ((active||kind==='source') && id==='upper' && r===source && c===k) classes.push('u-source');
+        const target=active && id==='original' && r===i && c===j;
+        if (target) classes.push('target');
+        if (target && changed) classes.push('updated-target');
+        cell.className=classes.join(' ');
+        const count=id==='original'?updatesApplied(r,c,scene,changed):0;
+        if (id==='original') cell.dataset.updates=count;
+        const html=id==='original'?(target?math(residual(r,c,count)):count>0?updated:normal):normal;
+        if (cell.innerHTML!==html) cell.innerHTML=html;
+      }
+      panel.rows.forEach((row,r)=>row.classList.toggle('selected-index',active && (id==='lower'||id==='original') && r===i));
+      panel.columns.forEach((index,c)=>index.classList.toggle('selected-index',column && (id==='upper'||id==='original') && c===k));
+    }
+    if (kind==='intro' || kind==='complete') {
+      identity.innerHTML=math(String.raw`A=LU`,true);
+      expansion.innerHTML=math(String.raw`a_{ij}=\sum_{r=0}^{7}l_{ir}\,u_{rj}`,true);
+      calculation.innerHTML=kind==='intro'?'Gather earlier columns into one current column.':'All columns are complete: the same factors as right-looking.';
+      note.innerHTML=kind==='intro'?'Teal: '+math('L')+'. Blue: '+math('U')+'. Yellow: known. Tilde: updated.':'The factors are complete. Tildes mark entries updated during elimination.';
+    } else if (kind==='load') {
+      identity.innerHTML=math(String.raw`w_i=a_{ik}`,true);
+      expansion.innerHTML=math(`\\boxed{w_i=a_{i,${k}}}`,true);
+      calculation.innerHTML='Start this column from its original entries.';
+      note.innerHTML='Future columns have not been updated.';
+    } else if (kind==='source') {
+      identity.innerHTML=math(String.raw`u_{pk}=\tilde a_{pk}^{(p)}`,true);
+      expansion.innerHTML=math(`\\boxed{${upperTerm(p,k)}=${residual(p,k,updatesApplied(p,k,scene,false))}}`,true);
+      calculation.innerHTML='Look left: use completed '+math(`L_{:,${p}}`)+'.';
+      note.innerHTML='Gather '+math(`l_{i,${p}}\\,u_{${p},${k}}\\quad(i>${p})`)+', only into column '+math(`k=${k}`)+'.';
+    } else if (kind==='pivot') {
+      identity.innerHTML=math(String.raw`u_{kk}=\tilde{a}_{kk}`,true);
+      expansion.innerHTML=math(`\\boxed{u_{${k},${k}}=${residual(k,k,updatesApplied(k,k,scene,false))}}`,true);
+      calculation.innerHTML='Check before division: '+math(String.raw`|u_{kk}|>\tau`)+'.';
+      note.innerHTML='Check the diagonal after gathering all earlier columns.';
+    } else if (kind==='multiplier') {
+      identity.innerHTML=math(String.raw`l_{ik}=\frac{\tilde{a}_{ik}}{u_{kk}}`,true);
+      expansion.innerHTML=math(`\\boxed{${lowerTerm(i,k)}=\\frac{${residual(i,k,updatesApplied(i,k,scene,false))}}{${upperTerm(k,k)}}}`,true);
+      calculation.innerHTML='Store the multiplier below the diagonal.';
+      note.innerHTML='Yellow marks the factor entries known so far at '+math(`k=${k}`)+'.';
+    } else if (kind==='commit') {
+      identity.innerHTML=math(String.raw`A_{:,k}\longrightarrow\begin{cases}u_{ik},&i\leq k\\l_{ik},&i>k\end{cases}`,true);
+      expansion.innerHTML='Column '+math(`k=${k}`)+' now provides factors for later columns.';
+      calculation.innerHTML='Advance to the next untouched column.';
+      note.innerHTML='Yellow marks completed factors; future columns remain original.';
+    } else {
+      const previous=p>0?String.raw`\cancel{\sum_{r=0}^{p-1}l_{ir}\,u_{rk}} + `:'';
+      const current=`\\boxed{${product('i','p','k')}}`;
+      const lhs=p===0&&!changed?'a_{ik}':`\\tilde a_{ik}^{(${changed?'p+1':'p'})}`;
+      identity.innerHTML=math(lhs+' = '+previous+(changed?`\\cancel{${current}}`:current)+String.raw` + \sum_{r=p+1}^{7}l_{ir}\,u_{rk}`,true);
+      expansion.innerHTML=expansionFor(scene,changed);
+      calculation.innerHTML=(changed?'Gathered: ':'Current: ')+math(`\\boxed{${product('i','p','k')}}\\quad ${residual(i,j,p)} \\longrightarrow ${residual(i,j,p+1)}`);
+      note.innerHTML='Only column '+math(`k=${k}`)+' changes; future columns stay original.';
+    }
+    document.getElementById('frame').setAttribute('aria-label',`${labels[kind]} of an 8-by-8 left-looking LU factorization${column?`, current column ${k}`:''}${p!==undefined?`, source column ${p}`:''}${active?`, current entry ${i}, ${j}`:''}.`);
+  }
+  function render(time) {
+    const t=Math.max(0,Math.min(duration,time));
+    let index=scenes.findIndex(scene=>t<scene.start+scene.seconds);
+    if (index<0) index=scenes.length-1;
+    const scene=scenes[index], {kind,k,p,i,j}=scene;
+    const progress=Math.min(1,(t-scene.start)/scene.seconds);
+    const changed=kind==='update' && progress>=0.55;
+    const key=`${index}:${changed}`;
+    if (key!==lastKey) {updateScene(scene,changed);lastKey=key;}
+    const active=i!==undefined, horizontal=active && kind!=='pivot';
+    lowerPath.style.display=lowerDot.style.display=horizontal?'':'none';
+    upperPath.style.display=upperDot.style.display=active?'':'none';
+    if (active) {
+      const movement=kind==='update'?Math.min(1,progress/0.55):progress;
+      const source=p!==undefined?p:k;
+      const x1=370+(source+0.73)*55, x2=1120+(j+0.38)*55, y=590+(i+0.85)*55;
+      const x=1120+(j+0.86)*55, y1=70+(source+0.85)*55, y2=590+(i+0.22)*55;
+      lowerPath.setAttribute('d',`M ${x1} ${y} H ${x2}`);
+      // Leave the matrix title and column indices unobstructed between panels.
+      upperPath.setAttribute('d',`M ${x} ${y1} V 510 M ${x} 590 V ${y2}`);
+      lowerDot.setAttribute('cx',x1+(x2-x1)*movement);lowerDot.setAttribute('cy',y);
+      const dotY=y1+(y2-y1)*movement;
+      upperDot.setAttribute('cx',x);upperDot.setAttribute('cy',dotY);
+      if (dotY>510 && dotY<590) upperDot.style.display='none';
+    }
+    return {index,kind,time:t,changed};
+  }
+  function selfCheck() {
+    const L=Array.from({length:n},(_,r)=>Array.from({length:n},(_,c)=>r<c?0:r===c?1:0.25+0.25*((r+2*c)%3)));
+    const U=Array.from({length:n},(_,r)=>Array.from({length:n},(_,c)=>r>c?0:r===c?2.4+0.04*r:0.24+0.04*((3*r+5*c)%20)));
+    const A=L.map(row=>U[0].map((_,c)=>row.reduce((sum,value,r)=>sum+value*U[r][c],0)));
+    const lu=A.map(row=>[...row]);
+    const writes=Array.from({length:n},()=>Array(n).fill(0));
+    let position=1, multipliers=0, scalarUpdates=0;
+    function verifyState(scene,changed) {
+      for (let r=0;r<n;++r) for (let c=0;c<n;++c) {
+        if (updatesApplied(r,c,scene,changed)!==writes[r][c]) throw new Error('Incorrect persistent tilde state.');
+        if (c>scene.k && lu[r][c]!==A[r][c]) throw new Error('A future column was updated early.');
+        if (c>scene.k && known('upper',r,c,scene)) throw new Error('A future U entry was marked known early.');
+        if (known('upper',r,c,scene,changed) && Math.abs(lu[r][c]-U[r][c])>1e-10) throw new Error('An unfinished U coefficient was marked known.');
+      }
+    }
+    for (let k=0;k<n;++k) {
+      const load=scenes[position++];
+      if (load.kind!=='load'||load.k!==k) throw new Error('Incorrect column load order.');
+      verifyState(load,false);
+      for (let p=0;p<k;++p) {
+        const source=scenes[position++];
+        if (source.kind!=='source'||source.k!==k||source.p!==p) throw new Error('Incorrect source column order.');
+        if (Math.abs(lu[p][k]-U[p][k])>1e-10 || !known('upper',p,k,source)) throw new Error('The source coefficient is not ready.');
+        verifyState(source,false);
+        for (let i=p+1;i<n;++i) {
+          const scene=scenes[position++];
+          if (scene.kind!=='update'||scene.k!==k||scene.p!==p||scene.i!==i||scene.j!==k) throw new Error('Incorrect left-looking update order.');
+          const expected=A[i][k]-L[i].slice(0,p).reduce((sum,value,r)=>sum+value*U[r][k],0);
+          if (Math.abs(lu[i][k]-expected)>1e-10) throw new Error('Incorrect crossed contributions.');
+          if (!known('lower',i,p,scene)||!known('upper',p,k,scene)) throw new Error('An update used an unknown factor.');
+          verifyState(scene,false);
+          lu[i][k]-=lu[i][p]*lu[p][k]; ++scalarUpdates;
+          ++writes[i][k];
+          verifyState(scene,true);
+        }
+      }
+      const pivot=scenes[position++];
+      if (pivot.kind!=='pivot'||pivot.k!==k) throw new Error('Incorrect pivot order.');
+      if (Math.abs(lu[k][k]-U[k][k])>1e-10 || !Number.isFinite(lu[k][k]) || lu[k][k]===0) throw new Error('The pivot was checked before gathering its contributions.');
+      verifyState(pivot,false);
+      for (let i=k+1;i<n;++i) {
+        const scene=scenes[position++];
+        if (scene.kind!=='multiplier'||scene.k!==k||scene.i!==i) throw new Error('Incorrect multiplier order.');
+        lu[i][k]/=lu[k][k]; ++multipliers;
+        if (!known('lower',i,k,scene) || known('lower',i+1,k,scene)) throw new Error('Incorrect multiplier visibility.');
+        verifyState(scene,false);
+      }
+      const commit=scenes[position++];
+      if (commit.kind!=='commit'||commit.k!==k) throw new Error('Incorrect column completion order.');
+      verifyState(commit,false);
+    }
+    for (let r=0;r<n;++r) for (let c=0;c<n;++c) {
+      if (Math.abs(lu[r][c]-(r>c?L[r][c]:U[r][c]))>1e-10) throw new Error('The factorization does not reconstruct A.');
+    }
+    // Visit every visual state to catch KaTeX failures before exporting frames.
+    for (const scene of scenes) {
+      render(scene.start+scene.seconds*0.25);
+      render(scene.start+scene.seconds*0.8);
+    }
+    return {duration,scenes:scenes.length,pivots:n,multipliers,scalarUpdates,reconstructsInput:true,matchesPackedImplementation:true,persistentTildesVerified:true,futureColumnsUntouched:true,writesOnlyCurrentColumn:true,sourceCoefficientsVerified:true};
+  }
+  const slider=document.getElementById('timeline'), play=document.getElementById('play');
+  slider.max=duration;
+  let playing=false, clock=0, previous=0;
+  function tick(timestamp) {
+    if (!playing) return;
+    if (previous) clock=Math.min(duration,clock+(timestamp-previous)/1000);
+    previous=timestamp;render(clock);slider.value=clock;
+    if (clock<duration) requestAnimationFrame(tick);
+    else {playing=false;play.textContent='Replay';}
+  }
+  play.addEventListener('click',()=>{
+    playing=!playing;previous=0;
+    if (playing && clock>=duration) clock=0;
+    play.textContent=playing?'Pause':'Play';
+    if (playing) requestAnimationFrame(tick);
+  });
+  slider.addEventListener('input',()=>{clock=Number(slider.value);previous=0;render(clock);});
+  selfCheck();
+  const preview=scenes.find(scene=>scene.kind==='update'&&scene.k===6&&scene.p===2&&scene.i===5);
+  render(preview.start+preview.seconds*0.8);
+  await document.fonts.ready;
+  if (!document.fonts.check('16px KaTeX_Main') || !document.fonts.check('16px KaTeX_Size2')) throw new Error('KaTeX fonts failed to load.');
+  window.luAnimation={render,selfCheck,duration,width:1920,height:1080,scenes};
+  document.documentElement.dataset.verified='true';
+})();
+</script>
+</body>
+</html>
