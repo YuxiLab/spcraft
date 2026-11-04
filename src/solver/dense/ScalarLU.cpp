@@ -21,13 +21,7 @@ void ForwardSolve(const DenseMatrix<IT, NT, OT>& lu, const DenseVector<IT, NT>& 
   // 1. Solve row k using the already computed y[i] for i<k.
   //    Start with rhs[k] and subtract lu[k,i]*y[i] for each earlier row i.
   // 2. Store y[k] directly; lu[k,k] is U's diagonal, not L's.
-  for (IT k = 0; k < y.n; ++k) {
-    NT tmp = rhs[k];
-    for (IT i = 0; i < k; ++i) {
-      tmp -= lu[k, i] * y[i];
-    }
-    y[k] = tmp;
-  }
+
 }
 
 template <class IT, class NT, class OT>
@@ -39,13 +33,6 @@ void BackwardSolve(const DenseMatrix<IT, NT, OT>& lu, const DenseVector<IT, NT>&
   //    Start with rhs[k] and subtract lu[k,i]*x[i] for each later row i.
   // 2. Divide the residual by lu[k,k] to store x[k].
   //    Reject a zero or nonfinite diagonal with runtime_error before division.
-  for (IT k = rhs.n - 1; k >= 0; --k) {
-    NT tmp = rhs[k];
-    for (IT i = k + 1; i < rhs.n; ++i) {
-      tmp -= lu[k, i] * x[i];
-    }
-    x[k] = tmp / lu[k, k];
-  }
 }
 
 template <class IT, class NT, class OT>
@@ -60,27 +47,6 @@ Factors<IT, NT, OT> RightLookingFactorize(const DenseMatrix<IT, NT, OT>& A, cons
   //    Subtract lu[i,k]*lu[k,j] from each trailing entry with i,j>k.
   // 4. Mark Success with pivot_column=-1 after all columns finish.
   //    Keep L's diagonal implicit; the stored diagonal belongs to U.
-  Factors<IT, NT, OT> factors;
-  factors.lu = A.Clone();
-  auto& lu = factors.lu;
-  for (IT k = 0; k < A.n; ++k) {
-    const NT pivot = lu[k, k];
-    if (!std::isfinite(pivot) || std::abs(pivot) <= options.pivot_tolerance) {
-      factors.status.code = LuCode::ZeroPivot;
-      factors.status.pivot_column = k;
-      return factors;
-    }
-    for (IT i = k + 1; i < A.m; ++i) {
-      lu[i, k] /= lu[k, k];
-    }
-    for (IT i = k + 1; i < A.m; ++i) {
-      for (IT j = k + 1; j < A.n; ++j) {
-        lu[i, j] -= lu[i, k] * lu[k, j];
-      }
-    }
-  }
-  factors.status.code = LuCode::Success;
-  return factors;
 }
 
 template <class IT, class NT, class OT>
@@ -97,10 +63,6 @@ Factors<IT, NT, OT> LeftLookingFactorize(const DenseMatrix<IT, NT, OT>& A, const
   //    Update only column k; future columns gather updates when reached.
   // 5. Mark Success with pivot_column=-1 after all columns finish.
   // Comment out the placeholder exception after implementing this function.
-  Factors<IT, NT, OT> factors;
-  factors.lu = A.Clone();
-  auto& lu = factors.lu;
-
   throw std::logic_error("LeftLookingFactorize: implement column-oriented delayed updates");
 }
 
