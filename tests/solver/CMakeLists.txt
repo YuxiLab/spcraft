@@ -15,7 +15,7 @@ target_link_libraries(test_solver_extensions PRIVATE SPCraftTestMain SPCraft)
 gtest_discover_tests(test_solver_extensions TEST_PREFIX solver.extensions.
   PROPERTIES LABELS solver-extensions TIMEOUT 30 DISCOVERY_MODE PRE_TEST)
 
-gtest_discover_tests(test_solver_dense TEST_PREFIX solver.dense.
+gtest_discover_tests(test_solver_dense TEST_PREFIX solver.dense.lu.
   PROPERTIES LABELS solver-dense TIMEOUT 30 DISCOVERY_MODE PRE_TEST)
 gtest_discover_tests(test_solver_scalar TEST_PREFIX solver.scalar.
   PROPERTIES LABELS solver-scalar TIMEOUT 30 DISCOVERY_MODE PRE_TEST)

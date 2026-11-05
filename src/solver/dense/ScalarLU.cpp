@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <ratio>
 #include <stdexcept>
 #include "core/DenseVector.h"
 #include "solver/Lu.h"
@@ -20,31 +21,37 @@ void ForwardSolve(const DenseMatrix<IT, NT, OT>& lu, const DenseVector<IT, NT>& 
   // Assume valid shapes and disjoint output storage.
   // 1. Solve row k using the already computed y[i] for i<k.
   //    Start with rhs[k] and subtract lu[k,i]*y[i] for each earlier row i.
-  // 2. Store y[k] directly; lu[k,k] is U's diagonal, not L's.
   for (IT k = 0; k < y.n; ++k) {
-    NT tmp = rhs[k];
+    NT residual = rhs[k];
     for (IT i = 0; i < k; ++i) {
-      tmp -= lu[k, i] * y[i];
+      residual -= lu[k, i] * y[i];
     }
-    y[k] = tmp;
+    // 2. Store y[k] directly; lu[k,k] is U's diagonal, not L's.
+    y[k] = residual;
   }
 }
 
 template <class IT, class NT, class OT>
 void BackwardSolve(const DenseMatrix<IT, NT, OT>& lu, const DenseVector<IT, NT>& rhs, DenseVector<IT, NT>& x)
 {
+  using namespace std;
   // Solve U*x=rhs using the upper triangle of the packed factors.
   // Assume valid shapes and disjoint output storage.
   // 1. Visit row k from last to first, using the already computed x[i] for i>k.
   //    Start with rhs[k] and subtract lu[k,i]*x[i] for each later row i.
-  // 2. Divide the residual by lu[k,k] to store x[k].
-  //    Reject a zero or nonfinite diagonal with runtime_error before division.
   for (IT k = rhs.n - 1; k >= 0; --k) {
-    NT tmp = rhs[k];
-    for (IT i = k + 1; i < rhs.n; ++i) {
-      tmp -= lu[k, i] * x[i];
+    // 2. Divide the residual by lu[k,k] to store x[k].
+    //    Reject a zero or nonfinite diagonal with runtime_error before division.
+    const NT pivot = lu[k, k];
+    if (!isfinite(pivot) || abs(pivot) == 0) {
+      throw runtime_error("Backwardsolve: zero or infinite pivot");
     }
-    x[k] = tmp / lu[k, k];
+    // diag elem is ok, then update
+    NT residual = rhs[k];
+    for (IT i = k + 1; i < rhs.n; ++i) {
+      residual -= lu[k, i] * x[i];
+    }
+    x[k] = residual / lu[k, k];
   }
 }
 
@@ -54,31 +61,31 @@ Factors<IT, NT, OT> RightLookingFactorize(const DenseMatrix<IT, NT, OT>& A, cons
   // Factor A=L*U with right-looking scalar updates to the trailing matrix.
   // Assume valid square A, finite coefficients, and a finite nonnegative tolerance.
   // 1. Clone A into the owning result.lu so the original input stays unchanged.
-  // 2. Process pivot columns k in order using the updated diagonal lu[k,k].
-  //    Return ZeroPivot at k before division if it is nonfinite or within tolerance.
-  // 3. Store lu[i,k]/lu[k,k] as the multiplier for each row i>k.
-  //    Subtract lu[i,k]*lu[k,j] from each trailing entry with i,j>k.
-  // 4. Mark Success with pivot_column=-1 after all columns finish.
-  //    Keep L's diagonal implicit; the stored diagonal belongs to U.
   Factors<IT, NT, OT> factors;
   factors.lu = A.Clone();
   auto& lu = factors.lu;
   for (IT k = 0; k < A.n; ++k) {
+    // 2. Process pivot columns k in order using the updated diagonal lu[k,k].
+    //    Return ZeroPivot at k before division if it is nonfinite or within tolerance.
     const NT pivot = lu[k, k];
     if (!std::isfinite(pivot) || std::abs(pivot) <= options.pivot_tolerance) {
       factors.status.code = LuCode::ZeroPivot;
       factors.status.pivot_column = k;
       return factors;
     }
+    // 3. Store lu[i,k]/lu[k,k] as the multiplier for each row i>k.
     for (IT i = k + 1; i < A.m; ++i) {
       lu[i, k] /= lu[k, k];
     }
+    // 4. Subtract lu[i,k]*lu[k,j] from each trailing entry with i,j>k.
     for (IT i = k + 1; i < A.m; ++i) {
       for (IT j = k + 1; j < A.n; ++j) {
         lu[i, j] -= lu[i, k] * lu[k, j];
       }
     }
   }
+  // 5. Mark Success with pivot_column=-1 after all columns finish.
+  //    Keep L's diagonal implicit; the stored diagonal belongs to U.
   factors.status.code = LuCode::Success;
   return factors;
 }
@@ -86,6 +93,7 @@ Factors<IT, NT, OT> RightLookingFactorize(const DenseMatrix<IT, NT, OT>& A, cons
 template <class IT, class NT, class OT>
 Factors<IT, NT, OT> LeftLookingFactorize(const DenseMatrix<IT, NT, OT>& A, const LuOptions<NT>& options)
 {
+  using namespace std;
   // Factor A=L*U column by column, gathering updates from earlier L columns.
   // Assume valid square A, finite coefficients, and a finite nonnegative tolerance.
   // 1. Clone A into owning factors and visit the current column k in order.
@@ -100,8 +108,30 @@ Factors<IT, NT, OT> LeftLookingFactorize(const DenseMatrix<IT, NT, OT>& A, const
   Factors<IT, NT, OT> factors;
   factors.lu = A.Clone();
   auto& lu = factors.lu;
-
-  throw std::logic_error("LeftLookingFactorize: implement column-oriented delayed updates");
+  for (IT k = 0; k < A.m; ++k) {
+    for (IT i = 0; i <= k; ++i) {
+      for (IT j = 0; j < i; ++j) {
+        lu[i, k] -= lu[i, j] * lu[j, k];  // update U[i,k]
+      }
+    }
+    // U[0:k+1, k] is updated, now update L[k+1:n, k]
+    const NT pivot = lu[k, k];
+    // pivot chk
+    if (!isfinite(pivot) || abs(pivot) <= options.pivot_tolerance) {
+      factors.status.pivot_column = k;
+      factors.status.code = LuCode::ZeroPivot;
+      return factors;
+    }
+    for (IT i = k + 1; i < A.m; ++i) {
+      for (IT j = 0; j < k; ++j) {
+        lu[i, k] -= lu[i, j] * lu[j, k];
+      }
+      lu[i, k] /= lu[k, k];
+    }
+  }
+  factors.status.code = LuCode::Success;
+  factors.status.pivot_column = -1;
+  return factors;
 }
 
 template <class IT, class NT, class OT>

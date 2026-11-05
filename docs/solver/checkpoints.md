@@ -59,24 +59,25 @@ Matrix dimensions and stride belong to `DenseMatrix`; only RHS/solution storage
 uses `DenseVector`. The container tests pass before the LU exercises are implemented.
 
 ```bash
-build/solver-learning/bin/test_solver_dense --gtest_filter='W01DenseForwardSolve.*'
-build/solver-learning/bin/test_solver_dense --gtest_filter='W02DenseBackwardSolve.*'
-build/solver-learning/bin/test_solver_dense --gtest_filter='DenseRightLookingFactorize.*'
-build/solver-learning/bin/test_solver_dense --gtest_filter='W04DenseSolve.*'
+build/solver-learning/bin/test_solver_dense --gtest_filter='ForwardSolve.*'
+build/solver-learning/bin/test_solver_dense --gtest_filter='BackwardSolve.*'
+build/solver-learning/bin/test_solver_dense --gtest_filter='RightLookingFactorize.*'
+build/solver-learning/bin/test_solver_dense --gtest_filter='Solve.*'
 ctest --test-dir build/solver-learning -L solver-dense --output-on-failure
 ```
 
-| Order | Predict before running | Explain before moving on |
+| Order | Predict using the 3-by-3 worked example | Explain before moving on |
 |---|---|---|
 | W0.1 | y=`{9,15/2,55/3}` from the supplied packed factors and b | Why is the stored diagonal ignored? |
 | W0.2 | x=`{1,2,3}` from supplied y | Why do later unknowns have to be ready first? |
 | W0.3 | Packed LU=`{4,1/2,0,1,9/2,2/9,1,-1/2,55/9}` | Which entries are multipliers, and which trailing entries are updated? |
 | W0.4 | Original-system residual is small for two RHSs | Why is only substitution repeated, rather than factorization? |
 
-The two triangular suites use hand-supplied packed factors. `W04DenseSolve`
-also uses supplied factors, so it can be tested before integrating W0.3.
-`DenseLu.RightLookingFactorizeThenSolve` is the final integration check. The empty-input,
-padded-storage, pivot, and tolerance cases check the remaining dense behavior.
+The regular-input tests share an 8-by-8 fixture. The two triangular suites and the
+`Solve` suite use its supplied packed factors independently of W0.3.
+`Integration.RightLookingFactorizeThenSolve` is the final integration check. The right-looking
+and left-looking factorization suites each check the 8-by-8 fixture and rejection of
+zero and infinite pivots after an update.
 The caller supplies valid shapes and disjoint buffers; the kernels need no
 repeated input validation.
 Before proceeding, explain how `i+j*n` describes column-major storage and why

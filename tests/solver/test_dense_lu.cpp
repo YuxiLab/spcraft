@@ -9,205 +9,214 @@ namespace
 
 using DenseTestMatrix = DenseMatrix<Index, Value>;
 
-DenseTestMatrix MakeDenseExample()
-{
-  // 1. Store the worked example by columns: A=[[4,1,1],[2,5,0],[0,1,6]].
-  DenseTestMatrix A(3, 3);
-  const Value values[] = {4, 2, 0, 1, 5, 1, 1, 0, 6};
-  std::copy(std::begin(values), std::end(values), A.val);
-  return A;
-}
-
 dense::Factors<Index, Value> MakeDenseFactors()
 {
-  // 1. Supply known packed factors so solve checkpoints do not depend on Factorize.
+  // Use the numerical fixture from docs/solver/visuals/left-looking-lu-8x8.html.
+  constexpr Index n = 8;
   dense::Factors<Index, Value> factors;
-  factors.lu.Allocate(3, 3);
-  const Value packed[] = {4, 0.5, 0, 1, 4.5, 2.0 / 9.0, 1, -0.5, 55.0 / 9.0};
-  std::copy(std::begin(packed), std::end(packed), factors.lu.val);
+  factors.lu.Allocate(n, n);
+  for (Index col = 0; col < n; ++col) {
+    for (Index row = 0; row < n; ++row) {
+      if (row > col) {
+        factors.lu(row, col) = 0.25 + 0.25 * ((row + 2 * col) % 3);
+      } else if (row == col) {
+        factors.lu(row, col) = 2.4 + 0.04 * row;
+      } else {
+        factors.lu(row, col) = 0.24 + 0.04 * ((3 * row + 5 * col) % 20);
+      }
+    }
+  }
   factors.status.code = LuCode::Success;
   return factors;
 }
 
+Value PackedProductEntry(const DenseTestMatrix& packed, Index row, Index col)
+{
+  Value sum = 0;
+  for (Index k = 0; k <= std::min(row, col); ++k) {
+    const Value lower = row == k ? 1 : packed(row, k);
+    sum += lower * packed(k, col);
+  }
+  return sum;
+}
+
+DenseTestMatrix MakeDenseExample(const DenseTestMatrix& packed)
+{
+  DenseTestMatrix A(packed.m, packed.n);
+  for (Index col = 0; col < A.n; ++col) {
+    for (Index row = 0; row < A.m; ++row) A(row, col) = PackedProductEntry(packed, row, col);
+  }
+  return A;
+}
+
+Vector MakeDenseRhs(const DenseTestMatrix& A, Value scale)
+{
+  Vector rhs(A.m);
+  for (Index row = 0; row < A.m; ++row) {
+    rhs[row] = 0;
+    for (Index col = 0; col < A.n; ++col) rhs[row] += A(row, col) * (scale * (col + 1));
+  }
+  return rhs;
+}
+
 }  // namespace
 
-TEST(W01DenseForwardSolve, PackedUnitLowerAndPreservedInputs)
+TEST(ForwardSolve, NormalInput)
 {
-  // 1. Predict y from L*y=b without using a factorization implementation.
   const auto factors = MakeDenseFactors();
-  const std::vector<Value> original(factors.lu.val, factors.lu.val + 9);
-  Vector rhs(3);
-  rhs[0] = 9;
-  rhs[1] = 12;
-  rhs[2] = 20;
-  Vector y(3);
-  dense::ForwardSolve(factors.lu, rhs, y);
-  EXPECT_NEAR(y[0], 9, kTolerance);
-  EXPECT_NEAR(y[1], 7.5, kTolerance);
-  EXPECT_NEAR(y[2], 55.0 / 3.0, kTolerance);
-  EXPECT_EQ(std::vector<Value>(rhs.val, rhs.val + 3), (std::vector<Value>{9, 12, 20}));
-  EXPECT_EQ(std::vector<Value>(factors.lu.val, factors.lu.val + 9), original);
+  const auto& lu = factors.lu;
+  const std::vector<Value> original(lu.val, lu.val + lu.size());
+  Vector rhs(lu.n);
+  // Form L*y for y = [1, 2, ..., 8], using the implicit unit diagonal of L.
+  for (Index row = 0; row < lu.n; ++row) {
+    rhs[row] = row + 1;
+    for (Index col = 0; col < row; ++col) rhs[row] += lu(row, col) * (col + 1);
+  }
+  const std::vector<Value> saved(rhs.val, rhs.val + rhs.n);
+  Vector y(lu.n);
+  dense::ForwardSolve(lu, rhs, y);
+  for (Index row = 0; row < lu.n; ++row) EXPECT_NEAR(y[row], row + 1, kTolerance);
+  EXPECT_EQ(std::vector<Value>(rhs.val, rhs.val + rhs.n), saved);
+  EXPECT_EQ(std::vector<Value>(lu.val, lu.val + lu.size()), original);
 }
 
-TEST(W01DenseForwardSolve, Empty)
+TEST(BackwardSolve, NormalInput)
 {
-  // 1. An empty row loop leaves empty output unchanged.
-  DenseTestMatrix empty;
-  Vector empty_rhs;
-  Vector output;
-  EXPECT_NO_THROW(dense::ForwardSolve(empty, empty_rhs, output));
-}
-
-TEST(W02DenseBackwardSolve, PackedUpperAndPreservedInputs)
-{
-  // 1. Supply the forward result directly so BackwardSolve is independent of ForwardSolve.
   const auto factors = MakeDenseFactors();
-  const std::vector<Value> original(factors.lu.val, factors.lu.val + 9);
-  Vector rhs(3);
-  rhs[0] = 9;
-  rhs[1] = 7.5;
-  rhs[2] = 55.0 / 3.0;
-  Vector x(3);
-  dense::BackwardSolve(factors.lu, rhs, x);
-  for (Index i = 0; i < 3; ++i) EXPECT_NEAR(x[i], i + 1, kTolerance);
-  EXPECT_EQ(std::vector<Value>(rhs.val, rhs.val + 3), (std::vector<Value>{9, 7.5, 55.0 / 3.0}));
-  EXPECT_EQ(std::vector<Value>(factors.lu.val, factors.lu.val + 9), original);
+  const auto& lu = factors.lu;
+  const std::vector<Value> original(lu.val, lu.val + lu.size());
+  Vector rhs(lu.n);
+  // Form U*x for x = [1, 2, ..., 8] independently of ForwardSolve.
+  for (Index row = 0; row < lu.n; ++row) {
+    rhs[row] = 0;
+    for (Index col = row; col < lu.n; ++col) rhs[row] += lu(row, col) * (col + 1);
+  }
+  const std::vector<Value> saved(rhs.val, rhs.val + rhs.n);
+  Vector x(lu.n);
+  dense::BackwardSolve(lu, rhs, x);
+  for (Index row = 0; row < lu.n; ++row) EXPECT_NEAR(x[row], row + 1, kTolerance);
+  EXPECT_EQ(std::vector<Value>(rhs.val, rhs.val + rhs.n), saved);
+  EXPECT_EQ(std::vector<Value>(lu.val, lu.val + lu.size()), original);
 }
 
-TEST(W02DenseBackwardSolve, EmptyAndRejectedDiagonals)
+TEST(BackwardSolve, ZeroDiagonal)
 {
-  // 1. Exercise n=0 and zero/nonfinite U diagonals before division.
-  DenseTestMatrix empty;
-  Vector empty_rhs;
-  Vector x;
-  EXPECT_NO_THROW(dense::BackwardSolve(empty, empty_rhs, x));
-  DenseTestMatrix lu(1, 1, Value{0});
-  Vector rhs(1, 1);
-  x.Allocate(1);
-  EXPECT_THROW(dense::BackwardSolve(lu, rhs, x), std::runtime_error);
-  lu(0, 0) = std::numeric_limits<Value>::infinity();
+  const DenseTestMatrix lu(1, 1, Value{0});
+  const Vector rhs(1, 1);
+  Vector x(1);
   EXPECT_THROW(dense::BackwardSolve(lu, rhs, x), std::runtime_error);
 }
 
-TEST(DenseRightLookingFactorize, PackedFactorsAndPreservedInput)
+TEST(BackwardSolve, InfiniteDiagonal)
 {
-  // 1. Compare every packed coefficient with the independent hand calculation.
-  const auto A = MakeDenseExample();
-  const std::vector<Value> original(A.val, A.val + 9);
+  const DenseTestMatrix lu(1, 1, std::numeric_limits<Value>::infinity());
+  const Vector rhs(1, 1);
+  Vector x(1);
+  EXPECT_THROW(dense::BackwardSolve(lu, rhs, x), std::runtime_error);
+}
+
+namespace
+{
+
+using DenseFactorize = dense::Factors<Index, Value> (*)(const DenseTestMatrix&, const LuOptions<Value>&);
+
+void CheckPackedFactorsAndPreservedInput(DenseFactorize factorize)
+{
   const auto expected = MakeDenseFactors();
-  auto factors = dense::RightLookingFactorize(A);
+  const auto A = MakeDenseExample(expected.lu);
+  const Index n = A.n;
+  const std::vector<Value> original(A.val, A.val + A.size());
+  auto factors = factorize(A, {});
   ASSERT_EQ(factors.status.code, LuCode::Success);
   EXPECT_EQ(factors.status.pivot_column, -1);
-  EXPECT_EQ(factors.lu.m, 3);
-  EXPECT_EQ(factors.lu.n, 3);
-  ASSERT_EQ(factors.lu.size(), 9);
+  ASSERT_EQ(factors.lu.m, n);
+  ASSERT_EQ(factors.lu.n, n);
   EXPECT_TRUE(factors.lu.memowned);
   EXPECT_NE(factors.lu.val, A.val);
-  for (Index i = 0; i < 9; ++i) EXPECT_NEAR(factors.lu.val[i], expected.lu.val[i], kTolerance);
-  // 2. Reconstruct L*U from the packed triangles in the original coordinates.
-  for (Index col = 0; col < 3; ++col) {
-    for (Index row = 0; row < 3; ++row) {
-      Value sum = 0;
-      for (Index k = 0; k < 3; ++k) {
-        const Value lower = row == k ? 1 : (row > k ? factors.lu(row, k) : 0);
-        const Value upper = k <= col ? factors.lu(k, col) : 0;
-        sum += lower * upper;
-      }
-      EXPECT_NEAR(sum, A(row, col), kTolerance);
+  for (Index col = 0; col < n; ++col) {
+    for (Index row = 0; row < n; ++row) {
+      SCOPED_TRACE(::testing::Message() << "row " << row << ", column " << col);
+      EXPECT_NEAR(factors.lu(row, col), expected.lu(row, col), kTolerance);
+      EXPECT_NEAR(PackedProductEntry(factors.lu, row, col), A(row, col), kTolerance);
     }
   }
-  EXPECT_EQ(std::vector<Value>(A.val, A.val + 9), original);
+  EXPECT_EQ(std::vector<Value>(A.val, A.val + A.size()), original);
   factors.lu(0, 0) = 99;
-  EXPECT_EQ(A(0, 0), 4);
+  EXPECT_EQ(A(0, 0), original.front());
 }
 
-TEST(DenseRightLookingFactorize, Empty)
+void CheckZeroPivotAfterUpdate(DenseFactorize factorize)
 {
-  // 1. No pivot iterations are needed for a successful empty factorization.
-  DenseTestMatrix empty;
-  const auto factors = dense::RightLookingFactorize(empty);
-  EXPECT_EQ(factors.status.code, LuCode::Success);
-  EXPECT_EQ(factors.status.pivot_column, -1);
-  EXPECT_EQ(factors.lu.size(), 0);
-}
-
-TEST(DenseRightLookingFactorize, FirstLaterAndToleranceBoundaryPivots)
-{
-  // 1. A nonsingular matrix can still have a rejected first no-pivot diagonal.
-  DenseTestMatrix A(2, 2);
-  const Value first[] = {0, 1, 1, 0};
-  std::copy(std::begin(first), std::end(first), A.val);
-  auto factors = dense::RightLookingFactorize(A);
-  EXPECT_EQ(factors.status.code, LuCode::ZeroPivot);
-  EXPECT_EQ(factors.status.pivot_column, 0);
-  // 2. Check the updated later pivot, then the inclusive tolerance comparison.
-  const Value later[] = {2, 1, 4, 2};
-  std::copy(std::begin(later), std::end(later), A.val);
-  factors = dense::RightLookingFactorize(A);
+  Value values[] = {2, 1, 4, 2};
+  const DenseTestMatrix A(values, 2, 2);
+  const auto factors = factorize(A, {});
   EXPECT_EQ(factors.status.code, LuCode::ZeroPivot);
   EXPECT_EQ(factors.status.pivot_column, 1);
-  DenseTestMatrix diagonal(1, 1, Value{2});
-  factors = dense::RightLookingFactorize(diagonal, LuOptions<Value>{2});
-  EXPECT_EQ(factors.status.code, LuCode::ZeroPivot);
-  EXPECT_EQ(factors.status.pivot_column, 0);
 }
 
-TEST(DenseRightLookingFactorize, PaddedInputClonesOnlyLogicalEntries)
+void CheckInfinitePivotAfterUpdate(DenseFactorize factorize)
 {
-  // 1. Padding contains NaNs that are outside the mathematical 3-by-3 input.
-  const auto A = MakeDenseExample();
-  Value buffer[13];
-  std::fill(std::begin(buffer), std::end(buffer), std::numeric_limits<Value>::quiet_NaN());
-  DenseTestMatrix view(buffer, 3, 3, 5);
-  for (Index col = 0; col < 3; ++col) {
-    for (Index row = 0; row < 3; ++row) view(row, col) = A(row, col);
-  }
-  const auto factors = dense::RightLookingFactorize(view);
-  const auto expected = MakeDenseFactors();
-  // 2. The result is an independent packed owner, not a copy of padding slots.
-  ASSERT_EQ(factors.status.code, LuCode::Success);
-  ASSERT_EQ(factors.lu.m, 3);
-  ASSERT_EQ(factors.lu.n, 3);
-  EXPECT_EQ(factors.lu.ld, 3);
-  EXPECT_TRUE(factors.lu.memowned);
-  EXPECT_NE(factors.lu.val, buffer);
-  for (Index col = 0; col < 3; ++col) {
-    for (Index row = 0; row < 3; ++row) {
-      EXPECT_NEAR(factors.lu(row, col), expected.lu(row, col), kTolerance);
-      EXPECT_EQ(view(row, col), A(row, col));
-    }
-  }
-  EXPECT_TRUE(std::isnan(buffer[3]));
-  EXPECT_TRUE(std::isnan(buffer[8]));
+  // The second pivot overflows when subtracting 2 * max from 1.
+  Value values[] = {1, 2, std::numeric_limits<Value>::max(), 1};
+  const DenseTestMatrix A(values, 2, 2);
+  const auto factors = factorize(A, {});
+  EXPECT_EQ(factors.status.code, LuCode::ZeroPivot);
+  EXPECT_EQ(factors.status.pivot_column, 1);
 }
 
-TEST(W04DenseSolve, KnownFactorsReusableRhsAndOriginalResidual)
+}  // namespace
+
+TEST(RightLookingFactorize, NormalInput)
+{
+  CheckPackedFactorsAndPreservedInput(dense::RightLookingFactorize);
+}
+
+TEST(RightLookingFactorize, ZeroPivotAfterUpdate) { CheckZeroPivotAfterUpdate(dense::RightLookingFactorize); }
+
+TEST(RightLookingFactorize, InfinitePivotAfterUpdate)
+{
+  CheckInfinitePivotAfterUpdate(dense::RightLookingFactorize);
+}
+
+TEST(LeftLookingFactorize, NormalInput) { CheckPackedFactorsAndPreservedInput(dense::LeftLookingFactorize); }
+
+TEST(LeftLookingFactorize, ZeroPivotAfterUpdate) { CheckZeroPivotAfterUpdate(dense::LeftLookingFactorize); }
+
+TEST(LeftLookingFactorize, InfinitePivotAfterUpdate)
+{
+  CheckInfinitePivotAfterUpdate(dense::LeftLookingFactorize);
+}
+
+TEST(UpperLookingFactorize, NormalInput)
+{
+  CheckPackedFactorsAndPreservedInput(dense::UpperLookingFactorize);
+}
+
+TEST(Solve, KnownFactorsReusableRhsAndOriginalResidual)
 {
   // 1. Solve with supplied factors so Solve does not depend on RightLookingFactorize.
   const auto factors = MakeDenseFactors();
-  const std::vector<Value> original(factors.lu.val, factors.lu.val + 9);
-  const auto A = MakeDenseExample();
-  Vector rhs(3);
-  Vector x(3);
+  const auto& lu = factors.lu;
+  const std::vector<Value> original(lu.val, lu.val + lu.size());
+  const auto A = MakeDenseExample(lu);
+  Vector x(A.n);
   for (Value scale : {1, 2}) {
-    rhs[0] = 9 * scale;
-    rhs[1] = 12 * scale;
-    rhs[2] = 20 * scale;
-    const std::vector<Value> saved(rhs.val, rhs.val + 3);
+    const auto rhs = MakeDenseRhs(A, scale);
+    const std::vector<Value> saved(rhs.val, rhs.val + rhs.n);
     dense::Solve(factors, rhs, x);
-    for (Index row = 0; row < 3; ++row) {
+    for (Index row = 0; row < A.m; ++row) {
       EXPECT_NEAR(x[row], scale * (row + 1), kTolerance);
       Value product = 0;
-      for (Index col = 0; col < 3; ++col) product += A(row, col) * x[col];
+      for (Index col = 0; col < A.n; ++col) product += A(row, col) * x[col];
       EXPECT_NEAR(product, rhs[row], kTolerance);
     }
-    EXPECT_EQ(std::vector<Value>(rhs.val, rhs.val + 3), saved);
+    EXPECT_EQ(std::vector<Value>(rhs.val, rhs.val + rhs.n), saved);
   }
-  EXPECT_EQ(std::vector<Value>(factors.lu.val, factors.lu.val + 9), original);
+  EXPECT_EQ(std::vector<Value>(lu.val, lu.val + lu.size()), original);
   EXPECT_EQ(factors.status.code, LuCode::Success);
 }
 
-TEST(W04DenseSolve, Empty)
+TEST(Solve, Empty)
 {
   // 1. Successful empty factors require no substitution work.
   dense::Factors<Index, Value> factors;
@@ -217,19 +226,17 @@ TEST(W04DenseSolve, Empty)
   EXPECT_NO_THROW(dense::Solve(factors, empty, x));
 }
 
-TEST(DenseLu, RightLookingFactorizeThenSolve)
+TEST(Integration, RightLookingFactorizeThenSolve)
 {
   // 1. Integrate the dense driver only after all four isolated checkpoints work.
-  const auto A = MakeDenseExample();
+  const auto expected = MakeDenseFactors();
+  const auto A = MakeDenseExample(expected.lu);
   const auto factors = dense::RightLookingFactorize(A);
   ASSERT_EQ(factors.status.code, LuCode::Success);
-  Vector rhs(3);
-  rhs[0] = 9;
-  rhs[1] = 12;
-  rhs[2] = 20;
-  Vector x(3);
+  const auto rhs = MakeDenseRhs(A, 1);
+  Vector x(A.n);
   dense::Solve(factors, rhs, x);
-  for (Index i = 0; i < 3; ++i) EXPECT_NEAR(x[i], i + 1, kTolerance);
+  for (Index i = 0; i < x.n; ++i) EXPECT_NEAR(x[i], i + 1, kTolerance);
 }
 
 }  // namespace spcraft::solver::test

@@ -338,7 +338,7 @@ or external numerical library is required.
 For `Solve`, allocate a private intermediate y, use the completed triangular
 solves, and preserve the factor buffers for another RHS. Known factors test
 `Solve` independently. The integration test
-`DenseLu.RightLookingFactorizeThenSolve` checks the complete pipeline after
+`Integration.RightLookingFactorizeThenSolve` checks the complete pipeline after
 the isolated checkpoints work.
 
 ### Compare scalar update orders
