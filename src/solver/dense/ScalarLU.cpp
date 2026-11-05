@@ -108,13 +108,13 @@ Factors<IT, NT, OT> LeftLookingFactorize(const DenseMatrix<IT, NT, OT>& A, const
   Factors<IT, NT, OT> factors;
   factors.lu = A.Clone();
   auto& lu = factors.lu;
-  for (IT k = 0; k < A.m; ++k) {
-    for (IT i = 0; i <= k; ++i) {
-      for (IT j = 0; j < i; ++j) {
-        lu[i, k] -= lu[i, j] * lu[j, k];  // update U[i,k]
+  for (IT k = 0; k < A.n; ++k) {
+    for (IT j = 0; j < k; ++j) {
+      const NT upper = lu[j, k];
+      for (IT i = j + 1; i < A.m; ++i) {
+        lu[i, k] -= upper * lu[i, j];
       }
     }
-    // U[0:k+1, k] is updated, now update L[k+1:n, k]
     const NT pivot = lu[k, k];
     // pivot chk
     if (!isfinite(pivot) || abs(pivot) <= options.pivot_tolerance) {
@@ -123,10 +123,7 @@ Factors<IT, NT, OT> LeftLookingFactorize(const DenseMatrix<IT, NT, OT>& A, const
       return factors;
     }
     for (IT i = k + 1; i < A.m; ++i) {
-      for (IT j = 0; j < k; ++j) {
-        lu[i, k] -= lu[i, j] * lu[j, k];
-      }
-      lu[i, k] /= lu[k, k];
+      lu[i, k] /= pivot;
     }
   }
   factors.status.code = LuCode::Success;
@@ -148,6 +145,9 @@ Factors<IT, NT, OT> UpperLookingFactorize(const DenseMatrix<IT, NT, OT>& A, cons
   //    Reject a nonfinite pivot or abs(pivot)<=options.pivot_tolerance.
   // 5. Mark Success with pivot_column=-1 after all rows finish.
   // Comment out the placeholder exception after implementing this function.
+  Factors<IT, NT, OT> factors;
+  factors.lu = A.Clone();
+  auto& lu = factors.lu;
   throw std::logic_error("UpperLookingFactorize: implement row-oriented up-looking updates");
 }
 
